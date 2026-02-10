@@ -275,18 +275,33 @@ class FinancialAdvisor {
 
                 diagnosis = `Tu déficit (${this.formatMoney(deficit)}) proviene de <b>${topLeak[0]}</b> (${this.formatMoney(topLeak[1])}) y tus deudas.${merchantText}${hangoverWarn}`;
 
-                // SMART ACTION for Debt Hangover
                 if (deficit > income * 0.3) {
-                    adjustments.push(`<b>🛑 Crisis de Liquidez:</b> No podrás pagar todo de golpe a fin de mes.`);
+                    adjustments.push(`<b>🛑 Crisis de Liquidez:</b> No dispones de efectivo para cubrir el mes.`);
 
-                    if (topMerchantsList.length > 0) {
-                        const bigOne = topMerchantsList[0];
-                        adjustments.push(`<b>📞 Acción Inteligente:</b> Llama a tu banco y redifiere la compra de <b>${bigOne[0]}</b> a 12 o 24 cuotas. Esto liberará caja INMEDIATA.`);
-                    } else {
-                        adjustments.push(`<b>📞 Salvavidas:</b> Paga solo el Mínimo de la tarjeta este mes y usa el efectivo para comida/servicios.`);
+                    // SMART ADVICE BASED ON CATEGORY TYPE
+                    const debtCats = ['Deuda/Créditos', 'Tarjeta de Crédito', 'Intereses Financieros', 'Otros Pasivos'];
+                    const livingCats = ['Alimentación', 'Vivienda', 'Alquiler / Hipoteca', 'Energía / Luz', 'Acueducto / Agua', 'Gas Natural', 'Internet / TV', 'Plan Celular', 'Mantenimiento / Admón', 'Gasolina', 'Transporte', 'Salud', 'Educación'];
+                    const lifestyleCats = ['Ocio', 'Restaurantes / Domicilios', 'Ropa / Cuidado Personal', 'Alcohol / Tabaco', 'Suscripciones Digitales', 'Deporte / Gym', 'Café / Snacks', 'Otros/Imprevistos'];
+
+                    if (debtCats.includes(leakName)) {
+                        adjustments.push(`<b>📞 Acción Inteligente (Deuda):</b> Llama a tu banco ya. Pide rediferir el saldo de tu tarjeta o crédito a 24/36 cuotas. Bajarás la carga mensual inmediatamente.`);
+                    }
+                    else if (livingCats.includes(leakName)) {
+                        adjustments.push(`<b>✂️ Economía de Guerra:</b> Tu gasto en <b>${leakName}</b> es insostenible hoy. Pásate a marcas blancas, elimina desperdicios o busca opciones más baratas.`);
+                        adjustments.push(`<b>🛡️ Estrategia de Pago:</b> Si tienes tarjeta de crédito, paga solo el Pago Mínimo este mes. Usa tu efectivo disponible EXCLUSIVAMENTE para Comida y Servicios.`);
+                    }
+                    else if (lifestyleCats.includes(leakName)) {
+                        adjustments.push(`<b>🚫 Cero Tolerancia:</b> Cancela o pausa absolutamente todo gasto en <b>${leakName}</b>. Estás en números rojos, los lujos quedan suspendidos hasta nuevo aviso.`);
+                    }
+                    else {
+                        // Fallback logic for mix/unknown
+                        if (topMerchantsList.length > 0) {
+                            adjustments.push(`<b>Plan de Choque:</b> Detén compras inecesarias en <b>${topMerchantsList[0][0]}</b>.`);
+                        }
+                        adjustments.push(`<b>Venta de Activos:</b> Considera vender algo que no uses por Marketplace para generar liquidez inmediata de al menos $${this.formatMoney(deficit)}.`);
                     }
                 } else {
-                    adjustments.push(`<b>Plan de Choque:</b> No gastes ni un peso más en ${topLeak[0]} hasta el próximo mes.`);
+                    adjustments.push(`<b>Plan de Choque:</b> No gastes ni un peso más en <b>${leakName}</b> hasta el próximo mes.`);
                 }
             }
             else {
