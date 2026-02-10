@@ -1843,10 +1843,12 @@ class UIManager {
                     <label style="margin: 0; flex: 1;">${c.name} <span class="text-secondary" style="font-size: 0.8rem;">(${c.group})</span></label>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span style="color: #666;">$</span>
-                        <input type="text" name="budget_${c.id}" 
-                               value="${new Intl.NumberFormat('es-CO').format(limit)}" 
+                        <input type="text" inputmode="numeric" name="budget_${c.id}" 
+                               value="${limit > 0 ? new Intl.NumberFormat('es-CO').format(limit) : ''}" 
+                               placeholder="0"
                                style="width: 120px; text-align: right;"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                               onfocus="if(this.value==='0')this.value=''"
+                               onblur="var n=parseInt(this.value.replace(/\\D/g,''))||0; this.value=n>0?new Intl.NumberFormat('es-CO').format(n):''">
                     </div>
                 </div>
             `;
@@ -1860,9 +1862,11 @@ class UIManager {
                     <form id="settings-form">
                         <div class="form-group">
                             <label>Ingreso Mensual Objetivo</label>
-                            <input type="text" name="monthly_income_target" 
-                                   value="${new Intl.NumberFormat('es-CO').format(conf.monthly_income_target || 0)}"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                            <input type="text" inputmode="numeric" name="monthly_income_target" 
+                                   value="${conf.monthly_income_target ? new Intl.NumberFormat('es-CO').format(conf.monthly_income_target) : ''}"
+                                   placeholder="0"
+                                   onfocus="if(this.value==='0')this.value=''"
+                                   onblur="var n=parseInt(this.value.replace(/\\D/g,''))||0; this.value=n>0?new Intl.NumberFormat('es-CO').format(n):''">
                         </div>
 
                         <div class="form-group">
