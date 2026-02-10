@@ -581,30 +581,6 @@ class UIManager {
         const currentMonthName = monthNames[this.viewDate.getMonth()];
         const currentYear = this.viewDate.getFullYear();
 
-        // TEMPORARY FORCE UPDATE BUTTON FOR USER
-        const updateBtn = document.createElement('button');
-        updateBtn.innerHTML = '⚠️ TOCAR AQUÍ PARA ACTUALIZAR APP';
-        updateBtn.style.cssText = 'width: 100%; padding: 15px; background: red; color: white; font-weight: bold; border: none; border-radius: 8px; margin-bottom: 20px; font-size: 16px; box-shadow: 0 4px 12px rgba(255,0,0,0.3);';
-        updateBtn.onclick = async () => {
-            if (confirm('Esto actualizará la app a la última versión. Tus datos NO se borrarán. ¿Continuar?')) {
-                updateBtn.innerHTML = 'Actualizando... espera...';
-                if ('serviceWorker' in navigator) {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for (let registration of registrations) {
-                        await registration.unregister();
-                    }
-                    const keys = await caches.keys();
-                    for (const key of keys) {
-                        await caches.delete(key);
-                    }
-                }
-                setTimeout(() => window.location.reload(true), 1000);
-            }
-        };
-        // Prepend to container if not already there? 
-        // We are building HTML string below. Let's just add it to the HTML string.
-
-
         // Generate Recurring Items for this month (Fixed Expenses & Incomes)
         this.store.processFixedExpenses(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
@@ -619,9 +595,6 @@ class UIManager {
         // Layout: Left (Diagnosis Context) - Right (The Numbers)
         // We use a CSS Grid wrapper for this
 
-        // Create wrapper
-        const updateWrapper = document.createElement('div');
-        updateWrapper.appendChild(updateBtn);
 
         const heroHTML = `
             <div class="dashboard-hero">
@@ -726,16 +699,12 @@ class UIManager {
         `;
 
         // LAYOUT ASSEMBLY
-        // LAYOUT ASSEMBLY
         this.container.innerHTML = `
             ${heroHTML}
             ${metricsHTML}
             ${chartsHTML}
             ${detailsHTML}
         `;
-
-        // INJECT UPDATE BUTTON (Top)
-        if (updateBtn) this.container.prepend(updateBtn);
 
         // Render Charts
         this.renderChart(); // Doughnut
