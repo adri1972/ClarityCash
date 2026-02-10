@@ -77,7 +77,7 @@ class UIManager {
 
         if (addBtn && txModal) {
             addBtn.addEventListener('click', () => {
-                this.populateSelects();
+                this.populateSelects('GASTO');
                 txModal.classList.remove('hidden');
             });
         }
@@ -134,31 +134,10 @@ class UIManager {
             typeInputs.forEach(input => {
                 input.addEventListener('change', () => {
                     const type = input.value;
-                    if (type === 'PAGO_DEUDA') {
-                        // Auto-select 'Deuda/Créditos' (cat_7)
-                        const debtCat = this.store.categories.find(c => c.name.includes('Deuda') || c.id === 'cat_7');
-                        if (debtCat) {
-                            form.querySelector('select[name="category_id"]').value = debtCat.id;
-                            categoryGroup.style.display = 'none';
-                        }
-                    } else if (type === 'INVERSION') {
-                        // Auto-select 'Inversión' (cat_6)
-                        const invCat = this.store.categories.find(c => c.name.includes('Inversión') || c.id === 'cat_6');
-                        if (invCat) {
-                            form.querySelector('select[name="category_id"]').value = invCat.id;
-                            categoryGroup.style.display = 'none';
-                        }
-                    } else if (type === 'AHORRO') {
-                        // Auto-select 'Ahorro' (cat_5)
-                        const saveCat = this.store.categories.find(c => c.name.includes('Ahorro') || c.id === 'cat_5');
-                        if (saveCat) {
-                            form.querySelector('select[name="category_id"]').value = saveCat.id;
-                            categoryGroup.style.display = 'none';
-                        }
-                    } else {
-                        categoryGroup.style.display = 'block';
-                        form.querySelector('select[name="category_id"]').value = ''; // Reset selection
-                    }
+                    this.populateSelects(type);
+                    // Ensure visibility (as we now filter options instead of hiding)
+                    const categoryGroup = form.querySelector('select[name="category_id"]').closest('.form-group');
+                    if (categoryGroup) categoryGroup.style.display = 'block';
                 });
             });
 
@@ -519,23 +498,52 @@ class UIManager {
         alert(msg);
     }
 
-    populateSelects() {
+    populateSelects(typeFilter = 'GASTO') {
         const catSelect = document.querySelector('select[name="category_id"]');
         const accSelect = document.querySelector('select[name="account_id"]');
+        if (!catSelect || !accSelect) return;
 
         // Group Categories
         const categories = this.store.categories;
-        const groups = [...new Set(categories.map(c => c.group))];
+
+        // Filter categories based on the selected Transaction Type
+        let filteredCats = categories;
+        if (typeFilter) {
+            if (typeFilter === 'INGRESO') {
+                filteredCats = categories.filter(c => c.group === 'INGRESOS');
+            } else if (typeFilter === 'AHORRO') {
+                filteredCats = categories.filter(c => c.id === 'cat_5'); // Only Ahorro
+            } else if (typeFilter === 'INVERSION') {
+                filteredCats = categories.filter(c => c.id === 'cat_6'); // Only Inversion
+            } else if (typeFilter === 'PAGO_DEUDA') {
+                filteredCats = categories.filter(c => c.id === 'cat_7' || c.id === 'cat_fin_4'); // Debt + Credit Card
+            } else { // GASTO
+                // Show everything EXCEPT strict special types (Income, Savings, Inv, Debt)
+                filteredCats = categories.filter(c =>
+                    c.group !== 'INGRESOS' &&
+                    c.id !== 'cat_5' &&
+                    c.id !== 'cat_6' &&
+                    c.id !== 'cat_7'
+                );
+            }
+        }
+
+        const groups = [...new Set(filteredCats.map(c => c.group))];
 
         let catHtml = '<option value="" disabled selected>Selecciona una categoría</option>';
         groups.forEach(group => {
             catHtml += `<optgroup label="${group}">`;
-            categories.filter(c => c.group === group).forEach(c => {
+            filteredCats.filter(c => c.group === group).forEach(c => {
                 catHtml += `<option value="${c.id}">${c.name}</option>`;
             });
             catHtml += `</optgroup>`;
         });
         catSelect.innerHTML = catHtml;
+
+        // Auto-select if only 1 option (e.g. Ahorro)
+        if (filteredCats.length === 1) {
+            catSelect.value = filteredCats[0].id;
+        }
 
         // Accounts
         accSelect.innerHTML = this.store.accounts.map(a =>
@@ -1269,12 +1277,32 @@ class UIManager {
     }
 
     async updateTransactionCategory(id, newCatId) {
-        // Find and update
         const tx = this.store.data.transactions.find(t => t.id === id);
         if (tx) {
-            console.log(`Updating transaction ${id} to category ${newCatId}`);
-            tx.category_id = newCatId;
-            this.store._save();
+            console.log(`Updating transaction ${id} category to ${newCatId}`);
+
+            // Auto-detect correct type for this category
+            // This fixes imports where expenses might be misclassified as income
+            const newCat = this.store.categories.find(c => c.id === newCatId);
+            let newType = tx.type;
+
+            if (newCat) {
+                if (newCat.group === 'INGRESOS') newType = 'INGRESO';
+                else if (newCat.id === 'cat_5') newType = 'AHORRO';
+                else if (newCat.id === 'cat_6') newType = 'INVERSION';
+                else if (newCat.id === 'cat_7' || newCat.id === 'cat_fin_4') newType = 'PAGO_DEUDA';
+                else newType = 'GASTO'; // Default to GASTO for Needs, Lifestyle, etc.
+            }
+
+            const updates = { category_id: newCatId };
+            // Only update type if it actually changed, to trigger balance updates
+            if (newType !== tx.type) {
+                updates.type = newType;
+                console.log(`🔄 Auto-correcting type: ${tx.type} -> ${newType}`);
+            }
+
+            this.store.updateTransaction(id, updates);
+            this.render(); // Re-render table to show new color (Green/Red)
 
             // Visual feedback
             const toast = document.createElement('div');

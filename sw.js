@@ -1,16 +1,16 @@
-const CACHE_NAME = 'clarity-cash-v6';
+const CACHE_NAME = 'clarity-cash-v7';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './manifest.json',
     './assets/icon.svg',
     './css/styles.css',
-    './js/advisor.js?v=31',
+    './js/advisor.js?v=32',
     './js/ai.js',
-    './js/gemini.js?v=31',
-    './js/app.js?v=31',
-    './js/data.js?v=31',
-    './js/ui.js?v=31',
+    './js/gemini.js?v=32',
+    './js/app.js?v=32',
+    './js/data.js?v=32',
+    './js/ui.js?v=32',
     'https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js',
     'https://cdn.jsdelivr.net/npm/chart.js'
 ];
