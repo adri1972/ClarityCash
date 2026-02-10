@@ -189,7 +189,6 @@ class FinancialAdvisor {
         let diagnosis = "";
 
         // --- HELPER: Find Top Leaks ---
-        // --- HELPER: Find Top Leaks ---
         // Exclude Fixed Costs (Vivienda, Educacion, Salud, financiero)
         const fixedCats = ['Vivienda', 'Educación', 'Salud', 'Ahorro', 'Inversión', 'Pago Deuda', 'Deuda/Créditos', 'Tarjeta de Crédito', 'Impuestos', 'Salario / Nómina', 'Honorarios', 'Otros Ingresos'];
         const discretionary = Object.entries(breakdown)
@@ -197,6 +196,28 @@ class FinancialAdvisor {
             .sort((a, b) => b[1] - a[1]); // Descending
 
         const topLeak = discretionary.length > 0 ? discretionary[0] : null;
+
+        // --- HELPER: Calculate total known fixed expenses ---
+        const configFixedExpenses = this.store.config.fixed_expenses || [];
+        const totalFixedCosts = configFixedExpenses.reduce((sum, fe) => sum + (fe.amount || 0), 0);
+        const fixedCostPct = income > 0 ? ((totalFixedCosts / income) * 100).toFixed(0) : 0;
+
+        // --- HELPER: Detect budget mismatches with fixed expenses ---
+        const budgets = this.store.config.budgets || {};
+        let budgetMismatches = [];
+        const fixedByCat = {};
+        configFixedExpenses.forEach(fe => {
+            if (fe.category_id && fe.amount) {
+                fixedByCat[fe.category_id] = (fixedByCat[fe.category_id] || 0) + fe.amount;
+            }
+        });
+        Object.entries(fixedByCat).forEach(([catId, fixedAmt]) => {
+            const budgetAmt = budgets[catId] || 0;
+            if (budgetAmt > 0 && budgetAmt < fixedAmt) {
+                const cat = this.store.categories.find(c => c.id === catId);
+                budgetMismatches.push({ name: cat ? cat.name : catId, budget: budgetAmt, fixed: fixedAmt });
+            }
+        });
 
         // --- HELPER: Top 3 Merchants in Leak Category ---
         let topMerchantsList = [];
@@ -310,15 +331,32 @@ class FinancialAdvisor {
             status = 'OK';
             priority = "📈 SUPERÁVIT: Optimización";
             const surplus = effectiveSavings;
+            const discretionarySpend = summary.expenses - totalFixedCosts;
 
-            diagnosis = `Tienes un flujo de caja positivo de ${this.formatMoney(surplus)}. ¡Muy bien! Pero el dinero quieto pierde valor.`;
-
-            if (this.store.config.has_debts) {
-                adjustments.push(`<b>Ataque a la Deuda:</b> Usa exactamente ${this.formatMoney(surplus * 0.8)} para hacer un abono extraordinario a capital.`);
-                adjustments.push(`<b>El Efecto:</b> Esto te ahorrará meses de intereses futuros.`);
+            // Budget mismatch warning (budget set below fixed costs)
+            if (budgetMismatches.length > 0) {
+                const fixes = budgetMismatches.map(m => `${m.name}: presupuesto ${this.formatMoney(m.budget)} pero tu gasto fijo es ${this.formatMoney(m.fixed)}`).join('. ');
+                diagnosis = `⚠️ Hay presupuestos mal configurados: ${fixes}. Ve a <b>Configuración → Metas</b> y usa "Auto por Perfil" para corregirlos.<br><br>`;
             } else {
-                adjustments.push(`<b>Inversión Automática:</b> Programa una transferencia de ${this.formatMoney(surplus)} a un bolsillo de inversión el día de pago.`);
-                adjustments.push("<b>Sube el nivel:</b> Tu estilo de vida está controlado. Es hora de aumentar tu meta de ingresos.");
+                diagnosis = '';
+            }
+
+            if (totalFixedCosts > 0) {
+                diagnosis += `Tu flujo positivo es ${this.formatMoney(surplus)}. Tus costos fijos son ${this.formatMoney(totalFixedCosts)} (${fixedCostPct}% del ingreso) — eso ya está contemplado.`;
+            } else {
+                diagnosis += `Tienes un flujo de caja positivo de ${this.formatMoney(surplus)}. ¡Muy bien!`;
+            }
+
+            if (this.store.config.has_debts && this.store.config.total_debt > 0) {
+                const debtAmount = this.store.config.total_debt;
+                const suggestedPayment = Math.min(surplus * 0.5, debtAmount);
+                adjustments.push(`<b>Ataque a la Deuda:</b> De tu excedente de ${this.formatMoney(surplus)}, usa ${this.formatMoney(suggestedPayment)} como abono extra a capital. Esto acelera la liquidación y reduce intereses.`);
+                if (discretionarySpend > 0 && topLeak) {
+                    adjustments.push(`<b>Optimiza:</b> Si recortas ${topLeak[0]} (${this.formatMoney(topLeak[1])}) un 20%, liberarías ${this.formatMoney(topLeak[1] * 0.2)}/mes adicional para la deuda.`);
+                }
+            } else {
+                adjustments.push(`<b>Inversión Automática:</b> Programa una transferencia de ${this.formatMoney(surplus * 0.5)} a un bolsillo de inversión el día de pago. El dinero quieto pierde valor.`);
+                adjustments.push("<b>Sube el nivel:</b> Tu estilo de vida está controlado. Es hora de aumentar tu meta de ingresos o crear una meta de ahorro.");
             }
         }
 

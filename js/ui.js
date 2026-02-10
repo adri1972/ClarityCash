@@ -2311,12 +2311,27 @@ class UIManager {
 
                 const allCats = this.store.categories;
 
+                // Calculate minimum floor per category from fixed expenses
+                const fixedFloor = {};
+                const fixedExpenses = this.store.config.fixed_expenses || [];
+                fixedExpenses.forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+
                 allCats.forEach(cat => {
                     const input = document.querySelector(`input[name="budget_${cat.id}"]`);
                     if (input) {
                         // Calculate strict limit based on income %
                         const pct = weights[cat.id] || 0.01; // Default 1% if missed
                         let strictLimit = Math.floor(income * pct);
+
+                        // Use fixed expense as floor — never suggest a budget lower than known fixed costs
+                        const floor = fixedFloor[cat.id] || 0;
+                        if (floor > strictLimit) {
+                            strictLimit = floor;
+                        }
 
                         // Rounding for cleaner numbers (nearest 5.000)
                         strictLimit = Math.ceil(strictLimit / 5000) * 5000;
@@ -2331,7 +2346,7 @@ class UIManager {
                 });
 
                 if (appliedCount > 0) {
-                    alert(`✅ Parámetros de Perfil "${profile}" aplicados.\n\nEstos son tus LÍMITES IDEALES según la teoría. Si tus gastos reales son mayores (como en Tarjeta o Renting), el Dashboard te mostrará la alerta roja para que empieces a recortar.`);
+                    alert(`✅ Presupuestos sugeridos por perfil "${profile}".\n\n💡 Los gastos fijos que ya definiste se usaron como piso mínimo. La app NUNCA te sugerirá un presupuesto menor a lo que ya sabes que pagas.`);
                 } else {
                     alert("No pudimos generar sugerencias. Verifica tu Ingreso Objetivo.");
                 }
@@ -2346,19 +2361,46 @@ class UIManager {
                 const formData = new FormData(e.target);
                 const newBudgets = {};
 
+                // Calculate fixed expense floor per category
+                const fixedFloor = {};
+                const fixedExpenses = this.store.config.fixed_expenses || [];
+                fixedExpenses.forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+
+                let warnings = [];
+
                 // Parse form data: name="budget_cat_id" -> value="100.000"
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('budget_')) {
                         const catId = key.replace('budget_', '');
                         const rawVal = value.toString().replace(/\./g, '');
-                        const val = parseFloat(rawVal);
-                        if (val > 0) newBudgets[catId] = val;
+                        let val = parseFloat(rawVal);
+                        if (val > 0) {
+                            // Check if budget is less than known fixed expenses
+                            const floor = fixedFloor[catId] || 0;
+                            if (floor > 0 && val < floor) {
+                                const cat = this.store.categories.find(c => c.id === catId);
+                                const catName = cat ? cat.name : catId;
+                                warnings.push(`"${catName}": Tu gasto fijo es $${floor.toLocaleString('es-CO')} pero pusiste $${val.toLocaleString('es-CO')}. Se ajustó al mínimo.`);
+                                val = floor;
+                            }
+                            newBudgets[catId] = val;
+                        }
                     }
                 }
 
                 // Update only budgets in config (keep others)
                 this.store.updateConfig({ budgets: newBudgets });
-                alert('Metas de presupuesto actualizadas.');
+
+                if (warnings.length > 0) {
+                    alert(`⚠️ Se ajustaron presupuestos:\n\n${warnings.join('\n\n')}\n\n💡 No puedes poner un presupuesto menor a tus gastos fijos conocidos.`);
+                } else {
+                    alert('✅ Metas de presupuesto actualizadas.');
+                }
+                this.render();
             });
         }
 
