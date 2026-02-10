@@ -767,9 +767,27 @@ class UIManager {
 
             } catch (err) {
                 console.error("AI Advice Failed:", err);
+                const msg = err.message || '';
+                let friendlyMsg = '';
+
+                if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) {
+                    friendlyMsg = '⏳ Límite temporal alcanzado. Espera 30 segundos y presiona Reintentar.';
+                } else if (msg.includes('NO_KEY') || msg.toLowerCase().includes('api key')) {
+                    friendlyMsg = '🔑 Configura tu API Key en Configuración → Asesor IA Personal.';
+                } else if (msg.includes('INVALID_KEY') || msg.includes('403')) {
+                    friendlyMsg = '🔑 Tu API Key no es válida. Revísala en Configuración.';
+                } else {
+                    friendlyMsg = '❌ Error conectando con la IA. Verifica tu conexión a internet.';
+                }
+
                 element.innerHTML = `
-                    <span class="tip-text" style="color:red">Error IA: ${err.message}</span>
-                    <button onclick="window.ui.forceRefreshAI()" style="margin-left:8px; font-size:0.7em; cursor:pointer;">Reintentar</button>
+                    <div style="display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center;">
+                        <span class="tip-text" style="color:#666; font-size:0.85rem;">${friendlyMsg}</span>
+                        <button onclick="window.ui.forceRefreshAI()" 
+                                style="background:#E91E63; color:white; border:none; padding:6px 16px; border-radius:20px; font-size:0.8rem; cursor:pointer;">
+                            🔄 Reintentar
+                        </button>
+                    </div>
                 `;
             }
         }
