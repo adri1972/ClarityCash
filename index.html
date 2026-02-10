@@ -31,14 +31,9 @@
 <body>
     <script>
         window.onerror = function (msg, url, line) {
-            // Ignorar errores de ResizeObserver que son comunes e inofensivos
             if (msg.includes('ResizeObserver')) return;
-
-            // Ignorar "Script error." genérico (usualmente CORS de librerías externas en file://)
             if (msg === 'Script error.') return;
-
-            // Mostrar alerta solo para errores críticos reales
-            document.body.innerHTML += '<div style="position:fixed;top:0;left:0;width:100%;background:red;color:white;padding:20px;z-index:9999;">ERROR CRÍTICO: ' + msg + '<br>Esto suele pasar por abrir el archivo directo. Intenta usar el link localhost:8080</div>';
+            console.error('App Error:', msg, 'at', url, 'line', line);
         };
     </script>
     <div id="app">

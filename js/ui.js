@@ -735,7 +735,7 @@ class UIManager {
             <div class="details-card">
                 <div class="card-header-clean">
                     <h4>Seguimiento de Presupuesto</h4>
-                    <button class="btn-link" onclick="document.querySelector('[data-view=budget]').click()">Configurar</button>
+                    <button class="btn-link" onclick="document.querySelector('[data-view=settings]').click()">Configurar</button>
                 </div>
                 <div class="budget-list-compact">
         `;
