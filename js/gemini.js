@@ -264,11 +264,12 @@ REGLAS DE FORMATO:
         return null;
     }
     /**
-     * Scan a receipt image using Multimodal AI (Gemini Vision / GPT-4o)
-     * @param {string} base64Image - Raw base64 string (without data:image/jpeg;base64 prefix)
-     * @returns {Promise<Object>} Extracted data { date, amount, merchant, category, note }
+     * Scan a receipt image/PDF using Multimodal AI
+     * @param {string} base64Data - Raw base64 string
+     * @param {string} mimeType - e.g. "image/jpeg" or "application/pdf"
+     * @returns {Promise<Object>} Extracted data
      */
-    async scanReceipt(base64Image) {
+    async scanReceipt(base64Data, mimeType = 'image/jpeg') {
         if (!this.hasApiKey()) {
             throw new Error('Primero configura tu API Key en Ajustes ⚙️ para usar el escáner inteligente.');
         }
@@ -308,6 +309,7 @@ REGLAS DE FORMATO:
 
         try {
             if (provider === 'openai') {
+                if (!mimeType.startsWith('image/')) throw new Error('OpenAI solo soporta imágenes (JPG/PNG). Para PDFs usa Gemini.');
                 // OpenAI Vision (GPT-4o / GPT-4-turbo)
                 const response = await fetch(this.OPENAI_URL, {
                     method: 'POST',
@@ -325,7 +327,7 @@ REGLAS DE FORMATO:
                                     {
                                         type: "image_url",
                                         image_url: {
-                                            "url": `data:image/jpeg;base64,${base64Image}`
+                                            "url": `data:${mimeType};base64,${base64Data}`
                                         }
                                     }
                                 ]
@@ -354,8 +356,8 @@ REGLAS DE FORMATO:
                                 { text: prompt },
                                 {
                                     inline_data: {
-                                        mime_type: "image/jpeg",
-                                        data: base64Image
+                                        mime_type: mimeType,
+                                        data: base64Data
                                     }
                                 }
                             ]

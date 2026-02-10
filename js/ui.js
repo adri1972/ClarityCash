@@ -1523,6 +1523,36 @@ class UIManager {
                 fullText += pageText + '\n';
             }
 
+            // HYBRID INTELLIGENCE: Single Page PDF Receipt -> Try AI First
+            if (pdf.numPages === 1 && fullText.length < 3000) {
+                // Show AI Loading
+                const loading = document.createElement('div');
+                loading.id = 'ai-pdf-loading';
+                loading.innerHTML = '🤖 <b>Analizando PDF con IA...</b><br><span style="font-size:0.8em">Descifrando datos del documento...</span>';
+                loading.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:white;padding:25px;border-radius:12px;z-index:9999;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
+                document.body.appendChild(loading);
+
+                // Convert to Base64 for Gemini
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = async () => {
+                    try {
+                        const base64 = reader.result.split(',')[1];
+                        const data = await this.advisor.scanReceipt(base64, 'application/pdf');
+
+                        if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
+                        this.openScanConfirmation(data);
+                    } catch (err) {
+                        console.warn("AI PDF Scan failed, fallback to local regex:", err);
+                        if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
+
+                        // Fallback to local regex (Extracto Bancario logic)
+                        this.processExtractedText(fullText);
+                    }
+                };
+                return;
+            }
+
             this.processExtractedText(fullText);
         } catch (err) {
             console.error("PDF Error:", err);
