@@ -6,7 +6,7 @@
 class AIAdvisor {
     constructor(store) {
         this.store = store;
-        this.GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+        this.GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
         this.OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
     }
 
