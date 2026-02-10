@@ -1429,9 +1429,19 @@ class UIManager {
 
         // 2. AMOUNT
         if (data.amount) {
-            // Format number to User Locale (COP style: 1.000)
-            const fmt = new Intl.NumberFormat('es-CO').format(data.amount);
-            form.querySelector('input[name="amount"]').value = fmt;
+            // SANITY CHECK: If amount > 5.000.000, probably a barcode or NIT
+            if (data.amount > 5000000) {
+                alert(`⚠️ ATENCIÓN: Detecté un monto inusualmente alto ($${new Intl.NumberFormat('es-CO').format(data.amount)}).\n\nProbablemente leí un código de barras, teléfono o NIT por error. Por favor verifica antes de guardar.`);
+                // Don't autofill insane amount to prevent accidental saving
+                form.querySelector('input[name="amount"]').value = '';
+                form.querySelector('input[name="amount"]').placeholder = 'Ingresa el valor real';
+                // Focus on amount for correction
+                setTimeout(() => form.querySelector('input[name="amount"]').focus(), 500);
+            } else {
+                // Normal Format (COP style: 1.000)
+                const fmt = new Intl.NumberFormat('es-CO').format(data.amount);
+                form.querySelector('input[name="amount"]').value = fmt;
+            }
         }
 
         // 3. CATEGORY (Smart Match)
