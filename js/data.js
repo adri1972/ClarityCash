@@ -91,7 +91,31 @@ class Store {
             if (!data.goals) data.goals = [];
 
             // Merge defaults for backward compatibility
-            return { ...DEFAULT_DATA, ...data, config: { ...DEFAULT_DATA.config, ...(data.config || {}) } };
+            const merged = { ...DEFAULT_DATA, ...data, config: { ...DEFAULT_DATA.config, ...(data.config || {}) } };
+
+            // Auto-correct budgets: ensure no budget is below its fixed expenses
+            if (merged.config.fixed_expenses && merged.config.fixed_expenses.length > 0 && merged.config.budgets) {
+                const fixedByCat = {};
+                merged.config.fixed_expenses.forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedByCat[fe.category_id] = (fixedByCat[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+                let corrected = false;
+                Object.entries(fixedByCat).forEach(([catId, fixedAmt]) => {
+                    if (merged.config.budgets[catId] && merged.config.budgets[catId] < fixedAmt) {
+                        console.log(`📐 Auto-corrigiendo presupuesto ${catId}: $${merged.config.budgets[catId]} → $${fixedAmt} (gasto fijo)`);
+                        merged.config.budgets[catId] = fixedAmt;
+                        corrected = true;
+                    }
+                });
+                if (corrected) {
+                    // Save the correction
+                    try { localStorage.setItem('cc_data', JSON.stringify(merged)); } catch (e) { }
+                }
+            }
+
+            return merged;
         } catch (e) {
             console.warn('LocalStorage access denied (likely file:// protocol). Using temporary memory.', e);
             this.usingMemory = true;
