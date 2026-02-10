@@ -1488,7 +1488,7 @@ class UIManager {
                 try {
                     const base64 = reader.result.split(',')[1];
                     // Call Gemini Vision
-                    const data = await this.advisor.scanReceipt(base64);
+                    const data = await this.aiAdvisor.scanReceipt(base64);
                     loading.remove();
                     this.openScanConfirmation(data);
                 } catch (err) {
@@ -1559,7 +1559,7 @@ class UIManager {
                 reader.onload = async () => {
                     try {
                         const base64 = reader.result.split(',')[1];
-                        const data = await this.advisor.scanReceipt(base64, 'application/pdf');
+                        const data = await this.aiAdvisor.scanReceipt(base64, 'application/pdf');
 
                         if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
                         this.openScanConfirmation(data);
