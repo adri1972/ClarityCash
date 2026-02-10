@@ -1104,3 +1104,202 @@ td {
 .tip-text b {
     color: var(--text-main);
 }
+
+/* ========================================
+   MOBILE RESPONSIVE 📱
+   ======================================== */
+
+/* Hamburger Button - Hidden on Desktop */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-main);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.hamburger-btn:hover {
+    background: var(--primary-light);
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+
+    /* Show Hamburger */
+    .hamburger-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Sidebar: Off-canvas drawer */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 270px;
+        height: 100%;
+        z-index: 999;
+        transition: left 0.3s ease;
+        box-shadow: none;
+    }
+
+    .sidebar.open {
+        left: 0;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Body scroll */
+    body {
+        overflow: auto;
+        height: auto;
+    }
+
+    #app {
+        flex-direction: column;
+        height: auto;
+    }
+
+    /* Main Content full width */
+    .main-content {
+        width: 100%;
+        padding: 0.75rem;
+    }
+
+    .content-container {
+        padding: 0;
+    }
+
+    /* Top Bar */
+    .top-bar {
+        padding: 0.75rem 0;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .top-bar h2 {
+        font-size: 1.1rem;
+    }
+
+    .actions .btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Dashboard Hero */
+    .dashboard-hero {
+        grid-template-columns: 1fr !important;
+    }
+
+    .month-selector h2 {
+        font-size: 1rem;
+    }
+
+    /* Diagnosis Banner */
+    .diagnosis-banner {
+        flex-direction: column;
+        padding: 1rem;
+        gap: 0.75rem;
+        text-align: center;
+    }
+
+    .diagnosis-balance {
+        text-align: center;
+    }
+
+    /* Metrics Row */
+    .metrics-row {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.75rem;
+    }
+
+    .metric-card {
+        padding: 1rem !important;
+    }
+
+    .metric-card .value {
+        font-size: 1.1rem !important;
+    }
+
+    /* Charts */
+    .charts-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .chart-wrapper {
+        min-height: 200px;
+    }
+
+    /* Details */
+    .details-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Settings Grid */
+    .settings-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Cards */
+    .card {
+        padding: 1rem;
+    }
+
+    /* Tables - Horizontal Scroll */
+    table {
+        font-size: 0.85rem;
+    }
+
+    td,
+    th {
+        padding: 0.6rem 0.5rem !important;
+    }
+
+    /* Modals */
+    .modal-content {
+        width: 95% !important;
+        max-height: 90vh;
+        margin: 5vh auto;
+    }
+
+    /* Tip Items */
+    .tip-item {
+        font-size: 0.85rem;
+        padding: 0.6rem;
+    }
+
+    /* Goal cards */
+    .goal-card-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* User Profile in sidebar */
+    .user-profile {
+        padding: 0.75rem;
+    }
+
+    /* Advisor Tips */
+    .advisor-tips {
+        gap: 0.5rem;
+    }
+}
