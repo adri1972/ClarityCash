@@ -277,25 +277,33 @@ REGLAS DE FORMATO:
         const apiKey = this.getApiKey();
 
         const prompt = `
-            Actúa como un experto en extracción de datos de facturas y recibos (OCR Inteligente).
+            Actúa como un experto en extracción de datos de facturas y recibos (OCR Inteligente) para Colombia/Latam.
             Analiza la imagen adjunta y extrae la información en formato JSON estricto.
             
-            Instrucciones Clave:
-            1. Busca el "TOTAL A PAGAR" o el monto mayor al final del ticket. Ignora subtotales, IVA o cambio.
-            2. La fecha suele estar arriba. Formato preferido: YYYY-MM-DD.
-            3. El comercio (Merchant) suele estar en el encabezado o logo.
-            4. Categoriza el gasto en UNA de estas opciones: Alimentación, Transporte, Salud, Vivienda, Servicios, Restaurantes, Ropa, Ocio, Otros.
-            
-            Formato JSON de respuesta (SIN bloques de código, solo el objeto):
+            Instrucciones CRITICAS para MONTO (Amount):
+            1. Busca el "TOTAL A PAGAR", "TOTAL A CANCELAR", "A PAGAR" o "NETO".
+            2. IMPORTANTE: EL MONTO DEBE SER UN VALOR MONETARIO REAL. Ignora números largos de "Resolución", "Autorización", "CUFE", "Factura No", "NIT" o "Teléfono".
+            3. Si ves un número gigante (como 187640...), ES UN CÓDIGO, NO EL PRECIO. El precio real suele tener separadores de miles (ej: 198.514).
+            4. El formato de respuesta para 'amount' debe ser NUMBER (ej: 198514). Redondea a entero.
+
+            Instrucciones para COMERCIO y CATEGORÍA:
+            1. Merchant: Busca el nombre en el logo o encabezado (Ej: "Notaría 7", "D1", "Exito").
+            2. Category:
+               - Si es "Notaría" o trámites legales -> "Vivienda" (si parece escritura) o "Servicios".
+               - Si es Mercado/Supermercado -> "Alimentación".
+               - Si es Gasolinera -> "Transporte".
+               - Si es Restaurante -> "Restaurantes".
+
+            Formato JSON de respuesta (solo el objeto):
             {
                 "date": "YYYY-MM-DD",
-                "amount": number (Ej: 15000. No uses separadores de miles, solo el numero puro. Si hay decimales usa punto),
+                "amount": number (El valor limpio. JAMÁS pongas el número de autorización),
                 "merchant": "Nombre del Negocio",
                 "category": "Categoría Sugerida",
-                "note": "Breve descripción de items (ej: 'Hamburguesa y gaseosa')"
+                "note": "Breve descripción (ej: 'Derechos Notariales' o 'Escrituración')"
             }
             
-            Si algún dato no es visible o claro, usa null. No inventes información.
+            Si algún dato no es visible o claro, usa null.
         `;
 
         try {
