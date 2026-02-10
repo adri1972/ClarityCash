@@ -241,7 +241,7 @@ REGLAS DE FORMATO:
      * Cache response to avoid unnecessary API calls
      */
     cacheResponse(month, year, text) {
-        const key = `cc_ai_${year}_${month}`;
+        const key = `cc_ai_v41_${year}_${month}`; // Force fresh advice for v41
         const data = { text, timestamp: Date.now(), provider: this.getProvider() };
         localStorage.setItem(key, JSON.stringify(data));
     }
@@ -250,7 +250,7 @@ REGLAS DE FORMATO:
      * Get cached response if less than 24 hours old
      */
     getCachedResponse(month, year) {
-        const key = `cc_ai_${year}_${month}`;
+        const key = `cc_ai_v41_${year}_${month}`; // Check specifically for v41 advice
         const raw = localStorage.getItem(key);
         if (!raw) return null;
 
@@ -378,40 +378,55 @@ REGLAS DE FORMATO:
     }
 
     /**
-     * Get specific advice for a critical financial situation
+     * Get specific advice for ANY financial situation
      */
     async getConsultation(context) {
         if (!this.hasApiKey()) {
-            return "⚠️ Configura tu API Key para recibir consejos personalizados.";
+            return "⚠️ Configura tu API Key en Ajustes para recibir consejos personalizados.";
+        }
+
+        const apiKey = this.getApiKey();
+        const provider = this.getProvider();
+
+        // 1. Define Persona & Strategy based on Problem Type
+        let role = "Asesor Financiero Personal";
+        let strategy = "Analiza la situación y da consejos prácticos.";
+
+        if (context.problem && context.problem.includes('DEFICIT')) {
+            role = "Experto en Crisis y Reestructuración de Deudas";
+            strategy = "El usuario está en DÉFICIT. Su casa financiera está en llamas. Tu objetivo es apagar el fuego con medidas de choque inmediatas. Prioriza liquidez y supervivencia.";
+        } else if (context.problem === 'WARNING') {
+            role = "Coach de Hábitos y Ahorro";
+            strategy = "El usuario vive al día (paycheck to paycheck). Su riesgo es alto ante cualquier imprevisto. Tu objetivo es despertarlo y encontrar fugas de dinero para crear un colchón de seguridad.";
+        } else if (context.problem === 'SURPLUS') {
+            role = "Gestor de Patrimonio e Inversiones";
+            strategy = "El usuario tiene dinero extra (Superávit). Tu objetivo es que NO se lo gaste en tonterías. Sugiérele estrategias de crecimiento (Inversión, Fondo de Emergencia o Prepago de deuda inteligente).";
         }
 
         const prompt = `
-            Actúa como un Asesor Financiero de Crisis experimentado.
-            El usuario está en DÉFICIT este mes. Necesita un plan de choque inmediato.
+            ROL: ${role}
+            ESTRATEGIA: ${strategy}
             
-            Datos del Caso:
-            - Déficit Actual: $${context.deficit}
-            - Ingreso Mensual: $${context.income}
-            - Principal Fuga de Dinero: ${context.top_leak_name} ($${context.top_leak_amount})
+            DIAGNÓSTICO DEL PACIENTE (DATOS REALES):
+            ${context.full_context}
             
-            Tu Tarea:
-            Dame 2 acciones tácticas, específicas y urgentes para aplicar HOY mismo.
+            TU MISIÓN:
+            Dame 2 (DOS) acciones tácticas, específicas y ejecutables HOY MISMO.
             
             REGLAS DE ORO:
-            1. Si la fuga es COMIDA/MERCADO: Sugiere cambiar marcas, eliminar desperdicios, cocinar en casa o usar bancos de alimentos. JAMÁS sugieras diferir comida a cuotas (es estúpido).
-            2. Si la fuga es DEUDA: Sugiere llamar al banco, rediferir saldos, compra de cartera o pagar solo mínimos legales.
-            3. Si la fuga es OCIO/LUJOS: Ordena cortar el gasto a cero inmediatamente (Cero Tolerancia).
-            4. Sé breve (máximo 2 frases por punto). Usa emojis.
-            5. Habla directo al usuario ("Tú").
+            1. No seas genérico ("ahorra más"). Sé quirúrgico ("Cancela X", "Vende Y", "Llama a Z").
+            2. Usa un tono directo, profesional y empático. Habla de "Tú".
+            3. Si la fuga es DEUDA, sugiere renegociar o pagar mínimos.
+            4. Si la fuga es OCIO, sugiere "Ayuno de Gasto" o cancelar suscripciones.
+            5. Usa emojis para resaltar.
+            6. Sé breve (máximo 400 caracteres en total).
             
-            Formato de respuesta: Texto plano con saltos de línea. No uses Markdown complejo.
+            FORMATO DE RESPUESTA:
+            Texto plano, separar ideas con bullets o saltos de línea.
         `;
 
         try {
-            const apiKey = this.getApiKey();
-            const provider = this.getProvider();
             let text = "";
-
             if (provider === 'openai') {
                 const response = await fetch(this.OPENAI_URL, {
                     method: 'POST',
@@ -419,7 +434,7 @@ REGLAS DE FORMATO:
                     body: JSON.stringify({
                         model: "gpt-4o",
                         messages: [{ role: "user", content: prompt }],
-                        max_tokens: 300
+                        max_tokens: 400
                     })
                 });
                 const data = await response.json();
@@ -439,7 +454,7 @@ REGLAS DE FORMATO:
 
         } catch (error) {
             console.error(error);
-            return "❌ Error conectando con tu Asesor IA. Verifica tu conexión.";
+            return "❌ Error conectando con tu Asesor IA.";
         }
     }
 }

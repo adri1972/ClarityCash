@@ -730,7 +730,6 @@ class UIManager {
     async processAIAdvice(plan) {
         if (!plan || !plan.adjustments) return;
 
-        // Find items needing AI
         const aiItems = plan.adjustments
             .map((item, index) => ({ item, index }))
             .filter(({ item }) => typeof item === 'object' && item.type === 'AI_ANALYSIS_REQUIRED');
@@ -742,33 +741,45 @@ class UIManager {
             if (!element) continue;
 
             try {
-                // Call Gemini
-                // Small delay to let UI render and not block thread
                 await new Promise(r => setTimeout(r, 100));
 
                 const adviceText = await this.aiAdvisor.getConsultation(item.context);
 
-                // Update UI with result
-                // We split by newline to make bullet points if returned as such
-                // But Prompt asks for "max 2 sentences per point".
-                // Since prompt asks for 2 points, maybe better to just use the text.
-
-                // Let's format it nicely
                 element.style.background = 'white';
                 element.style.border = 'none';
                 element.classList.remove('ai-loading');
 
                 element.innerHTML = `
-                    <span class="tip-bullet">✨</span>
-                    <span class="tip-text" style="color: #333;">
-                        ${adviceText.replace(/\n/g, '<br>')}
-                    </span>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <span class="tip-bullet">✨</span>
+                            <span class="tip-text" style="color: #333; line-height: 1.4;">
+                                ${adviceText.replace(/\n/g, '<br>')}
+                            </span>
+                        </div>
+                        <div style="align-self: flex-end; margin-top: 5px;">
+                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:#999; font-size:0.7rem; cursor:pointer; text-decoration:underline;">
+                               🔄 Nueva Opinión
+                           </button>
+                        </div>
+                    </div>
                 `;
 
             } catch (err) {
                 console.error("AI Advice Failed:", err);
-                element.innerHTML = `<span class="tip-text" style="color:red">Error consultando IA.</span>`;
+                element.innerHTML = `
+                    <span class="tip-text" style="color:red">Error IA: ${err.message}</span>
+                    <button onclick="window.ui.forceRefreshAI()" style="margin-left:8px; font-size:0.7em; cursor:pointer;">Reintentar</button>
+                `;
             }
+        }
+    }
+
+    forceRefreshAI() {
+        if (confirm('¿Quieres que la IA analice de nuevo tu situación?')) {
+            const key = `cc_ai_v41_${this.viewDate.getFullYear()}_${this.viewDate.getMonth()}`;
+            localStorage.removeItem(key);
+            this.renderDashboard();
         }
     }
 
@@ -2361,10 +2372,10 @@ class UIManager {
             
             <!-- ADVANCED / TROUBLESHOOTING -->
             <div style="margin-top: 3rem; text-align: center; opacity: 0.7;">
-                <button id="force-update-env-btn" class="btn-text" style="color: #ff5252; font-size: 0.8rem; text-decoration: underline;">
-                    ⚠️ Solución de Problemas: Recargar App
+                <button id="force-update-env-btn" class="btn-text" style="color: #2E7D32; font-size: 0.85rem; text-decoration: underline; font-weight: 600;">
+                    🔄 Buscar Actualizaciones / Recargar
                 </button>
-                <p style="font-size: 0.7rem; color: #ccc; margin-top: 0.3rem;">v32 (Stable)</p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 0.5rem;">Versión instalada: v41 (Universal AI)</p>
             </div>
             </div>
         `;
@@ -2374,21 +2385,34 @@ class UIManager {
             const forceBtn = document.getElementById('force-update-env-btn');
             if (forceBtn) {
                 forceBtn.addEventListener('click', async () => {
-                    if (confirm('¿Quieres borrar el caché y recargar la última versión? Úsalo si notas que la app no funciona bien.')) {
-                        forceBtn.innerHTML = 'Limpiando...';
+                    if (confirm('¿Actualizar a la última versión? Esto recargará la aplicación.')) {
+                        forceBtn.innerHTML = '⌛ Actualizando...';
+                        forceBtn.disabled = true;
+
                         try {
+                            // 1. Unregister Service Workers
                             if ('serviceWorker' in navigator) {
                                 const regs = await navigator.serviceWorker.getRegistrations();
                                 for (let r of regs) await r.unregister();
-                                const keys = await caches.keys();
-                                for (let k of keys) await caches.delete(k);
                             }
-                        } catch (e) { console.error(e); }
-                        window.location.reload(true);
+
+                            // 2. Clear Caches
+                            const keys = await caches.keys();
+                            for (let k of keys) await caches.delete(k);
+
+                            // 3. Force Network Reload with Timestamp (The Nuclear Option)
+                            // This guarantees we get the fresh index.html
+                            console.log('Forcing nuclear reload...');
+                            window.location.href = window.location.pathname + '?update=' + Date.now();
+
+                        } catch (e) {
+                            console.error(e);
+                            window.location.reload();
+                        }
                     }
                 });
             }
-        }, 100);
+        }, 1000);
 
         // Handle Profile Form
         const settingsForm = document.getElementById('settings-form');

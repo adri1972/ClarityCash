@@ -1,18 +1,15 @@
-const CACHE_NAME = 'clarity-cash-v7';
+const CACHE_NAME = 'clarity-cash-v43'; // Bump to v43
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './manifest.json',
     './assets/icon.svg',
     './css/styles.css',
-    './js/advisor.js?v=32',
-    './js/ai.js',
-    './js/gemini.js?v=32',
-    './js/app.js?v=32',
-    './js/data.js?v=32',
-    './js/ui.js?v=32',
-    'https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js',
-    'https://cdn.jsdelivr.net/npm/chart.js'
+    './js/advisor.js',
+    './js/gemini.js',
+    './js/app.js',
+    './js/data.js',
+    './js/ui.js'
 ];
 
 self.addEventListener('install', (event) => {

@@ -140,11 +140,7 @@ class FinancialAdvisor {
     /**
      * Action Plan Generator (The "What to do next")
      * Returns structured advice for the Dashboard Hero Section
-     */
-    /**
-     * Action Plan Generator (The "What to do next")
-     * Returns structured advice for the Dashboard Hero Section
-     * NOW WITH "DEEP DIVE" ANALYSIS (Less generic, more math-based)
+     * NOW WITH UNIVERSAL AI ANALYSIS FOR ALL SITUATIONS
      */
     generateActionPlan(month, year) {
         const summary = this.store.getFinancialSummary(month, year);
@@ -160,7 +156,6 @@ class FinancialAdvisor {
         const income = summary.income > 0 ? summary.income : 1;
 
         const txs = this.store.transactions.filter(t => {
-            // Filter by month/year robustly
             if (!t.date) return false;
             const parts = t.date.split('-');
             if (parts.length < 2) return false;
@@ -189,35 +184,12 @@ class FinancialAdvisor {
         let diagnosis = "";
 
         // --- HELPER: Find Top Leaks ---
-        // Exclude Fixed Costs (Vivienda, Educacion, Salud, financiero)
         const fixedCats = ['Vivienda', 'Educación', 'Salud', 'Ahorro', 'Inversión', 'Pago Deuda', 'Deuda/Créditos', 'Tarjeta de Crédito', 'Impuestos', 'Salario / Nómina', 'Honorarios', 'Otros Ingresos'];
         const discretionary = Object.entries(breakdown)
             .filter(([name, val]) => !fixedCats.includes(name) && val > 0)
             .sort((a, b) => b[1] - a[1]); // Descending
 
         const topLeak = discretionary.length > 0 ? discretionary[0] : null;
-
-        // --- HELPER: Calculate total known fixed expenses ---
-        const configFixedExpenses = this.store.config.fixed_expenses || [];
-        const totalFixedCosts = configFixedExpenses.reduce((sum, fe) => sum + (fe.amount || 0), 0);
-        const fixedCostPct = income > 0 ? ((totalFixedCosts / income) * 100).toFixed(0) : 0;
-
-        // --- HELPER: Detect budget mismatches with fixed expenses ---
-        const budgets = this.store.config.budgets || {};
-        let budgetMismatches = [];
-        const fixedByCat = {};
-        configFixedExpenses.forEach(fe => {
-            if (fe.category_id && fe.amount) {
-                fixedByCat[fe.category_id] = (fixedByCat[fe.category_id] || 0) + fe.amount;
-            }
-        });
-        Object.entries(fixedByCat).forEach(([catId, fixedAmt]) => {
-            const budgetAmt = budgets[catId] || 0;
-            if (budgetAmt > 0 && budgetAmt < fixedAmt) {
-                const cat = this.store.categories.find(c => c.id === catId);
-                budgetMismatches.push({ name: cat ? cat.name : catId, budget: budgetAmt, fixed: fixedAmt });
-            }
-        });
 
         // --- HELPER: Top 3 Merchants in Leak Category ---
         let topMerchantsList = [];
@@ -229,7 +201,6 @@ class FinancialAdvisor {
                 const merchantMap = {};
                 catTxs.forEach(t => {
                     let m = t.note || "Varios";
-                    // Truncate and clean for better grouping
                     m = m.split(' ')[0].replace(/[^a-zA-Z]/g, '').toUpperCase();
                     if (m.length < 3) m = "Varios";
                     if (!merchantMap[m]) merchantMap[m] = 0;
@@ -237,142 +208,89 @@ class FinancialAdvisor {
                 });
                 topMerchantsList = Object.entries(merchantMap)
                     .sort((a, b) => b[1] - a[1])
-                    .slice(0, 3); // Top 3
+                    .slice(0, 3);
             }
         }
 
-        // --- LOGIC TREE ---
-        // Effective savings = explicit savings + positive cash flow (money available even if not tagged as savings)
         const effectiveSavings = summary.savings + Math.max(0, summary.balance_net);
+        const totalFixedCosts = (this.store.config.fixed_expenses || []).reduce((sum, fe) => sum + (fe.amount || 0), 0);
 
-        // CASE A: DEFICIT (The House is on Fire)
+        // CASE A: DEFICIT (Any Deficit)
         if (summary.balance_net < 0) {
             status = 'CRITICAL';
             const deficit = Math.abs(summary.balance_net);
             priority = `🚨 DÉFICIT DE ${this.formatMoney(deficit)}`;
 
-            // Fix: Include 'Tarjeta de Crédito' in Debt Calculation
-            const cardPayment = breakdown['Tarjeta de Crédito'] || 0;
-            const debtPay = summary.debt_payment + cardPayment;
+            const topLeakName = topLeak ? topLeak[0] : 'Gastos Generales';
+            const topLeakAmount = topLeak ? this.formatMoney(topLeak[1]) : '$0';
 
-            if (debtPay > income * 0.3) { // Lowered threshold to 30%
-                diagnosis = `Tu deuda te está asfixiando. Pagas ${this.formatMoney(debtPay)}, que es el ${((debtPay / income) * 100).toFixed(0)}% de tu ingreso.`;
-                adjustments.push(`<b>🛑 Frena el pago de capital:</b> Solo paga los mínimos legales este mes. Necesitas liquidez para comer.`);
-                adjustments.push(`<b>📞 Llama al banco ya:</b> Pide "Rediferir a 24 o 36 cuotas" la tarjeta de mayor cuota. Bajarás la mensualidad inmediatamente.`);
+            let merchantText = "";
+            if (topMerchantsList.length > 0) {
+                const names = topMerchantsList.map(m => `${m[0]} (${this.formatMoney(m[1])})`).join(', ');
+                merchantText = `<br><br>👉 <b>Principales fugas:</b> ${names}.`;
             }
-            else if (topLeak) {
-                let merchantText = "";
-                if (topMerchantsList.length > 0) {
-                    const names = topMerchantsList.map(m => `${m[0]} (${this.formatMoney(m[1])})`).join(', ');
-                    merchantText = `<br><br>👉 <b>Principales fugas:</b> ${names}.`;
+
+            diagnosis = `Tienes un hueco de ${this.formatMoney(deficit)}. Tu principal fuga es <b>${topLeakName}</b> (${topLeakAmount}).${merchantText}`;
+
+            adjustments.push({
+                type: 'AI_ANALYSIS_REQUIRED',
+                context: {
+                    problem: 'DEFICIT',
+                    deficit: this.formatMoney(deficit),
+                    income: this.formatMoney(income),
+                    expenses: this.formatMoney(summary.expenses),
+                    top_leak_name: topLeakName,
+                    top_leak_amount: topLeakAmount,
+                    debt_payment: this.formatMoney(summary.debt_payment),
+                    full_context: `Usuario con déficit de ${this.formatMoney(deficit)}. Ingreso: ${this.formatMoney(income)}. Gasto Total: ${this.formatMoney(summary.expenses)}. Fuga principal: ${topLeakName} (${topLeakAmount}). Pago Deuda: ${this.formatMoney(summary.debt_payment)}.`
                 }
-
-                // Discrepancy Check (User spent huge last month vs this month)
-                let hangoverWarn = "";
-                if (prevExpenses > income * 1.5) {
-                    hangoverWarn = `<br><br>⚠️ <b>Ciclo de Deuda:</b> Veo gastos muy altos el mes anterior (${this.formatMoney(prevExpenses)}). Si usaste tarjeta, esas cuotas te están asfixiando hoy.`;
-                }
-
-                diagnosis = `Tu déficit (${this.formatMoney(deficit)}) proviene de <b>${topLeak[0]}</b> (${this.formatMoney(topLeak[1])}) y tus deudas.${merchantText}${hangoverWarn}`;
-
-                if (deficit > income * 0.3) {
-                    adjustments.push(`<b>🛑 Crisis de Liquidez:</b> No dispones de efectivo para cubrir el mes.`);
-
-                    // SMART ADVICE BASED ON CATEGORY TYPE
-                    const debtCats = ['Deuda/Créditos', 'Tarjeta de Crédito', 'Intereses Financieros', 'Otros Pasivos'];
-                    const livingCats = ['Alimentación', 'Vivienda', 'Alquiler / Hipoteca', 'Energía / Luz', 'Acueducto / Agua', 'Gas Natural', 'Internet / TV', 'Plan Celular', 'Mantenimiento / Admón', 'Gasolina', 'Transporte', 'Salud', 'Educación'];
-                    const lifestyleCats = ['Ocio', 'Restaurantes / Domicilios', 'Ropa / Cuidado Personal', 'Alcohol / Tabaco', 'Suscripciones Digitales', 'Deporte / Gym', 'Café / Snacks', 'Otros/Imprevistos'];
-
-                    if (debtCats.includes(leakName)) {
-                        adjustments.push(`<b>📞 Acción Inteligente (Deuda):</b> Llama a tu banco ya. Pide rediferir el saldo de tu tarjeta o crédito a 24/36 cuotas. Bajarás la carga mensual inmediatamente.`);
-                    }
-                    else if (livingCats.includes(leakName)) {
-                        adjustments.push(`<b>✂️ Economía de Guerra:</b> Tu gasto en <b>${leakName}</b> es insostenible hoy. Pásate a marcas blancas, elimina desperdicios o busca opciones más baratas.`);
-                        adjustments.push(`<b>🛡️ Estrategia de Pago:</b> Si tienes tarjeta de crédito, paga solo el Pago Mínimo este mes. Usa tu efectivo disponible EXCLUSIVAMENTE para Comida y Servicios.`);
-                    }
-                    else if (lifestyleCats.includes(leakName)) {
-                        adjustments.push(`<b>🚫 Cero Tolerancia:</b> Cancela o pausa absolutamente todo gasto en <b>${leakName}</b>. Estás en números rojos, los lujos quedan suspendidos hasta nuevo aviso.`);
-                    }
-                    else {
-                        // Fallback logic for mix/unknown
-                        if (topMerchantsList.length > 0) {
-                            adjustments.push(`<b>Plan de Choque:</b> Detén compras inecesarias en <b>${topMerchantsList[0][0]}</b>.`);
-                        }
-                        adjustments.push(`<b>Venta de Activos:</b> Considera vender algo que no uses por Marketplace para generar liquidez inmediata de al menos $${this.formatMoney(deficit)}.`);
-                    }
-                } else {
-                    adjustments.push(`<b>Plan de Choque:</b> No gastes ni un peso más en <b>${leakName}</b> hasta el próximo mes.`);
-                }
-            }
-            else {
-                diagnosis = "Tus costos fijos (Vivienda/Servicios) son mayores a tus ingresos. Esto es estructural.";
-                adjustments.push(`<b>Ingreso de Emergencia:</b> Vende algo por Marketplace que valga al menos ${this.formatMoney(deficit)} esta semana.`);
-            }
+            });
         }
-        // CASE B: BREAK-EVEN (Living on the Edge)
-        // Only flag as risk if effective savings (savings + positive balance) is truly low
+        // CASE B: LIVING ON EDGE
         else if (effectiveSavings < (income * 0.05)) {
             status = 'WARNING';
             priority = "⚠️ RIESGO ALTO (Vives al día)";
 
             if (topLeak) {
                 const leakPct = (topLeak[1] / income) * 100;
-                let merchantText = "";
+                diagnosis = `No ahorras porque <b>${topLeak[0]}</b> consume el ${leakPct.toFixed(0)}% de tu ingreso (${this.formatMoney(topLeak[1])}).`;
 
-                if (topMerchantsList.length > 0) {
-                    const topList = topMerchantsList.map(m => `${m[0]} (${this.formatMoney(m[1])})`).join(', ');
-                    merchantText = `<br><br>👉 <b>Se fue en:</b> ${topList} y otros.`;
-                }
-
-                diagnosis = `No ahorras porque <b>${topLeak[0]}</b> consume el ${leakPct.toFixed(0)}% de tu ingreso (${this.formatMoney(topLeak[1])}).${merchantText}`;
-
-                const cat = this.store.categories.find(c => c.name === topLeak[0]);
-                const count = txs.filter(t => t.category_id === cat?.id).length;
-
-                if (count > 6) {
-                    adjustments.push(`<b>Comportamiento Compulsivo:</b> Hiciste ${count} compras distintas en esta categoría. Estás comprando por impulso, no por necesidad.`);
-                    adjustments.push(`👉 <b>Estrategia de Fricción:</b> Retira en efectivo tu presupuesto semanal para ${topLeak[0]}. Cuando se acabe el billete, se acabó el gasto.`);
-                } else {
-                    adjustments.push(`<b>Compras Grandes:</b> Hiciste pocas compras pero de alto valor.`);
-                    adjustments.push(`👉 <b>Regla de las 72h:</b> Para compras > $200k, espera 3 días antes de pagar. Dale tiempo a tu cerebro racional.`);
-                }
+                adjustments.push({
+                    type: 'AI_ANALYSIS_REQUIRED',
+                    context: {
+                        problem: 'WARNING',
+                        income: this.formatMoney(income),
+                        top_leak_name: topLeak[0],
+                        top_leak_amount: this.formatMoney(topLeak[1]),
+                        full_context: `Usuario vive al día. Ingreso: ${this.formatMoney(income)}. Principal gasto: ${topLeak[0]} (${this.formatMoney(topLeak[1])}).`
+                    }
+                });
             } else {
                 diagnosis = "El dinero se te escapa en 'Gastos Hormiga' dispersos.";
-                adjustments.push("<b>Ayuno de Gasto:</b> Próximos 3 días, gasta SOLO en transporte y comida básica. Nada más.");
+                adjustments.push("<b>Reto AI:</b> Reduce gastos hormiga esta semana.");
             }
         }
-        // CASE C: GOOD (Can optimize)
+        // CASE C: SURPLUS
         else {
             status = 'OK';
             priority = "📈 SUPERÁVIT: Optimización";
             const surplus = effectiveSavings;
-            const discretionarySpend = summary.expenses - totalFixedCosts;
-
-            // Budget mismatch warning (budget set below fixed costs)
-            if (budgetMismatches.length > 0) {
-                const fixes = budgetMismatches.map(m => `${m.name}: presupuesto ${this.formatMoney(m.budget)} pero tu gasto fijo es ${this.formatMoney(m.fixed)}`).join('. ');
-                diagnosis = `⚠️ Hay presupuestos mal configurados: ${fixes}. Ve a <b>Configuración → Metas</b> y usa "Auto por Perfil" para corregirlos.<br><br>`;
-            } else {
-                diagnosis = '';
-            }
+            const fixedCostPct = income > 0 ? ((totalFixedCosts / income) * 100).toFixed(0) : 0;
 
             if (totalFixedCosts > 0) {
-                diagnosis += `Tu flujo positivo es ${this.formatMoney(surplus)}. Tus costos fijos son ${this.formatMoney(totalFixedCosts)} (${fixedCostPct}% del ingreso) — eso ya está contemplado.`;
+                diagnosis = `Tu flujo positivo es ${this.formatMoney(surplus)}. Tus costos fijos son ${this.formatMoney(totalFixedCosts)} (${fixedCostPct}% del ingreso).`;
             } else {
-                diagnosis += `Tienes un flujo de caja positivo de ${this.formatMoney(surplus)}. ¡Muy bien!`;
+                diagnosis = `Tienes un flujo de caja positivo de ${this.formatMoney(surplus)}. ¡Muy bien!`;
             }
 
-            if (this.store.config.has_debts && this.store.config.total_debt > 0) {
-                const debtAmount = this.store.config.total_debt;
-                const suggestedPayment = Math.min(surplus * 0.5, debtAmount);
-                adjustments.push(`<b>Ataque a la Deuda:</b> De tu excedente de ${this.formatMoney(surplus)}, usa ${this.formatMoney(suggestedPayment)} como abono extra a capital. Esto acelera la liquidación y reduce intereses.`);
-                if (discretionarySpend > 0 && topLeak) {
-                    adjustments.push(`<b>Optimiza:</b> Si recortas ${topLeak[0]} (${this.formatMoney(topLeak[1])}) un 20%, liberarías ${this.formatMoney(topLeak[1] * 0.2)}/mes adicional para la deuda.`);
+            adjustments.push({
+                type: 'AI_ANALYSIS_REQUIRED',
+                context: {
+                    problem: 'SURPLUS',
+                    surplus: this.formatMoney(surplus),
+                    full_context: `Usuario tiene superávit de ${this.formatMoney(surplus)}.`
                 }
-            } else {
-                adjustments.push(`<b>Inversión Automática:</b> Programa una transferencia de ${this.formatMoney(surplus * 0.5)} a un bolsillo de inversión el día de pago. El dinero quieto pierde valor.`);
-                adjustments.push("<b>Sube el nivel:</b> Tu estilo de vida está controlado. Es hora de aumentar tu meta de ingresos o crear una meta de ahorro.");
-            }
+            });
         }
 
         return { status, priority, diagnosis, adjustments };
