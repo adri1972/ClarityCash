@@ -366,4 +366,70 @@ REGLAS DE FORMATO:
             throw new Error('No se pudo leer el recibo. Intenta con mejor luz o recorta la imagen.');
         }
     }
+
+    /**
+     * Get specific advice for a critical financial situation
+     */
+    async getConsultation(context) {
+        if (!this.hasApiKey()) {
+            return "⚠️ Configura tu API Key para recibir consejos personalizados.";
+        }
+
+        const prompt = `
+            Actúa como un Asesor Financiero de Crisis experimentado.
+            El usuario está en DÉFICIT este mes. Necesita un plan de choque inmediato.
+            
+            Datos del Caso:
+            - Déficit Actual: $${context.deficit}
+            - Ingreso Mensual: $${context.income}
+            - Principal Fuga de Dinero: ${context.top_leak_name} ($${context.top_leak_amount})
+            
+            Tu Tarea:
+            Dame 2 acciones tácticas, específicas y urgentes para aplicar HOY mismo.
+            
+            REGLAS DE ORO:
+            1. Si la fuga es COMIDA/MERCADO: Sugiere cambiar marcas, eliminar desperdicios, cocinar en casa o usar bancos de alimentos. JAMÁS sugieras diferir comida a cuotas (es estúpido).
+            2. Si la fuga es DEUDA: Sugiere llamar al banco, rediferir saldos, compra de cartera o pagar solo mínimos legales.
+            3. Si la fuga es OCIO/LUJOS: Ordena cortar el gasto a cero inmediatamente (Cero Tolerancia).
+            4. Sé breve (máximo 2 frases por punto). Usa emojis.
+            5. Habla directo al usuario ("Tú").
+            
+            Formato de respuesta: Texto plano con saltos de línea. No uses Markdown complejo.
+        `;
+
+        try {
+            const apiKey = this.getApiKey();
+            const provider = this.getProvider();
+            let text = "";
+
+            if (provider === 'openai') {
+                const response = await fetch(this.OPENAI_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [{ role: "user", content: prompt }],
+                        max_tokens: 300
+                    })
+                });
+                const data = await response.json();
+                text = data.choices[0].message.content;
+            } else {
+                const url = `${this.GEMINI_URL}?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                text = data.candidates[0].content.parts[0].text;
+            }
+            return text;
+
+        } catch (error) {
+            console.error(error);
+            return "❌ Error conectando con tu Asesor IA. Verifica tu conexión.";
+        }
+    }
 }

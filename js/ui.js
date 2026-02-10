@@ -613,12 +613,24 @@ class UIManager {
                     <div class="diagnosis-content">
                         <h3>${plan.priority}</h3>
                         <div class="advisor-tips">
-                            ${plan.adjustments.map((step, i) => `
+                            ${plan.adjustments.map((step, i) => {
+            if (typeof step === 'object' && step.type === 'AI_ANALYSIS_REQUIRED') {
+                return `
+                                        <div id="ai-advice-tip-${i}" class="tip-item ai-loading" style="background: rgba(255,255,255,0.9); border: 1px dashed #0D47A1;">
+                                            <span class="tip-bullet">🤖</span>
+                                            <span class="tip-text" style="font-style: italic; color: #0D47A1;">
+                                                Analizando estrategia personalizada...
+                                            </span>
+                                        </div>
+                                    `;
+            }
+            return `
                                 <div class="tip-item">
                                     <span class="tip-bullet">${i + 1}</span>
                                     <span class="tip-text">${step}</span>
                                 </div>
-                            `).join('')}
+                                `;
+        }).join('')}
                         </div>
                     </div>
                     <div class="diagnosis-balance">
@@ -710,6 +722,54 @@ class UIManager {
         this.renderChart(); // Doughnut
         this.renderHistoryChart(); // Bar Chart
         if (window.feather) window.feather.replace();
+
+        // Trigger AI Insight if needed
+        this.processAIAdvice(plan);
+    }
+
+    async processAIAdvice(plan) {
+        if (!plan || !plan.adjustments) return;
+
+        // Find items needing AI
+        const aiItems = plan.adjustments
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => typeof item === 'object' && item.type === 'AI_ANALYSIS_REQUIRED');
+
+        if (aiItems.length === 0) return;
+
+        for (const { item, index } of aiItems) {
+            const element = document.getElementById(`ai-advice-tip-${index}`);
+            if (!element) continue;
+
+            try {
+                // Call Gemini
+                // Small delay to let UI render and not block thread
+                await new Promise(r => setTimeout(r, 100));
+
+                const adviceText = await this.aiAdvisor.getConsultation(item.context);
+
+                // Update UI with result
+                // We split by newline to make bullet points if returned as such
+                // But Prompt asks for "max 2 sentences per point".
+                // Since prompt asks for 2 points, maybe better to just use the text.
+
+                // Let's format it nicely
+                element.style.background = 'white';
+                element.style.border = 'none';
+                element.classList.remove('ai-loading');
+
+                element.innerHTML = `
+                    <span class="tip-bullet">✨</span>
+                    <span class="tip-text" style="color: #333;">
+                        ${adviceText.replace(/\n/g, '<br>')}
+                    </span>
+                `;
+
+            } catch (err) {
+                console.error("AI Advice Failed:", err);
+                element.innerHTML = `<span class="tip-text" style="color:red">Error consultando IA.</span>`;
+            }
+        }
     }
 
     renderBudgetCompact() {
@@ -1014,12 +1074,25 @@ class UIManager {
                     <div>
                         <h5 style="color: ${color}; font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem;">🚀 PLAN DE ACCIÓN INMEDIATO</h5>
                         <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                            ${plan.adjustments.map((step, index) => `
+                            ${plan.adjustments.map((step, index) => {
+            if (typeof step === 'object' && step.type === 'AI_ANALYSIS_REQUIRED') {
+                return `
+                                        <div id="ai-advice-placeholder" style="background: #E3F2FD; padding: 1rem; border-radius: 10px; border: 1px dashed #2196F3; display: flex; gap: 1rem; align-items: center;">
+                                            <div class="ai-spinner" style="font-size: 1.5rem;">🔮</div>
+                                            <div style="color: #0D47A1; font-size: 0.95rem;">
+                                                <b>Analizando tu caso...</b><br>
+                                                <span style="font-size: 0.8rem; opacity: 0.8;">Tu Asesor IA está redactando una estrategia única para ti.</span>
+                                            </div>
+                                        </div>
+                                    `;
+            }
+            return `
                                 <div style="display: flex; gap: 1rem; align-items: flex-start; background: white; padding: 1rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                                     <div style="background: ${color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;">${index + 1}</div>
                                     <div style="color: #444; font-size: 1rem; line-height: 1.4;">${step}</div>
                                 </div>
-                            `).join('')}
+                                `;
+        }).join('')}
                         </div>
                     </div>
                     `}
