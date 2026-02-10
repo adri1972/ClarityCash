@@ -1,9 +1,10 @@
 // Chart.js is loaded globally in index.html
 
 class UIManager {
-    constructor(store, advisor) {
+    constructor(store, advisor, aiAdvisor) {
         this.store = store;
         this.advisor = advisor; // Instance of FinancialAdvisor
+        this.aiAdvisor = aiAdvisor; // Instance of AIAdvisor (Gemini/ChatGPT)
 
         // Selectors
         this.container = document.getElementById('content-area');
@@ -1759,8 +1760,102 @@ class UIManager {
 
         html += '</div>'; // Close max-width container
 
+        // --- AI ADVISOR SECTION (Gemini / ChatGPT) ---
+        const hasKey = this.aiAdvisor && this.aiAdvisor.hasApiKey();
+        const cached = hasKey ? this.aiAdvisor.getCachedResponse(this.viewDate.getMonth(), this.viewDate.getFullYear()) : null;
+        const providerName = this.aiAdvisor ? (this.aiAdvisor.getProvider() === 'openai' ? 'ChatGPT' : 'Gemini') : 'IA';
+
+        html += `
+            <div class="card" style="margin-top: 2rem; border: 2px solid ${hasKey ? '#E91E63' : '#ddd'}; border-radius: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <h3 style="margin: 0;">🧠 Asesor IA Personal</h3>
+                    ${hasKey ? `<span class="badge" style="background: #E8F5E9; color: #2E7D32; font-size: 0.75rem;">${providerName} Activo ✓</span>` : ''}
+                </div>
+        `;
+
+        if (!hasKey) {
+            html += `
+                <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+                    <p style="font-size: 2rem; margin-bottom: 0.5rem;">🤖</p>
+                    <p style="color: #555; margin-bottom: 1rem;">Conecta tu cuenta de <strong>Google Gemini</strong> (gratis) o <strong>ChatGPT</strong> para recibir consejos personalizados con IA real.</p>
+                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=settings]').click()" style="margin-bottom: 0.5rem;">
+                        ⚙️ Configurar API Key
+                    </button>
+                    <p style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">Tus datos se envían directo a la IA desde tu celular. No pasan por ningún servidor.</p>
+                </div>
+            `;
+        } else if (cached) {
+            html += `
+                <div id="ai-response" style="white-space: pre-line; line-height: 1.7; font-size: 0.95rem; color: #444;">
+                    ${cached}
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <span style="font-size: 0.75rem; color: #999; align-self: center;">Consultado reciente</span>
+                    <button id="ai-refresh-btn" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 1rem;">
+                        🔄 Actualizar Consejo
+                    </button>
+                </div>
+            `;
+        } else {
+            html += `
+                <div id="ai-response" style="text-align: center; padding: 1rem;">
+                    <p style="color: #666;">¿Listo para recibir tu consejo financiero personalizado?</p>
+                </div>
+                <div style="text-align: center;">
+                    <button id="ai-ask-btn" class="btn btn-primary" style="padding: 0.6rem 2rem; font-size: 1rem;">
+                        🧠 Consultar ${providerName}
+                    </button>
+                </div>
+            `;
+        }
+
+        html += '</div>'; // Close AI card
+
         this.container.innerHTML = html;
         if (window.feather) window.feather.replace();
+
+        // Bind AI buttons
+        const askBtn = document.getElementById('ai-ask-btn');
+        const refreshBtn = document.getElementById('ai-refresh-btn');
+
+        const handleAIRequest = async () => {
+            const responseDiv = document.getElementById('ai-response');
+            const btn = askBtn || refreshBtn;
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando...'; }
+            if (responseDiv) {
+                responseDiv.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #ddd; border-top-color: #E91E63; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="color: #999; margin-top: 1rem;">La IA está analizando tus finanzas...</p>
+                    </div>
+                `;
+            }
+
+            try {
+                const advice = await this.aiAdvisor.getAdvice(this.viewDate.getMonth(), this.viewDate.getFullYear());
+                if (responseDiv) {
+                    responseDiv.style.textAlign = 'left';
+                    responseDiv.innerHTML = advice;
+                }
+                if (btn) { btn.textContent = '✅ Listo'; }
+            } catch (err) {
+                const messages = {
+                    'NO_KEY': '⚙️ Configura tu API Key en Configuración.',
+                    'INVALID_KEY': '❌ API Key inválida. Revísala en Configuración.',
+                    'RATE_LIMIT': '⏳ Muchas consultas. Espera unos minutos.',
+                    'NETWORK_ERROR': '📡 Sin conexión a internet.',
+                    'EMPTY_RESPONSE': '🤷 La IA no pudo generar una respuesta. Intenta de nuevo.',
+                    'API_ERROR': '⚠️ Error del servicio de IA. Intenta más tarde.'
+                };
+                if (responseDiv) {
+                    responseDiv.innerHTML = `<p style="color: #F44336; text-align: center;">${messages[err.message] || 'Error desconocido'}</p>`;
+                }
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 Reintentar'; }
+            }
+        };
+
+        if (askBtn) askBtn.addEventListener('click', handleAIRequest);
+        if (refreshBtn) refreshBtn.addEventListener('click', handleAIRequest);
 
         // Render Chart
         this.renderTrendChart();
@@ -2004,6 +2099,57 @@ class UIManager {
                         <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">Guardar Presupuestos</button>
                      </form>
                 </div>
+
+                <!-- AI CONFIGURATION CARD -->
+                <div class="card" style="margin-top: 2rem; border: 2px solid #E91E63; border-radius: 12px;">
+                    <h3 style="margin-bottom: 0.5rem;">🧠 Asesor IA Personal</h3>
+                    <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">
+                        Conecta tu IA para recibir consejos financieros personalizados. Tus datos van directo de tu celular a la IA.
+                    </p>
+                    <form id="ai-config-form">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Proveedor de IA</label>
+                            <select name="ai_provider" id="ai-provider-select">
+                                <option value="gemini" ${(conf.ai_provider || 'gemini') === 'gemini' ? 'selected' : ''}>Google Gemini (Gratis ✨)</option>
+                                <option value="openai" ${conf.ai_provider === 'openai' ? 'selected' : ''}>ChatGPT (OpenAI)</option>
+                            </select>
+                        </div>
+
+                        <div id="gemini-key-group" style="display: ${(conf.ai_provider || 'gemini') === 'gemini' ? 'block' : 'none'};">
+                            <div class="form-group" style="margin-bottom: 0.5rem;">
+                                <label>API Key de Gemini</label>
+                                <input type="password" name="gemini_api_key" 
+                                       value="${conf.gemini_api_key || ''}" 
+                                       placeholder="AIzaSy..."
+                                       style="font-family: monospace; font-size: 0.85rem;">
+                            </div>
+                            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
+                               style="font-size: 0.8rem; color: #E91E63; text-decoration: underline;">
+                                🔑 Obtener API Key gratis (Google AI Studio)
+                            </a>
+                        </div>
+
+                        <div id="openai-key-group" style="display: ${conf.ai_provider === 'openai' ? 'block' : 'none'};">
+                            <div class="form-group" style="margin-bottom: 0.5rem;">
+                                <label>API Key de OpenAI</label>
+                                <input type="password" name="openai_api_key" 
+                                       value="${conf.openai_api_key || ''}" 
+                                       placeholder="sk-..."
+                                       style="font-family: monospace; font-size: 0.85rem;">
+                            </div>
+                            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener"
+                               style="font-size: 0.8rem; color: #E91E63; text-decoration: underline;">
+                                🔑 Obtener API Key (OpenAI)
+                            </a>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                            💾 Guardar Configuración IA
+                        </button>
+                    </form>
+                    ${(conf.gemini_api_key || conf.openai_api_key) ? '<p style="margin-top: 0.5rem; font-size: 0.8rem; color: #2E7D32; text-align: center;">✅ API Key configurada</p>' : ''}
+                </div>
+            </div>
             </div>
         `;
 
@@ -2048,6 +2194,32 @@ class UIManager {
 - Prioridad: Calidad de Vida hoy.
 - Riesgo: Menor capacidad de ahorro ante imprevistos.
 - Recomendado si: Tienes altos ingresos y ya cubriste tus bases.`);
+            });
+        }
+
+        // Handle AI Provider Toggle
+        const providerSelect = document.getElementById('ai-provider-select');
+        if (providerSelect) {
+            providerSelect.addEventListener('change', () => {
+                const isGemini = providerSelect.value === 'gemini';
+                document.getElementById('gemini-key-group').style.display = isGemini ? 'block' : 'none';
+                document.getElementById('openai-key-group').style.display = isGemini ? 'none' : 'block';
+            });
+        }
+
+        // Handle AI Config Form
+        const aiForm = document.getElementById('ai-config-form');
+        if (aiForm) {
+            aiForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                this.store.updateConfig({
+                    ai_provider: formData.get('ai_provider') || 'gemini',
+                    gemini_api_key: formData.get('gemini_api_key') || '',
+                    openai_api_key: formData.get('openai_api_key') || ''
+                });
+                alert('✅ Configuración de IA guardada.');
+                this.render();
             });
         }
 

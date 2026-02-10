@@ -1,4 +1,4 @@
-const CACHE_NAME = 'clarity-cash-v3';
+const CACHE_NAME = 'clarity-cash-v4';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
     './css/styles.css',
     './js/advisor.js',
     './js/ai.js',
+    './js/gemini.js',
     './js/app.js',
     './js/data.js',
     './js/ui.js',

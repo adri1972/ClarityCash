@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Core Modules
     const store = new Store();
     const advisor = new FinancialAdvisor(store);
-    const ui = new UIManager(store, advisor);
+    const aiAdvisor = new AIAdvisor(store);
+    const ui = new UIManager(store, advisor, aiAdvisor);
     window.ui = ui; // Global access for inline events
 
     // Initial Render
