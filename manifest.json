@@ -1,7 +1,7 @@
 {
-    "name": "Clarity Cash",
-    "short_name": "ClarityCash",
-    "start_url": "./index.html",
+    "name": "Clarity Cash AI (v2.0)",
+    "short_name": "Clarity Cash v2",
+    "start_url": "./index.html?v=FORCE_UPDATE_MANIFEST",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#2E7D32",
