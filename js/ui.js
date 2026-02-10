@@ -1705,43 +1705,55 @@ class UIManager {
             html += '<p class="text-secondary">Registra más movimientos para obtener un diagnóstico detallado.</p>';
         } else {
             insights.forEach(i => {
-                const potentialHtml = i.savingsPotential
-                    ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
-                    : '';
+                try {
+                    const potentialHtml = i.savingsPotential
+                        ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
+                        : '';
 
-                // Color mapping
-                const colors = {
-                    'HIGH': '#F44336', // Critical
-                    'MEDIUM': '#FF9800', // Warning
-                    'LOW': '#4CAF50',  // Info/Good
-                    'INFO': '#2196F3'
-                };
-                const color = colors[i.severity] || '#666';
+                    // Map advisor type to severity (advisor returns: critical, warning, info)
+                    const severityMap = { 'critical': 'HIGH', 'warning': 'MEDIUM', 'info': 'LOW' };
+                    const severity = severityMap[i.type] || i.severity || 'INFO';
 
-                // Icon mapping
-                const icons = {
-                    'HIGH': 'alert-circle',
-                    'MEDIUM': 'alert-triangle',
-                    'LOW': 'check-circle',
-                    'INFO': 'info'
-                };
-                const icon = icons[i.severity] || 'info';
+                    // Color mapping
+                    const colors = {
+                        'HIGH': '#F44336',
+                        'MEDIUM': '#FF9800',
+                        'LOW': '#4CAF50',
+                        'INFO': '#2196F3'
+                    };
+                    const color = colors[severity] || '#666';
 
-                html += `
-                    <div class="insight-card severity-${i.severity.toLowerCase()}">
-                        <div class="insight-header">
-                            <span class="insight-title" style="color:${color}; display:flex; align-items:center; gap:0.5rem;">
-                                <i data-feather="${icon}"></i> ${i.title}
-                            </span>
-                            <span class="badge" style="background:${color}20; color:${color}">${i.type}</span>
+                    // Icon mapping
+                    const icons = {
+                        'HIGH': 'alert-circle',
+                        'MEDIUM': 'alert-triangle',
+                        'LOW': 'check-circle',
+                        'INFO': 'info'
+                    };
+                    const icon = icons[severity] || 'info';
+
+                    // Use message or description (advisor uses 'message')
+                    const desc = i.description || i.message || '';
+                    const rec = i.recommendation || '';
+
+                    html += `
+                        <div class="insight-card severity-${severity.toLowerCase()}">
+                            <div class="insight-header">
+                                <span class="insight-title" style="color:${color}; display:flex; align-items:center; gap:0.5rem;">
+                                    <i data-feather="${icon}"></i> ${i.title || 'Insight'}
+                                </span>
+                                <span class="badge" style="background:${color}20; color:${color}">${i.type || ''}</span>
+                            </div>
+                            <p class="insight-desc">${desc}</p>
+                            ${potentialHtml}
+                            ${rec ? `<div class="insight-action">
+                                 💡 <strong>Recomendación:</strong> ${rec}
+                            </div>` : ''}
                         </div>
-                        <p class="insight-desc">${i.description}</p>
-                        ${potentialHtml}
-                        <div class="insight-action">
-                             💡 <strong>Recomendación:</strong> ${i.recommendation}
-                        </div>
-                    </div>
-                `;
+                    `;
+                } catch (err) {
+                    console.error('Error rendering insight:', err, i);
+                }
             });
         }
 
