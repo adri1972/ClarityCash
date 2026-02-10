@@ -28,11 +28,20 @@ const DEFAULT_DATA = {
         { id: 'cat_inc_2', name: 'Honorarios', group: 'INGRESOS', is_default: true },
         { id: 'cat_inc_3', name: 'Otros Ingresos', group: 'INGRESOS', is_default: true },
         // NECESIDADES
-        { id: 'cat_1', name: 'Vivienda', group: 'NECESIDADES', is_default: true },
         { id: 'cat_2', name: 'Alimentación', group: 'NECESIDADES', is_default: true },
         { id: 'cat_3', name: 'Transporte', group: 'NECESIDADES', is_default: true },
         { id: 'cat_gasolina', name: 'Gasolina', group: 'NECESIDADES', is_default: true },
         { id: 'cat_4', name: 'Salud', group: 'NECESIDADES', is_default: true },
+
+        // VIVIENDA & SERVICIOS (New Group)
+        { id: 'cat_1', name: 'Alquiler / Hipoteca', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_luz', name: 'Energía / Luz', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_agua', name: 'Acueducto / Agua', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_gas', name: 'Gas Natural', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_net', name: 'Internet / TV', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_cel', name: 'Plan Celular', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_man', name: 'Mantenimiento / Admón', group: 'VIVIENDA', is_default: true },
+
         // FINANCIERO
         { id: 'cat_5', name: 'Ahorro', group: 'FINANCIERO', is_default: true },
         { id: 'cat_6', name: 'Inversión', group: 'FINANCIERO', is_default: true },
@@ -78,7 +87,38 @@ class Store {
                 data.config.currency = 'COP';
             }
 
-            // Migration: Ensure new default categories exist in stored data
+            // --- DATA MIGRATION: Add new Utility Categories ---
+            if (data.categories) {
+                const existingIds = new Set(data.categories.map(c => c.id));
+                const newCats = [
+                    { id: 'cat_viv_luz', name: 'Energía / Luz', group: 'VIVIENDA', is_default: true },
+                    { id: 'cat_viv_agua', name: 'Acueducto / Agua', group: 'VIVIENDA', is_default: true },
+                    { id: 'cat_viv_gas', name: 'Gas Natural', group: 'VIVIENDA', is_default: true },
+                    { id: 'cat_viv_net', name: 'Internet / TV', group: 'VIVIENDA', is_default: true },
+                    { id: 'cat_viv_cel', name: 'Plan Celular', group: 'VIVIENDA', is_default: true },
+                    { id: 'cat_viv_man', name: 'Mantenimiento / Admón', group: 'VIVIENDA', is_default: true }
+                ];
+
+                newCats.forEach(cat => {
+                    if (!existingIds.has(cat.id)) {
+                        data.categories.push(cat);
+                    }
+                });
+
+                // Update 'Vivienda' label/group for existing users
+                const vivCat = data.categories.find(c => c.id === 'cat_1');
+                if (vivCat) {
+                    vivCat.group = 'VIVIENDA'; // Move to new group
+                    if (vivCat.name === 'Vivienda') vivCat.name = 'Alquiler / Hipoteca'; // Rename for clarity
+                }
+            }
+
+            // Fix Spending Profile if missing
+            if (data.config && !data.config.spending_profile) {
+                data.config.spending_profile = 'BALANCEADO';
+            }
+
+            // Migration: Ensure new default categories exist in stored data (general migration)
             const currentCatIds = new Set((data.categories || []).map(c => c.id));
             DEFAULT_DATA.categories.forEach(defCat => {
                 if (!currentCatIds.has(defCat.id)) {

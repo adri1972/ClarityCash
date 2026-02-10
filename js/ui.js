@@ -1966,7 +1966,7 @@ class UIManager {
 
         // Filter categories for Budget
         const categories = this.store.categories.filter(c =>
-            ['NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group)
+            ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group)
         );
 
         const budgets = conf.budgets || {};
