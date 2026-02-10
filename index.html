@@ -319,7 +319,12 @@
                             <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
                                 <span
                                     style="background: #E8F5E9; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">4</span>
-                                Registra movimientos y ¡listo!
+                                Registra movimientos
+                            </li>
+                            <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
+                                <span
+                                    style="background: #FCE4EC; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">5</span>
+                                Activa tu Asesor IA personal ✨
                             </li>
                         </ul>
                     </div>
@@ -393,18 +398,38 @@
                         <h3 style="margin: 0.5rem 0 0;">Paso 4: ¡A Registrar!</h3>
                     </div>
                     <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
-                        <p>Ya estás listo. Para registrar un gasto o ingreso:</p>
+                        <p>Para registrar un gasto o ingreso:</p>
                         <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
                             <p>1️⃣ Toca <strong>"+ Nuevo Movimiento"</strong></p>
                             <p>2️⃣ Elige tipo (Gasto, Ingreso, etc.)</p>
-                            <p>3️⃣ Escribe el monto o <strong>📷 tómale foto al recibo</strong></p>
-                            <p>4️⃣ Selecciona categoría y cuenta</p>
+                            <p>3️⃣ Escribe el monto o <strong>📷 foto al recibo</strong></p>
+                            <p>4️⃣ Categoría y cuenta</p>
                             <p>5️⃣ ¡Guardar!</p>
                         </div>
-                        <div
-                            style="background: #E8F5E9; border-radius: 8px; padding: 1rem; margin-top: 1rem; text-align: center;">
-                            <p style="margin:0; font-weight: 600; color: #2E7D32;">🧠 La IA analizará tus datos y te
-                                dará recomendaciones en la sección "Insights IA"</p>
+                    </div>
+                </div>
+
+                <!-- Step 6: Activar IA -->
+                <div class="guide-step" data-step="6" style="display:none;">
+                    <div
+                        style="background: linear-gradient(135deg, #9C27B0, #6A1B9A); padding: 1.5rem; text-align: center; color: white;">
+                        <div style="font-size: 2.5rem;">🧠</div>
+                        <h3 style="margin: 0.5rem 0 0;">Paso 5: Activa tu Asesor IA</h3>
+                    </div>
+                    <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
+                        <p>Conecta <strong>Google Gemini (gratis)</strong> o <strong>ChatGPT</strong> para recibir
+                            consejos personalizados:</p>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <p>1️⃣ Ve a <strong>Configuración</strong> (abajo)</p>
+                            <p>2️⃣ Busca <strong>"Asesor IA Personal"</strong></p>
+                            <p>3️⃣ Elige <strong>Google Gemini</strong> (recomendado, es gratis)</p>
+                            <p>4️⃣ Toca <strong>"Obtener API Key gratis"</strong></p>
+                            <p>5️⃣ Inicia sesión con tu cuenta de Google</p>
+                            <p>6️⃣ Copia la key y pégala en la app</p>
+                        </div>
+                        <div style="background: #EDE7F6; border-radius: 8px; padding: 0.8rem; text-align: center;">
+                            <p style="margin:0; font-size: 0.85rem; color: #4A148C;">🔒 Tus datos van directo de tu
+                                celular a la IA. Nadie más los ve.</p>
                         </div>
                     </div>
                 </div>
@@ -435,7 +460,7 @@
     <script>
         // Guide Navigation Logic
         window.guideStep = 1;
-        window.guideTotalSteps = 5;
+        window.guideTotalSteps = 6;
 
         window.showGuide = function () {
             document.getElementById('guide-modal').classList.remove('hidden');
