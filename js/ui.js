@@ -1132,9 +1132,9 @@ class UIManager {
                     <i data-feather="trash-2"></i> Iniciar de Cero
                 </button>
                 
-                <input type="file" id="import-file" accept=".csv,.txt,.pdf" style="display: none;" />
+                <input type="file" id="import-file" accept=".csv,.txt,.pdf,.jpg,.jpeg,.png" style="display: none;" />
                 <button class="btn" style="background: #2E7D32; color: white; display: flex; align-items: center; gap: 0.5rem;" onclick="document.getElementById('import-file').click()">
-                    <i data-feather="upload"></i> Importar Extracto
+                    <i data-feather="camera"></i> Escanear / Importar
                 </button>
             </div>
 
@@ -1326,9 +1326,85 @@ class UIManager {
         }
     }
 
+    openScanConfirmation(data) {
+        // Open Modal
+        const txModal = document.getElementById('transaction-modal');
+        const form = document.getElementById('transaction-form');
+        this.populateSelects('GASTO'); // Assume Gasto for receipt
+        txModal.classList.remove('hidden');
+
+        // Reset previous form data
+        form.reset();
+
+        // 1. DATE
+        if (data.date) {
+            form.querySelector('input[name="date"]').value = data.date;
+        } else {
+            form.querySelector('input[name="date"]').value = new Date().toISOString().split('T')[0];
+        }
+
+        // 2. AMOUNT
+        if (data.amount) {
+            // Format number to User Locale (COP style: 1.000)
+            const fmt = new Intl.NumberFormat('es-CO').format(data.amount);
+            form.querySelector('input[name="amount"]').value = fmt;
+        }
+
+        // 3. CATEGORY (Smart Match)
+        if (data.category) {
+            const search = data.category.toLowerCase();
+            const cat = this.store.categories.find(c =>
+                c.name.toLowerCase().includes(search) ||
+                c.group.toLowerCase().includes(search)
+            );
+            if (cat) {
+                form.querySelector('select[name="category_id"]').value = cat.id;
+            }
+        }
+
+        // 4. NOTE (Merchant + Items)
+        let note = '';
+        if (data.merchant) note += `[${data.merchant}] `;
+        if (data.note) note += data.note;
+        form.querySelector('input[name="note"]').value = note;
+
+        // Visual Feedback
+        const title = txModal.querySelector('h3');
+        const originalTitle = title.textContent;
+        title.innerHTML = '🧾 Recibo Escaneado <span style="font-size:0.6em;color:#2E7D32;">(Verifica los datos)</span>';
+
+        // Restore title on close? Not strictly necessary as it resets next open
+    }
+
     async handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
+
+        // IMAGE Handling (Receipt Scanning)
+        if (file.type.startsWith('image/')) {
+            // Visual Loading Indicator
+            const loading = document.createElement('div');
+            loading.innerHTML = '📷 <b>Analizando recibo con IA...</b><br><span style="font-size:0.8em">Consultando a tu asistente inteligente...</span>';
+            loading.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:white;padding:25px;border-radius:12px;z-index:9999;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
+            document.body.appendChild(loading);
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file); // Base64
+            reader.onload = async () => {
+                try {
+                    const base64 = reader.result.split(',')[1];
+                    // Call Gemini Vision
+                    const data = await this.advisor.scanReceipt(base64);
+                    loading.remove();
+                    this.openScanConfirmation(data);
+                } catch (err) {
+                    loading.remove();
+                    console.error(err);
+                    alert('❌ Error analizando recibo:\n' + err.message + '\n\nAsegúrate de tener luz y que la imagen sea clara.');
+                }
+            };
+            return;
+        }
 
         // PDF Handling
         if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {

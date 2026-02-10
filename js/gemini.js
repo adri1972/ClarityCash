@@ -263,4 +263,97 @@ REGLAS DE FORMATO:
         } catch (e) { /* invalid cache */ }
         return null;
     }
+    /**
+     * Scan a receipt image using Multimodal AI (Gemini Vision / GPT-4o)
+     * @param {string} base64Image - Raw base64 string (without data:image/jpeg;base64 prefix)
+     * @returns {Promise<Object>} Extracted data { date, amount, merchant, category, note }
+     */
+    async scanReceipt(base64Image) {
+        if (!this.hasApiKey()) {
+            throw new Error('Primero configura tu API Key en Ajustes ⚙️ para usar el escáner inteligente.');
+        }
+
+        const provider = this.getProvider();
+        const apiKey = this.getApiKey();
+
+        const prompt = `
+            You are a receipt scanner. Extract data from this image into strict JSON format.
+            Do not include markdown code blocks. Just the raw JSON object.
+            
+            Fields required:
+            - date (YYYY-MM-DD, or null if not found)
+            - amount (number, main total)
+            - merchant (string, store name)
+            - category (string, best guess for expense category in Spanish, e.g. Alimentación, Transporte, Salud, Vivienda, Restaurantes, Ropa, Ocio, Otros)
+            - note (string, short description of items)
+        `;
+
+        try {
+            if (provider === 'openai') {
+                // OpenAI Vision (GPT-4o / GPT-4-turbo)
+                const response = await fetch(this.OPENAI_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: prompt },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            "url": `data:image/jpeg;base64,${base64Image}`
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        max_tokens: 300
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                const text = data.choices[0].message.content;
+                return JSON.parse(text.replace(/```json|```/g, '').trim());
+
+            } else {
+                // Gemini Vision (1.5 Flash / 2.0 Flash)
+                // URL usually has :generateContent?key=API_KEY
+                const url = `${this.GEMINI_URL}?key=${apiKey}`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inline_data: {
+                                        mime_type: "image/jpeg",
+                                        data: base64Image
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const text = data.candidates[0].content.parts[0].text;
+                return JSON.parse(text.replace(/```json|```/g, '').trim());
+            }
+        } catch (error) {
+            console.error('AI Scan Error:', error);
+            throw new Error('No se pudo leer el recibo. Intenta con mejor luz o recorta la imagen.');
+        }
+    }
 }
