@@ -61,6 +61,12 @@ class UIManager {
             btn.addEventListener('click', () => {
                 const view = btn.dataset.view;
                 this.navigate(view);
+
+                // Close sidebar on mobile
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (sidebar) sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('active');
             });
         });
 
