@@ -2179,8 +2179,37 @@ class UIManager {
                     ${(conf.gemini_api_key || conf.openai_api_key) ? '<p style="margin-top: 0.5rem; font-size: 0.8rem; color: #2E7D32; text-align: center;">✅ API Key configurada</p>' : ''}
                 </div>
             </div>
+            
+            <!-- ADVANCED / TROUBLESHOOTING -->
+            <div style="margin-top: 3rem; text-align: center; opacity: 0.7;">
+                <button id="force-update-env-btn" class="btn-text" style="color: #ff5252; font-size: 0.8rem; text-decoration: underline;">
+                    ⚠️ Solución de Problemas: Recargar App
+                </button>
+                <p style="font-size: 0.7rem; color: #ccc; margin-top: 0.3rem;">v32 (Stable)</p>
+            </div>
             </div>
         `;
+
+        // Handle Force Update Logic
+        setTimeout(() => {
+            const forceBtn = document.getElementById('force-update-env-btn');
+            if (forceBtn) {
+                forceBtn.addEventListener('click', async () => {
+                    if (confirm('¿Quieres borrar el caché y recargar la última versión? Úsalo si notas que la app no funciona bien.')) {
+                        forceBtn.innerHTML = 'Limpiando...';
+                        try {
+                            if ('serviceWorker' in navigator) {
+                                const regs = await navigator.serviceWorker.getRegistrations();
+                                for (let r of regs) await r.unregister();
+                                const keys = await caches.keys();
+                                for (let k of keys) await caches.delete(k);
+                            }
+                        } catch (e) { console.error(e); }
+                        window.location.reload(true);
+                    }
+                });
+            }
+        }, 100);
 
         // Handle Profile Form
         const settingsForm = document.getElementById('settings-form');
