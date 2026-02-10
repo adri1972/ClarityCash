@@ -591,12 +591,55 @@ class UIManager {
         // Control Visibility based on Data
         const plan = this.advisor.generateActionPlan(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
+        // --- CHECK: Is this a brand new user? ---
+        const hasTransactions = this.store.transactions && this.store.transactions.length > 0;
+        const hasApiKey = this.aiAdvisor && this.aiAdvisor.hasApiKey && this.aiAdvisor.hasApiKey();
+
+        // --- SECTION 0: WELCOME TIP (only if no transactions) ---
+        let welcomeTipHTML = '';
+        if (!hasTransactions) {
+            welcomeTipHTML = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 24px; margin-bottom: 1.5rem; color: white; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 8px;">👋</div>
+                    <h2 style="margin: 0 0 8px 0; font-size: 1.3rem;">¡Bienvenido a ClarityCash!</h2>
+                    <p style="opacity: 0.9; margin: 0 0 16px 0; font-size: 0.9rem; line-height: 1.5;">Tu asistente financiero personal. Empieza en 3 simples pasos:</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px; text-align: left; max-width: 320px; margin: 0 auto;">
+                        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px;">
+                            <span style="background: white; color: #764ba2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">1</span>
+                            <span style="font-size: 0.85rem;">Toca <strong>"+ Nuevo Movimiento"</strong> arriba para registrar tu primer ingreso o gasto</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px;">
+                            <span style="background: white; color: #764ba2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">2</span>
+                            <span style="font-size: 0.85rem;">También puedes <strong>escanear un recibo</strong> con la cámara o importar un extracto bancario (PDF/CSV)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px;">
+                            <span style="background: white; color: #764ba2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">3</span>
+                            <span style="font-size: 0.85rem;">La IA analizará tus finanzas y te dará <strong>consejos personalizados</strong> 🧠</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- AI TIP (if no API key and has transactions) ---
+        let aiTipHTML = '';
+        if (hasTransactions && !hasApiKey) {
+            aiTipHTML = `
+                <div style="background: linear-gradient(135deg, #0D47A1, #1976D2); border-radius: 12px; padding: 14px 18px; margin-bottom: 1rem; color: white; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="window.ui.navigate('settings')">
+                    <span style="font-size: 1.5rem;">🧠</span>
+                    <div style="flex: 1;">
+                        <strong style="font-size: 0.85rem;">Desbloquea tu Asesor IA</strong>
+                        <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.85;">Conecta Gemini gratis para recibir consejos financieros personalizados → Toca aquí</p>
+                    </div>
+                    <span style="font-size: 1.2rem;">→</span>
+                </div>
+            `;
+        }
+
         // --- SECTION 1: HERO (Diagnosis + Key Stats) ---
-        // Layout: Left (Diagnosis Context) - Right (The Numbers)
-        // We use a CSS Grid wrapper for this
-
-
         const heroHTML = `
+            ${welcomeTipHTML}
+            ${aiTipHTML}
             <div class="dashboard-hero">
                 <!-- Left: context/nav -->
                 <div class="hero-header">
@@ -1254,7 +1297,24 @@ class UIManager {
         `;
 
         if (txs.length === 0) {
-            html += `<tr><td colspan="4" style="padding: 2rem; text-align: center; color: #888;">No hay movimientos aún. Importa tu extracto o agrega uno manual.</td></tr>`;
+            html += `<tr><td colspan="4" style="padding: 0; border: none;">
+                <div style="text-align: center; padding: 3rem 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">📝</div>
+                    <h3 style="margin: 0 0 8px; color: #333;">Tu historial está vacío</h3>
+                    <p style="color: #888; margin: 0 0 16px; font-size: 0.9rem; line-height: 1.5;">Tienes 3 formas de agregar movimientos:</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 280px; margin: 0 auto; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
+                            <span style="font-size: 1.2rem;">📷</span> <strong>Escanear</strong> un recibo con la cámara
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
+                            <span style="font-size: 1.2rem;">📄</span> <strong>Importar</strong> un extracto bancario (PDF/CSV)
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
+                            <span style="font-size: 1.2rem;">✍️</span> <strong>Manual:</strong> toca "+ Nuevo Movimiento" arriba
+                        </div>
+                    </div>
+                </div>
+            </td></tr>`;
         } else {
             txs.forEach(t => {
                 const currentCatId = t.category_id;
@@ -1950,7 +2010,13 @@ class UIManager {
         const insights = this.advisor.analyze(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
         if (insights.length === 0) {
-            html += '<p class="text-secondary">Registra más movimientos para obtener un diagnóstico detallado.</p>';
+            html += `
+                <div style="text-align: center; padding: 2rem 1.5rem;">
+                    <div style="font-size: 2.5rem; margin-bottom: 10px;">🔍</div>
+                    <h3 style="margin: 0 0 8px; color: #333;">Aún no hay suficientes datos</h3>
+                    <p style="color: #888; margin: 0; font-size: 0.9rem; line-height: 1.5;">Registra al menos <strong>5 movimientos</strong> (ingresos y gastos) para que la IA pueda analizar tus patrones financieros y darte un diagnóstico completo.</p>
+                </div>
+            `;
         } else {
             insights.forEach(i => {
                 try {
@@ -2903,9 +2969,24 @@ class UIManager {
 
         if (goals.length === 0) {
             html += `
-                <div class="empty-state">
-                    <h3>No tienes metas definidas aún.</h3>
-                    <p class="text-secondary">Conecta tus finanzas a un propósito real.</p>
+                <div style="text-align: center; padding: 3rem 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">🎯</div>
+                    <h3 style="margin: 0 0 8px; color: #333;">Dale un propósito a tu dinero</h3>
+                    <p style="color: #888; margin: 0 0 20px; font-size: 0.9rem; line-height: 1.5;">Las metas te ayudan a ahorrar con dirección.<br>Por ejemplo:</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 280px; margin: 0 auto 20px; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
+                            <span style="font-size: 1.2rem;">🛡️</span> Fondo de emergencia (3 meses de gastos)
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
+                            <span style="font-size: 1.2rem;">✈️</span> Vacaciones soñadas
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
+                            <span style="font-size: 1.2rem;">💳</span> Pagar una deuda específica
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="document.getElementById('add-goal-btn').click()" style="padding: 10px 24px; font-size: 0.95rem;">
+                        ✨ Crear mi primera meta
+                    </button>
                 </div>
             `;
         } else {
