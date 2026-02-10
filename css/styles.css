@@ -1302,4 +1302,31 @@ td {
     .advisor-tips {
         gap: 0.5rem;
     }
+
+    /* Settings Page */
+    .settings-layout {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* All inline grids inside settings forms */
+    .card form .form-group {
+        flex-wrap: wrap;
+    }
+
+    /* Top bar adjustments */
+    .top-bar {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .top-bar .actions .btn span {
+        display: none;
+    }
+
+    /* Content scroll */
+    .content-container {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }

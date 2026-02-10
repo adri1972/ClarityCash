@@ -1853,7 +1853,7 @@ class UIManager {
         });
 
         this.container.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+            <div class="settings-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
                 <!-- Column 1: Profile -->
                 <div class="card">
                     <h3>Perfil Financiero</h3>
