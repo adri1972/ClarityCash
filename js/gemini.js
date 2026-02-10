@@ -277,15 +277,25 @@ REGLAS DE FORMATO:
         const apiKey = this.getApiKey();
 
         const prompt = `
-            You are a receipt scanner. Extract data from this image into strict JSON format.
-            Do not include markdown code blocks. Just the raw JSON object.
+            Actúa como un experto en extracción de datos de facturas y recibos (OCR Inteligente).
+            Analiza la imagen adjunta y extrae la información en formato JSON estricto.
             
-            Fields required:
-            - date (YYYY-MM-DD, or null if not found)
-            - amount (number, main total)
-            - merchant (string, store name)
-            - category (string, best guess for expense category in Spanish, e.g. Alimentación, Transporte, Salud, Vivienda, Restaurantes, Ropa, Ocio, Otros)
-            - note (string, short description of items)
+            Instrucciones Clave:
+            1. Busca el "TOTAL A PAGAR" o el monto mayor al final del ticket. Ignora subtotales, IVA o cambio.
+            2. La fecha suele estar arriba. Formato preferido: YYYY-MM-DD.
+            3. El comercio (Merchant) suele estar en el encabezado o logo.
+            4. Categoriza el gasto en UNA de estas opciones: Alimentación, Transporte, Salud, Vivienda, Servicios, Restaurantes, Ropa, Ocio, Otros.
+            
+            Formato JSON de respuesta (SIN bloques de código, solo el objeto):
+            {
+                "date": "YYYY-MM-DD",
+                "amount": number (Ej: 15000. No uses separadores de miles, solo el numero puro. Si hay decimales usa punto),
+                "merchant": "Nombre del Negocio",
+                "category": "Categoría Sugerida",
+                "note": "Breve descripción de items (ej: 'Hamburguesa y gaseosa')"
+            }
+            
+            Si algún dato no es visible o claro, usa null. No inventes información.
         `;
 
         try {
