@@ -221,6 +221,8 @@ class FinancialAdvisor {
         }
 
         // --- LOGIC TREE ---
+        // Effective savings = explicit savings + positive cash flow (money available even if not tagged as savings)
+        const effectiveSavings = summary.savings + Math.max(0, summary.balance_net);
 
         // CASE A: DEFICIT (The House is on Fire)
         if (summary.balance_net < 0) {
@@ -270,10 +272,10 @@ class FinancialAdvisor {
                 diagnosis = "Tus costos fijos (Vivienda/Servicios) son mayores a tus ingresos. Esto es estructural.";
                 adjustments.push(`<b>Ingreso de Emergencia:</b> Vende algo por Marketplace que valga al menos ${this.formatMoney(deficit)} esta semana.`);
             }
-
         }
         // CASE B: BREAK-EVEN (Living on the Edge)
-        else if (summary.savings < (income * 0.05)) {
+        // Only flag as risk if effective savings (savings + positive balance) is truly low
+        else if (effectiveSavings < (income * 0.05)) {
             status = 'WARNING';
             priority = "⚠️ RIESGO ALTO (Vives al día)";
 
@@ -281,7 +283,6 @@ class FinancialAdvisor {
                 const leakPct = (topLeak[1] / income) * 100;
                 let merchantText = "";
 
-                // 1. Merchant Breakdown (The "Who") -> In Diagnosis
                 if (topMerchantsList.length > 0) {
                     const topList = topMerchantsList.map(m => `${m[0]} (${this.formatMoney(m[1])})`).join(', ');
                     merchantText = `<br><br>👉 <b>Se fue en:</b> ${topList} y otros.`;
@@ -289,9 +290,6 @@ class FinancialAdvisor {
 
                 diagnosis = `No ahorras porque <b>${topLeak[0]}</b> consume el ${leakPct.toFixed(0)}% de tu ingreso (${this.formatMoney(topLeak[1])}).${merchantText}`;
 
-
-
-                // 2. Frequency Analysis (The "How")
                 const cat = this.store.categories.find(c => c.name === topLeak[0]);
                 const count = txs.filter(t => t.category_id === cat?.id).length;
 
@@ -311,7 +309,7 @@ class FinancialAdvisor {
         else {
             status = 'OK';
             priority = "📈 SUPERÁVIT: Optimización";
-            const surplus = summary.balance_net + summary.savings; // True cash available
+            const surplus = effectiveSavings;
 
             diagnosis = `Tienes un flujo de caja positivo de ${this.formatMoney(surplus)}. ¡Muy bien! Pero el dinero quieto pierde valor.`;
 
