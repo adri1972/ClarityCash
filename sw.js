@@ -1,4 +1,4 @@
-const CACHE_NAME = 'clarity-cash-v1';
+const CACHE_NAME = 'clarity-cash-v3';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -6,7 +6,7 @@ const ASSETS_TO_CACHE = [
     './assets/icon.svg',
     './css/styles.css',
     './js/advisor.js',
-    './js/ai.js', // If exists
+    './js/ai.js',
     './js/app.js',
     './js/data.js',
     './js/ui.js',
@@ -36,15 +36,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Network first strategy for API or dynamic data if any (none here, all local),
-    // but for static assets, Cache First is usually better for PWA.
-    // Given app nature (updated often locally), Stale-While-Revalidate might be good, 
-    // or simply Cache First for shell and Network otherwise.
-
-    // Simple Cache First strategy
+    // Network First: Always try to get fresh content, fall back to cache if offline
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            return cachedResponse || fetch(event.request);
-        })
+        fetch(event.request)
+            .then((response) => {
+                // Save fresh copy to cache
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                return response;
+            })
+            .catch(() => {
+                // Offline: serve from cache
+                return caches.match(event.request);
+            })
     );
 });
