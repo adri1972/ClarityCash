@@ -1,25 +1,35 @@
-// ClarityCash Service Worker v50 - Network First, No Static Cache Issues
+// ClarityCash Service Worker v50 - Self-Healing
 const CACHE_NAME = 'cc-v50';
 
 self.addEventListener('install', () => {
-    self.skipWaiting(); // Take control immediately
+    // Take control IMMEDIATELY - don't wait
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
+        // Delete ALL old caches
         caches.keys().then(keys =>
-            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-        )
+            Promise.all(keys.map(k => caches.delete(k)))
+        ).then(() => {
+            // Force all open pages to use this new SW
+            return self.clients.claim();
+        }).then(() => {
+            // Force reload all open pages to get fresh HTML
+            return self.clients.matchAll({ type: 'window' });
+        }).then(clients => {
+            clients.forEach(client => {
+                client.navigate(client.url);
+            });
+        })
     );
-    self.clients.claim();
 });
 
-// NETWORK FIRST: Always fetch from server, only use cache when offline
+// NETWORK FIRST: Always fetch from server
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // Save fresh copy to cache for offline use
                 if (response.ok && event.request.method === 'GET') {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));

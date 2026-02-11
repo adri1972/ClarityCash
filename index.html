@@ -527,13 +527,36 @@
     <script src="js/ui.js?v=41"></script>
     <script src="js/app.js?v=41"></script>
 
-    <!-- PWA Service Worker Registration -->
+    <!-- Auto-healing Service Worker Manager -->
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js?v=50')
-                .then(reg => { reg.update(); console.log('SW v50 OK'); })
-                .catch(err => console.log('SW fail:', err));
-        }
+        const SW_VERSION = 'v50';
+        (async () => {
+            if (!('serviceWorker' in navigator)) return;
+
+            try {
+                // Check if we need to clean up old service workers
+                const regs = await navigator.serviceWorker.getRegistrations();
+                const needsClean = regs.length > 0 && !localStorage.getItem('cc_sw_' + SW_VERSION);
+
+                if (needsClean) {
+                    // Kill ALL old service workers
+                    for (const reg of regs) await reg.unregister();
+                    // Kill ALL caches
+                    const keys = await caches.keys();
+                    for (const key of keys) await caches.delete(key);
+                    // Mark as cleaned so we don't loop
+                    localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
+                    // Reload to get fresh content
+                    location.reload();
+                    return;
+                }
+
+                // Register fresh SW
+                localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
+                const reg = await navigator.serviceWorker.register('service-worker.js?v=50');
+                reg.update();
+            } catch (e) { console.log('SW:', e); }
+        })();
     </script>
 </body>
 
