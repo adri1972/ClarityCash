@@ -166,6 +166,14 @@ class Store {
 
     _save() {
         this.data.config.updated_at = new Date().toISOString();
+
+        // Invalidate AI advice cache (so it re-analyzes with new data)
+        try {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('cc_ai_v41_')) localStorage.removeItem(key);
+            });
+        } catch (e) { }
+
         if (this.usingMemory) {
             this.memoryStore = JSON.parse(JSON.stringify(this.data)); // Deep copy to prevent direct reference issues
             window.dispatchEvent(new CustomEvent('c_store_updated'));
