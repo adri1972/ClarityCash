@@ -1416,10 +1416,27 @@ class UIManager {
         const resetBtn = document.getElementById('btn-reset-data');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                if (confirm("⚠️ ¿Estás seguro de borrar TODOS los movimientos?\n\nEsto dejará la cuenta en cero para que importes de nuevo.")) {
-                    this.store.clearTransactions();
-                    alert("Datos borrados. Listo para importar.");
-                    this.renderTransactions(); // Refresh
+                const choice = confirm("⚠️ ¿Quieres borrar TODO y empezar de cero?\n\n• OK = Borrar TODO (movimientos, presupuestos, gastos fijos, metas)\n• Cancelar = No borrar nada");
+
+                if (choice) {
+                    // Double confirm for full reset
+                    if (confirm("🚨 ÚLTIMA CONFIRMACIÓN\n\nEsto borrará:\n✖ Todos los movimientos\n✖ Presupuestos\n✖ Gastos fijos\n✖ Ingresos recurrentes\n✖ Metas\n✖ Caché de IA\n\n(Tu API Key se conservará)\n\n¿Continuar?")) {
+                        // Save API key before wiping
+                        const apiKey = this.store.config.gemini_api_key || '';
+                        const provider = this.store.config.ai_provider || 'gemini';
+
+                        // Nuclear reset
+                        localStorage.clear();
+
+                        // Restore API key
+                        if (apiKey) {
+                            const freshStore = { config: { gemini_api_key: apiKey, ai_provider: provider } };
+                            localStorage.setItem('clarity_cash_data', JSON.stringify(freshStore));
+                        }
+
+                        alert("✅ Todo limpio. La app se recargará ahora.");
+                        location.reload();
+                    }
                 }
             });
         }
