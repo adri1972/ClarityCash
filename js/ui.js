@@ -2967,27 +2967,7 @@ class UIManager {
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Perfil</button>
                     </form>
                     
-                    <div style="margin-top: 2rem; padding: 1rem; border: 1px dashed #F44336; border-radius: 8px; background: #FFEBEE;">
-                        <h4 style="color: #D32F2F; margin: 0 0 0.5rem 0;">🛠️ Zona de Peligro (Debug)</h4>
-                        <p style="font-size: 0.8rem; color: #D32F2F; margin-bottom: 1rem;">
-                            Si la app no actualiza o se comporta extraño, usa este botón para limpiar todo el caché y recargar desde cero.
-                        </p>
-                        <button onclick="
-                            if(confirm('¿Seguro? Esto recargará la app.')) {
-                                if(navigator.serviceWorker) {
-                                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                                        for(let registration of registrations) { registration.unregister(); }
-                                    });
-                                }
-                                caches.keys().then(function(names) {
-                                    for (let name of names) caches.delete(name);
-                                });
-                                window.location.reload(true);
-                            }
-                        " style="width: 100%; padding: 10px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: 700;">
-                            💣 BORRAR CACHÉ Y FORZAR RECARGA
-                        </button>
-                    </div>
+
                 </div>
 
                 <!-- Column 2: Fixed Expenses & Recurring Incomes -->
@@ -3123,13 +3103,47 @@ class UIManager {
                 </div>
             </div>
             
-            <!-- ADVANCED / TROUBLESHOOTING -->
-            <div style="margin-top: 3rem; text-align: center; opacity: 0.7;">
-                <button id="force-update-env-btn" class="btn-text" style="color: #2E7D32; font-size: 0.85rem; text-decoration: underline; font-weight: 600;">
-                    🔄 Buscar Actualizaciones / Recargar
-                </button>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 0.5rem;">Versión instalada: v62 (Cache Fix + Minimal UI + Proactive AI)</p>
+            <!-- End of Grid Layout -->
             </div>
+            
+            <!-- FOOTER: ADVANCED / TROUBLESHOOTING (Full Width) -->
+            <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #eee; text-align: center;">
+                
+                <!-- Version & Updates -->
+                <div style="opacity: 0.8; margin-bottom: 2rem;">
+                    <button id="force-update-env-btn" class="btn-text" style="color: #2E7D32; font-size: 0.9rem; text-decoration: underline; font-weight: 600;">
+                        🔄 Buscar Actualizaciones / Recargar
+                    </button>
+                    <p style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">Versión instalada: v63 (Layout Fix)</p>
+                </div>
+
+                <!-- Collapsible Danger Zone -->
+                <details style="margin: 0 auto; max-width: 90%; width: 400px; text-align: left; background: #fff5f5; border: 1px solid #ffcdd2; border-radius: 12px; overflow: hidden;">
+                    <summary style="padding: 12px; cursor: pointer; color: #c62828; font-weight: 600; font-size: 0.85rem; list-style: none; display: flex; align-items: center; justify-content: center; gap: 8px; user-select: none; background: rgba(255, 205, 210, 0.2);">
+                        <span>🔧 Zona de Peligro / Debug</span>
+                        <span style="font-size: 0.7rem; opacity: 0.7;">(Clic para abrir)</span>
+                    </summary>
+                    <div style="padding: 16px;">
+                        <p style="font-size: 0.8rem; color: #b71c1c; margin-bottom: 12px; line-height: 1.5; text-align: center;">
+                            Utiliza esta opción si la aplicación presenta errores graves, no actualiza, o se queda cargando.
+                        </p>
+                        <button onclick="
+                            if(confirm('⚠️ ¿Estás seguro?\n\nEsto borrará todos los datos temporales y recargará la aplicación. Tus transacciones NO se perderán (se guardan en otra base de datos), pero tendrás que volver a cargar el sitio.')) {
+                                if(navigator.serviceWorker) {
+                                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                                        for(let registration of registrations) { registration.unregister(); }
+                                    });
+                                }
+                                caches.keys().then(function(names) {
+                                    for (let name of names) caches.delete(name);
+                                });
+                                window.location.reload(true);
+                            }
+                        " style="width: 100%; padding: 12px; background: #c62828; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 6px rgba(198, 40, 40, 0.2);">
+                            💣 BORRAR CACHÉ Y REINICIAR
+                        </button>
+                    </div>
+                </details>
             </div>
         `;
 

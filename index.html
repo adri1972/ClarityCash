@@ -532,26 +532,24 @@
 
     <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
     <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
-    <script src="js/data.js?v=62"></script>
-    <script src="js/advisor.js?v=62"></script>
-    <script src="js/gemini.js?v=62"></script>
-    <script src="js/ui.js?v=62"></script>
-    <script src="js/app.js?v=62"></script>
+    <script src="js/data.js?v=63"></script>
+    <script src="js/advisor.js?v=63"></script>
+    <script src="js/gemini.js?v=63"></script>
+    <script src="js/ui.js?v=63"></script>
+    <script src="js/app.js?v=63"></script>
 
     <!-- Standard Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw-v62.js')
+                navigator.serviceWorker.register('sw-v63.js')
                     .then(registration => {
-                        console.log('SW Registered:', registration.scope);
+                        console.log('SW Registered v63:', registration.scope);
 
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                                    // New version installed: force reload now
-                                    console.log('Update available. Reloading...');
                                     window.location.reload();
                                 }
                             });
