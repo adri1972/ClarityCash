@@ -3007,363 +3007,360 @@ class UIManager {
                 alert('✅ Configuración de IA guardada.');
                 this.render();
             });
-        });
-        alert('✅ Configuración de IA guardada.');
-        this.render();
-    });
-}
-
-// Handle App Repair
-window.ui.appRepair = async () => {
-    if (!confirm('¿La app no funciona bien? Esto borrará el caché y forzará una actualización completa. Tus datos NO se perderán.')) return;
-
-    try {
-        // Unregister legacy SWs
-        if ('serviceWorker' in navigator) {
-            const regs = await navigator.serviceWorker.getRegistrations();
-            for (const reg of regs) await reg.unregister();
-        }
-        // Clear Caches
-        if ('caches' in window) {
-            const keys = await caches.keys();
-            for (const key of keys) await caches.delete(key);
-        }
-        // Reload
-        alert('✅ Limpieza completada. La app se reiniciará.');
-        window.location.reload();
-    } catch (e) {
-        alert('❌ Error: ' + e.message);
-    }
-};
-
-// Handle Auto-Suggest Button
-const autoBtn = document.getElementById('auto-budget-btn');
-if (autoBtn) {
-    autoBtn.addEventListener('click', () => {
-        const income = this.store.config.monthly_income_target || 0;
-        const profile = this.store.config.spending_profile || 'BALANCEADO';
-
-        if (income <= 0) {
-            alert('⚠️ Primero define y guarda un "Ingreso Mensual Objetivo" mayor a 0 en la columna izquierda.');
-            return;
         }
 
-        // 1. Strict Profile Logic (The "Should Be")
-        // We define exactly how the Pie must be sliced for each profile.
-        // No looking at history. Pure theory from the profile.
 
-        const distributions = {
-            'CONSERVADOR': {
-                // Total: 100%
-                // High Savings/Debt Payoff (30%), Low Wants (10%)
-                'cat_1': 0.25, // Vivienda
-                'cat_2': 0.15, // Alimentación
-                'cat_3': 0.05, // Transporte
-                'cat_gasolina': 0.05,
-                'cat_4': 0.05, // Salud
-                'cat_8': 0.05, // Educación
-                'cat_9': 0.05, // Ocio (Strict)
-                'cat_personal': 0.05, // Ropa/Cuidado (Basic)
-                'cat_deporte': 0.00, // Deporte (Optional in crisis)
-                'cat_vicios': 0.00, // Vicios (None)
-                'cat_10': 0.05, // Otros
-                // Financiero (30% combined)
-                'cat_5': 0.10, // Ahorro
-                'cat_6': 0.00, // Inversion (Feature safety first)
-                'cat_7': 0.10, // Deuda
-                'cat_fin_4': 0.05, // Tarjeta
-                'cat_fin_5': 0.05  // Renting
-            },
-            'BALANCEADO': {
-                // Rule 50/30/20
-                // Needs (50%)
-                'cat_1': 0.20,
-                'cat_2': 0.15,
-                'cat_3': 0.05,
-                'cat_gasolina': 0.05,
-                'cat_4': 0.05,
-                // Wants (30%)
-                'cat_9': 0.10, // Ocio
-                'cat_personal': 0.05, // Ropa
-                'cat_deporte': 0.03, // Deporte (Healthy)
-                'cat_vicios': 0.02, // Vicios (Low)
-                'cat_8': 0.05, // Educación (Counts as self-investment/want sometimes, or need)
-                'cat_10': 0.08,
-                // Savings/Debt (20%)
-                'cat_5': 0.05,
-                'cat_6': 0.05,
-                'cat_7': 0.05,
-                'cat_fin_4': 0.025,
-                'cat_fin_5': 0.025
-            },
-            'FLEXIBLE': {
-                // High Wants (40%+), Low Savings
-                'cat_1': 0.25,
-                'cat_2': 0.10,
-                'cat_3': 0.05,
-                'cat_gasolina': 0.05,
-                'cat_4': 0.05,
-                // Wants
-                'cat_9': 0.10, // Ocio HIGH
-                'cat_personal': 0.10, // Ropa High
-                'cat_deporte': 0.05, // Deporte (Good)
-                'cat_vicios': 0.05, // Vicios Allowed
-                'cat_8': 0.05,
-                'cat_10': 0.10,
-                // Savings (Min 10%)
-                'cat_5': 0.02,
-                'cat_6': 0.00,
-                'cat_7': 0.04,
-                'cat_fin_4': 0.02,
-                'cat_fin_5': 0.02
+        // Handle App Repair
+        window.ui.appRepair = async () => {
+            if (!confirm('¿La app no funciona bien? Esto borrará el caché y forzará una actualización completa. Tus datos NO se perderán.')) return;
+
+            try {
+                // Unregister legacy SWs
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of regs) await reg.unregister();
+                }
+                // Clear Caches
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (const key of keys) await caches.delete(key);
+                }
+                // Reload
+                alert('✅ Limpieza completada. La app se reiniciará.');
+                window.location.reload();
+            } catch (e) {
+                alert('❌ Error: ' + e.message);
             }
         };
 
-        const weights = distributions[profile] || distributions['BALANCEADO'];
-        let appliedCount = 0;
+        // Handle Auto-Suggest Button
+        const autoBtn = document.getElementById('auto-budget-btn');
+        if (autoBtn) {
+            autoBtn.addEventListener('click', () => {
+                const income = this.store.config.monthly_income_target || 0;
+                const profile = this.store.config.spending_profile || 'BALANCEADO';
 
-        const allCats = this.store.categories;
-
-        // Calculate minimum floor per category from fixed expenses
-        const fixedFloor = {};
-        const fixedExpenses = this.store.config.fixed_expenses || [];
-        fixedExpenses.forEach(fe => {
-            if (fe.category_id && fe.amount) {
-                fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
-            }
-        });
-
-        allCats.forEach(cat => {
-            const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-            if (input) {
-                // Calculate strict limit based on income %
-                const pct = weights[cat.id] || 0.01; // Default 1% if missed
-                let strictLimit = Math.floor(income * pct);
-
-                // Use fixed expense as floor — never suggest a budget lower than known fixed costs
-                const floor = fixedFloor[cat.id] || 0;
-                if (floor > strictLimit) {
-                    strictLimit = floor;
+                if (income <= 0) {
+                    alert('⚠️ Primero define y guarda un "Ingreso Mensual Objetivo" mayor a 0 en la columna izquierda.');
+                    return;
                 }
 
-                // Rounding for cleaner numbers (nearest 5.000)
-                strictLimit = Math.ceil(strictLimit / 5000) * 5000;
+                // 1. Strict Profile Logic (The "Should Be")
+                // We define exactly how the Pie must be sliced for each profile.
+                // No looking at history. Pure theory from the profile.
 
-                if (strictLimit > 0) {
-                    input.value = strictLimit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                    input.style.backgroundColor = '#e8f5e9';
-                    setTimeout(() => input.style.backgroundColor = '#fff', 1500);
-                    appliedCount++;
-                }
-            }
-        });
-
-        if (appliedCount > 0) {
-            alert(`✅ Presupuestos sugeridos por perfil "${profile}".\n\n💡 Los gastos fijos que ya definiste se usaron como piso mínimo. La app NUNCA te sugerirá un presupuesto menor a lo que ya sabes que pagas.`);
-        } else {
-            alert("No pudimos generar sugerencias. Verifica tu Ingreso Objetivo.");
-        }
-    });
-}
-
-// Handle Budget Form
-const budgetForm = document.getElementById('budget-form');
-if (budgetForm) {
-    budgetForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const newBudgets = {};
-
-        // Calculate fixed expense floor per category
-        const fixedFloor = {};
-        const fixedExpenses = this.store.config.fixed_expenses || [];
-        fixedExpenses.forEach(fe => {
-            if (fe.category_id && fe.amount) {
-                fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
-            }
-        });
-
-        let warnings = [];
-
-        // Parse form data: name="budget_cat_id" -> value="100.000"
-        for (let [key, value] of formData.entries()) {
-            if (key.startsWith('budget_')) {
-                const catId = key.replace('budget_', '');
-                const rawVal = value.toString().replace(/\./g, '');
-                let val = parseFloat(rawVal);
-                if (val > 0) {
-                    // Check if budget is less than known fixed expenses
-                    const floor = fixedFloor[catId] || 0;
-                    if (floor > 0 && val < floor) {
-                        const cat = this.store.categories.find(c => c.id === catId);
-                        const catName = cat ? cat.name : catId;
-                        warnings.push(`"${catName}": Tu gasto fijo es $${floor.toLocaleString('es-CO')} pero pusiste $${val.toLocaleString('es-CO')}. Se ajustó al mínimo.`);
-                        val = floor;
+                const distributions = {
+                    'CONSERVADOR': {
+                        // Total: 100%
+                        // High Savings/Debt Payoff (30%), Low Wants (10%)
+                        'cat_1': 0.25, // Vivienda
+                        'cat_2': 0.15, // Alimentación
+                        'cat_3': 0.05, // Transporte
+                        'cat_gasolina': 0.05,
+                        'cat_4': 0.05, // Salud
+                        'cat_8': 0.05, // Educación
+                        'cat_9': 0.05, // Ocio (Strict)
+                        'cat_personal': 0.05, // Ropa/Cuidado (Basic)
+                        'cat_deporte': 0.00, // Deporte (Optional in crisis)
+                        'cat_vicios': 0.00, // Vicios (None)
+                        'cat_10': 0.05, // Otros
+                        // Financiero (30% combined)
+                        'cat_5': 0.10, // Ahorro
+                        'cat_6': 0.00, // Inversion (Feature safety first)
+                        'cat_7': 0.10, // Deuda
+                        'cat_fin_4': 0.05, // Tarjeta
+                        'cat_fin_5': 0.05  // Renting
+                    },
+                    'BALANCEADO': {
+                        // Rule 50/30/20
+                        // Needs (50%)
+                        'cat_1': 0.20,
+                        'cat_2': 0.15,
+                        'cat_3': 0.05,
+                        'cat_gasolina': 0.05,
+                        'cat_4': 0.05,
+                        // Wants (30%)
+                        'cat_9': 0.10, // Ocio
+                        'cat_personal': 0.05, // Ropa
+                        'cat_deporte': 0.03, // Deporte (Healthy)
+                        'cat_vicios': 0.02, // Vicios (Low)
+                        'cat_8': 0.05, // Educación (Counts as self-investment/want sometimes, or need)
+                        'cat_10': 0.08,
+                        // Savings/Debt (20%)
+                        'cat_5': 0.05,
+                        'cat_6': 0.05,
+                        'cat_7': 0.05,
+                        'cat_fin_4': 0.025,
+                        'cat_fin_5': 0.025
+                    },
+                    'FLEXIBLE': {
+                        // High Wants (40%+), Low Savings
+                        'cat_1': 0.25,
+                        'cat_2': 0.10,
+                        'cat_3': 0.05,
+                        'cat_gasolina': 0.05,
+                        'cat_4': 0.05,
+                        // Wants
+                        'cat_9': 0.10, // Ocio HIGH
+                        'cat_personal': 0.10, // Ropa High
+                        'cat_deporte': 0.05, // Deporte (Good)
+                        'cat_vicios': 0.05, // Vicios Allowed
+                        'cat_8': 0.05,
+                        'cat_10': 0.10,
+                        // Savings (Min 10%)
+                        'cat_5': 0.02,
+                        'cat_6': 0.00,
+                        'cat_7': 0.04,
+                        'cat_fin_4': 0.02,
+                        'cat_fin_5': 0.02
                     }
-                    newBudgets[catId] = val;
+                };
+
+                const weights = distributions[profile] || distributions['BALANCEADO'];
+                let appliedCount = 0;
+
+                const allCats = this.store.categories;
+
+                // Calculate minimum floor per category from fixed expenses
+                const fixedFloor = {};
+                const fixedExpenses = this.store.config.fixed_expenses || [];
+                fixedExpenses.forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+
+                allCats.forEach(cat => {
+                    const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                    if (input) {
+                        // Calculate strict limit based on income %
+                        const pct = weights[cat.id] || 0.01; // Default 1% if missed
+                        let strictLimit = Math.floor(income * pct);
+
+                        // Use fixed expense as floor — never suggest a budget lower than known fixed costs
+                        const floor = fixedFloor[cat.id] || 0;
+                        if (floor > strictLimit) {
+                            strictLimit = floor;
+                        }
+
+                        // Rounding for cleaner numbers (nearest 5.000)
+                        strictLimit = Math.ceil(strictLimit / 5000) * 5000;
+
+                        if (strictLimit > 0) {
+                            input.value = strictLimit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                            input.style.backgroundColor = '#e8f5e9';
+                            setTimeout(() => input.style.backgroundColor = '#fff', 1500);
+                            appliedCount++;
+                        }
+                    }
+                });
+
+                if (appliedCount > 0) {
+                    alert(`✅ Presupuestos sugeridos por perfil "${profile}".\n\n💡 Los gastos fijos que ya definiste se usaron como piso mínimo. La app NUNCA te sugerirá un presupuesto menor a lo que ya sabes que pagas.`);
+                } else {
+                    alert("No pudimos generar sugerencias. Verifica tu Ingreso Objetivo.");
                 }
-            }
+            });
         }
 
-        // Update only budgets in config (keep others)
-        this.store.updateConfig({ budgets: newBudgets });
+        // Handle Budget Form
+        const budgetForm = document.getElementById('budget-form');
+        if (budgetForm) {
+            budgetForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const newBudgets = {};
 
-        if (warnings.length > 0) {
-            alert(`⚠️ Se ajustaron presupuestos:\n\n${warnings.join('\n\n')}\n\n💡 No puedes poner un presupuesto menor a tus gastos fijos conocidos.`);
-        } else {
-            alert('✅ Metas de presupuesto actualizadas.');
+                // Calculate fixed expense floor per category
+                const fixedFloor = {};
+                const fixedExpenses = this.store.config.fixed_expenses || [];
+                fixedExpenses.forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+
+                let warnings = [];
+
+                // Parse form data: name="budget_cat_id" -> value="100.000"
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('budget_')) {
+                        const catId = key.replace('budget_', '');
+                        const rawVal = value.toString().replace(/\./g, '');
+                        let val = parseFloat(rawVal);
+                        if (val > 0) {
+                            // Check if budget is less than known fixed expenses
+                            const floor = fixedFloor[catId] || 0;
+                            if (floor > 0 && val < floor) {
+                                const cat = this.store.categories.find(c => c.id === catId);
+                                const catName = cat ? cat.name : catId;
+                                warnings.push(`"${catName}": Tu gasto fijo es $${floor.toLocaleString('es-CO')} pero pusiste $${val.toLocaleString('es-CO')}. Se ajustó al mínimo.`);
+                                val = floor;
+                            }
+                            newBudgets[catId] = val;
+                        }
+                    }
+                }
+
+                // Update only budgets in config (keep others)
+                this.store.updateConfig({ budgets: newBudgets });
+
+                if (warnings.length > 0) {
+                    alert(`⚠️ Se ajustaron presupuestos:\n\n${warnings.join('\n\n')}\n\n💡 No puedes poner un presupuesto menor a tus gastos fijos conocidos.`);
+                } else {
+                    alert('✅ Metas de presupuesto actualizadas.');
+                }
+                this.render();
+            });
         }
-        this.render();
-    });
-}
 
-// Profile Info Modal Trigger
-const profileBtn = document.getElementById('profile-info-btn');
-if (profileBtn) {
-    profileBtn.addEventListener('click', () => {
-        document.getElementById('profile-modal').classList.remove('hidden');
-    });
-}
-
-// Handle Fixed Expense Adding / Updating
-const fixedExpForm = document.getElementById('fixed-expense-form');
-if (fixedExpForm) {
-    fixedExpForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const rawAmount = formData.get('amount').toString().replace(/\./g, '');
-        const editId = formData.get('edit_id');
-
-        const expenseData = {
-            name: formData.get('name'),
-            amount: parseFloat(rawAmount),
-            category_id: formData.get('category_id'),
-            day: parseInt(formData.get('day')) || 1
-        };
-
-        if (editId) {
-            this.store.updateFixedExpense(editId, expenseData);
-            alert('Gasto fijo actualizado.');
-        } else {
-            this.store.addFixedExpense(expenseData);
-            alert('Gasto fijo agregado.');
+        // Profile Info Modal Trigger
+        const profileBtn = document.getElementById('profile-info-btn');
+        if (profileBtn) {
+            profileBtn.addEventListener('click', () => {
+                document.getElementById('profile-modal').classList.remove('hidden');
+            });
         }
-        this.render(); // Refresh to show in list/reset form
-    });
-}
 
-// Handle Recurring Income Adding / Updating
-const recIncForm = document.getElementById('recurring-income-form');
-if (recIncForm) {
-    recIncForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const rawAmount = formData.get('amount').toString().replace(/\./g, '');
-        const editId = formData.get('edit_id');
+        // Handle Fixed Expense Adding / Updating
+        const fixedExpForm = document.getElementById('fixed-expense-form');
+        if (fixedExpForm) {
+            fixedExpForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const rawAmount = formData.get('amount').toString().replace(/\./g, '');
+                const editId = formData.get('edit_id');
 
-        const incomeData = {
-            name: formData.get('name'),
-            amount: parseFloat(rawAmount),
-            day: parseInt(formData.get('day')) || 1,
-            category_id: 'cat_salario' // Fixed for now or selectable? Let's assume Salary/Income
-        };
+                const expenseData = {
+                    name: formData.get('name'),
+                    amount: parseFloat(rawAmount),
+                    category_id: formData.get('category_id'),
+                    day: parseInt(formData.get('day')) || 1
+                };
 
-        if (editId) {
-            this.store.updateRecurringIncome(editId, incomeData);
-            alert('Ingreso recurrente actualizado.');
-        } else {
-            this.store.addRecurringIncome(incomeData);
-            alert('Ingreso recurrente agregado.');
+                if (editId) {
+                    this.store.updateFixedExpense(editId, expenseData);
+                    alert('Gasto fijo actualizado.');
+                } else {
+                    this.store.addFixedExpense(expenseData);
+                    alert('Gasto fijo agregado.');
+                }
+                this.render(); // Refresh to show in list/reset form
+            });
         }
-        this.render();
-    });
-}
 
-// Handle Edit Logic (Fixed Exp)
-document.querySelectorAll('.edit-fixed-exp').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const id = e.target.closest('button').dataset.id;
-        const exp = this.store.config.fixed_expenses.find(x => x.id === id);
-        if (!exp) return;
+        // Handle Recurring Income Adding / Updating
+        const recIncForm = document.getElementById('recurring-income-form');
+        if (recIncForm) {
+            recIncForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const rawAmount = formData.get('amount').toString().replace(/\./g, '');
+                const editId = formData.get('edit_id');
 
-        const form = document.getElementById('fixed-expense-form');
-        form.querySelector('[name="name"]').value = exp.name;
-        form.querySelector('[name="amount"]').value = exp.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        form.querySelector('[name="category_id"]').value = exp.category_id;
-        form.querySelector('[name="day"]').value = exp.day;
+                const incomeData = {
+                    name: formData.get('name'),
+                    amount: parseFloat(rawAmount),
+                    day: parseInt(formData.get('day')) || 1,
+                    category_id: 'cat_salario' // Fixed for now or selectable? Let's assume Salary/Income
+                };
 
-        let hiddenInput = form.querySelector('[name="edit_id"]');
-        if (!hiddenInput) {
-            hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'edit_id';
-            form.appendChild(hiddenInput);
+                if (editId) {
+                    this.store.updateRecurringIncome(editId, incomeData);
+                    alert('Ingreso recurrente actualizado.');
+                } else {
+                    this.store.addRecurringIncome(incomeData);
+                    alert('Ingreso recurrente agregado.');
+                }
+                this.render();
+            });
         }
-        hiddenInput.value = exp.id;
 
-        form.querySelector('button[type="submit"]').textContent = '💾 Guardar Cambios';
-        form.querySelector('h4').textContent = 'Editar Gasto Fijo ✏️';
-        form.scrollIntoView({ behavior: 'smooth' });
-    });
-});
+        // Handle Edit Logic (Fixed Exp)
+        document.querySelectorAll('.edit-fixed-exp').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.closest('button').dataset.id;
+                const exp = this.store.config.fixed_expenses.find(x => x.id === id);
+                if (!exp) return;
 
-// Handle Edit Logic (Recurring Income)
-document.querySelectorAll('.edit-rec-inc').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const id = e.target.closest('button').dataset.id;
-        const inc = this.store.config.recurring_incomes.find(x => x.id === id);
-        if (!inc) return;
+                const form = document.getElementById('fixed-expense-form');
+                form.querySelector('[name="name"]').value = exp.name;
+                form.querySelector('[name="amount"]').value = exp.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                form.querySelector('[name="category_id"]').value = exp.category_id;
+                form.querySelector('[name="day"]').value = exp.day;
 
-        const form = document.getElementById('recurring-income-form');
-        form.querySelector('[name="name"]').value = inc.name;
-        form.querySelector('[name="amount"]').value = inc.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        form.querySelector('[name="day"]').value = inc.day;
+                let hiddenInput = form.querySelector('[name="edit_id"]');
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'edit_id';
+                    form.appendChild(hiddenInput);
+                }
+                hiddenInput.value = exp.id;
 
-        let hiddenInput = form.querySelector('[name="edit_id"]');
-        if (!hiddenInput) {
-            hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'edit_id';
-            form.appendChild(hiddenInput);
-        }
-        hiddenInput.value = inc.id;
+                form.querySelector('button[type="submit"]').textContent = '💾 Guardar Cambios';
+                form.querySelector('h4').textContent = 'Editar Gasto Fijo ✏️';
+                form.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
 
-        form.querySelector('button[type="submit"]').textContent = '💾 Guardar Cambios';
-        form.querySelector('h4').textContent = 'Editar Ingreso ✏️';
-        form.scrollIntoView({ behavior: 'smooth' });
-    });
-});
+        // Handle Edit Logic (Recurring Income)
+        document.querySelectorAll('.edit-rec-inc').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.closest('button').dataset.id;
+                const inc = this.store.config.recurring_incomes.find(x => x.id === id);
+                if (!inc) return;
 
-// Handle Fixed Expense Deletion
-document.querySelectorAll('.delete-fixed-exp').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        if (confirm('¿Dejar de generar este gasto fijo?')) {
-            const id = e.target.closest('button').dataset.id;
-            this.store.deleteFixedExpense(id);
-            this.render();
-        }
-    });
-});
+                const form = document.getElementById('recurring-income-form');
+                form.querySelector('[name="name"]').value = inc.name;
+                form.querySelector('[name="amount"]').value = inc.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                form.querySelector('[name="day"]').value = inc.day;
 
-// Handle Recurring Income Deletion
-document.querySelectorAll('.delete-rec-inc').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        if (confirm('¿Dejar de generar este ingreso recurrente?')) {
-            const id = e.target.closest('button').dataset.id;
-            this.store.deleteRecurringIncome(id);
-            this.render();
-        }
-    });
-});
+                let hiddenInput = form.querySelector('[name="edit_id"]');
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'edit_id';
+                    form.appendChild(hiddenInput);
+                }
+                hiddenInput.value = inc.id;
+
+                form.querySelector('button[type="submit"]').textContent = '💾 Guardar Cambios';
+                form.querySelector('h4').textContent = 'Editar Ingreso ✏️';
+                form.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Handle Fixed Expense Deletion
+        document.querySelectorAll('.delete-fixed-exp').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (confirm('¿Dejar de generar este gasto fijo?')) {
+                    const id = e.target.closest('button').dataset.id;
+                    this.store.deleteFixedExpense(id);
+                    this.render();
+                }
+            });
+        });
+
+        // Handle Recurring Income Deletion
+        document.querySelectorAll('.delete-rec-inc').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (confirm('¿Dejar de generar este ingreso recurrente?')) {
+                    const id = e.target.closest('button').dataset.id;
+                    this.store.deleteRecurringIncome(id);
+                    this.render();
+                }
+            });
+        });
     }
 
-renderFixedExpensesList() {
-    const list = this.store.config.fixed_expenses || [];
-    if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes gastos fijos configurados.</p>';
+    renderFixedExpensesList() {
+        const list = this.store.config.fixed_expenses || [];
+        if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes gastos fijos configurados.</p>';
 
-    return list.map(fe => {
-        const cat = this.store.categories.find(c => c.id === fe.category_id) || { name: '?' };
-        return `
+        return list.map(fe => {
+            const cat = this.store.categories.find(c => c.id === fe.category_id) || { name: '?' };
+            return `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
                     <div>
                         <div style="font-weight: 600; font-size: 0.95rem;">${fe.name}</div>
@@ -3381,15 +3378,15 @@ renderFixedExpensesList() {
                     </div>
                 </div>
             `;
-    }).join('');
-}
+        }).join('');
+    }
 
-renderRecurringIncomesList() {
-    const list = this.store.config.recurring_incomes || [];
-    if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes ingresos recurrentes configurados.</p>';
+    renderRecurringIncomesList() {
+        const list = this.store.config.recurring_incomes || [];
+        if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes ingresos recurrentes configurados.</p>';
 
-    return list.map(ri => {
-        return `
+        return list.map(ri => {
+            return `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
                     <div>
                         <div style="font-weight: 600; font-size: 0.95rem;">${ri.name}</div>
@@ -3407,15 +3404,15 @@ renderRecurringIncomesList() {
                     </div>
                 </div>
             `;
-    }).join('');
-}
+        }).join('');
+    }
 
-renderGoals() {
-    this.pageTitle.textContent = 'Metas Financieras 🎯';
-    // Use the getter that calculates real progress from transactions
-    const goals = this.store.getGoals();
+    renderGoals() {
+        this.pageTitle.textContent = 'Metas Financieras 🎯';
+        // Use the getter that calculates real progress from transactions
+        const goals = this.store.getGoals();
 
-    let html = `
+        let html = `
             <div style="margin-bottom: 2rem; display: flex; justify-content: flex-end;">
                 <button class="btn btn-primary" id="add-goal-btn">
                     <i data-feather="plus"></i> Nueva Meta
@@ -3423,10 +3420,10 @@ renderGoals() {
             </div>
         `;
 
-    // Calculate Plan / Projection info per goal could happen here
+        // Calculate Plan / Projection info per goal could happen here
 
-    if (goals.length === 0) {
-        html += `
+        if (goals.length === 0) {
+            html += `
                 <div style="text-align: center; padding: 3rem 1.5rem;">
                     <div style="font-size: 3rem; margin-bottom: 12px;">🎯</div>
                     <h3 style="margin: 0 0 8px; color: #333;">Dale un propósito a tu dinero</h3>
@@ -3447,27 +3444,27 @@ renderGoals() {
                     </button>
                 </div>
             `;
-    } else {
-        html += `<div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">`;
+        } else {
+            html += `<div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">`;
 
-        goals.forEach(g => {
-            const percent = Math.min((g.current_amount / g.target_amount) * 100, 100);
-            const remaining = g.target_amount - g.current_amount;
+            goals.forEach(g => {
+                const percent = Math.min((g.current_amount / g.target_amount) * 100, 100);
+                const remaining = g.target_amount - g.current_amount;
 
-            let icon = 'target';
-            let color = '#2196F3';
-            if (g.type === 'EMERGENCY') { icon = 'shield'; color = '#4CAF50'; }
-            if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; } // Red for Debt
-            if (g.type === 'PURCHASE') { icon = 'gift'; color = '#9C27B0'; }
+                let icon = 'target';
+                let color = '#2196F3';
+                if (g.type === 'EMERGENCY') { icon = 'shield'; color = '#4CAF50'; }
+                if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; } // Red for Debt
+                if (g.type === 'PURCHASE') { icon = 'gift'; color = '#9C27B0'; }
 
-            // Recent contributions
-            const lastContrib = g.recent_contributions && g.recent_contributions.length > 0
-                ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
+                // Recent contributions
+                const lastContrib = g.recent_contributions && g.recent_contributions.length > 0
+                    ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
                         Último abono: ${this.formatCurrency(g.recent_contributions[0].amount)} (${new Date(g.recent_contributions[0].date).toLocaleDateString()})
                        </div>`
-                : '<div style="font-size: 0.75rem; color: #ccc; margin-top: 0.5rem;">Sin abonos recientes</div>';
+                    : '<div style="font-size: 0.75rem; color: #ccc; margin-top: 0.5rem;">Sin abonos recientes</div>';
 
-            html += `
+                html += `
                     <div class="card" style="border-top: 4px solid ${color}; display: flex; flex-direction: column;">
                         <div class="card-header">
                             <div class="card-title" style="display:flex; justify-content:space-between; width:100%">
@@ -3498,110 +3495,110 @@ renderGoals() {
                         </button>
                     </div>
                 `;
-        });
-        html += `</div>`;
-    }
-
-    this.container.innerHTML = html;
-
-    // Add Goal Handler
-    const addBtn = document.getElementById('add-goal-btn');
-    if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            const type = prompt("Tipo de Meta:\n1. Fondo de Emergencia\n2. Pago de Deuda\n3. Ahorro Específico\n\n(1-3):");
-            if (!type) return;
-
-            let typeKey = 'PURCHASE';
-            let nameDefault = 'Nueva Meta';
-            if (type === '1') { typeKey = 'EMERGENCY'; nameDefault = 'Fondo de Emergencia'; }
-            else if (type === '2') { typeKey = 'DEBT'; nameDefault = 'Salir de Deudas'; }
-            else if (type === '3') { typeKey = 'PURCHASE'; nameDefault = 'Viaje soñado'; }
-            else return;
-
-            const name = prompt("Nombre de la meta:", nameDefault) || nameDefault;
-            const targetStr = prompt("Monto objetivo ($):");
-            if (!targetStr) return;
-            const target = parseFloat(targetStr.replace(/\./g, ''));
-
-            this.store.addGoal({
-                type: typeKey,
-                name: name,
-                target_amount: target,
-                current_amount: 0 // Always starts at 0, adds via transactions
             });
-            this.render();
-        });
-    }
+            html += `</div>`;
+        }
 
-    // Add Fund Handler (Creates REAL transaction)
-    document.querySelectorAll('.add-fund-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.target.dataset.id;
-            const type = e.target.dataset.type;
+        this.container.innerHTML = html;
 
-            const amountStr = prompt("Monto a abonar hoy ($):");
-            if (!amountStr) return;
-            const amount = parseFloat(amountStr.replace(/\./g, ''));
-            if (isNaN(amount) || amount <= 0) return;
+        // Add Goal Handler
+        const addBtn = document.getElementById('add-goal-btn');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                const type = prompt("Tipo de Meta:\n1. Fondo de Emergencia\n2. Pago de Deuda\n3. Ahorro Específico\n\n(1-3):");
+                if (!type) return;
 
-            const accounts = this.store.accounts;
-            const accNames = accounts.map((a, i) => `${i + 1}. ${a.name} ($${a.current_balance})`).join('\n');
-            const accIndex = prompt(`¿De qué cuenta sale el dinero?\n${accNames}`);
-            if (!accIndex) return;
-            const account = accounts[parseInt(accIndex) - 1];
-            if (!account) return;
+                let typeKey = 'PURCHASE';
+                let nameDefault = 'Nueva Meta';
+                if (type === '1') { typeKey = 'EMERGENCY'; nameDefault = 'Fondo de Emergencia'; }
+                else if (type === '2') { typeKey = 'DEBT'; nameDefault = 'Salir de Deudas'; }
+                else if (type === '3') { typeKey = 'PURCHASE'; nameDefault = 'Viaje soñado'; }
+                else return;
 
-            // Auto-categorize
-            // Payment of Debt -> Spending/Flow Out -> Type: PAGO_DEUDA
-            // Savings -> Transfer to "Savings" (conceptually) -> Type: AHORRO
-            let txType = 'AHORRO';
-            let catId = 'cat_5'; // Ahorro default
-            let note = 'Abono a meta';
+                const name = prompt("Nombre de la meta:", nameDefault) || nameDefault;
+                const targetStr = prompt("Monto objetivo ($):");
+                if (!targetStr) return;
+                const target = parseFloat(targetStr.replace(/\./g, ''));
 
-            if (type === 'DEBT') {
-                txType = 'PAGO_DEUDA';
-                catId = 'cat_7'; // Deuda default
-                note = 'Pago abono a deuda';
-            }
-
-            this.store.addTransaction({
-                type: txType,
-                amount: amount,
-                date: new Date().toISOString().split('T')[0],
-                category_id: catId,
-                account_id: account.id,
-                goal_id: id,
-                note: note
-            });
-
-            alert('✅ Abono registrado correctamente como movimiento.');
-            this.render();
-        });
-    });
-
-    // Delete Handler
-    document.querySelectorAll('.delete-goal').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if (confirm('¿Borrar esta meta? Los movimientos históricos NO se borrarán.')) {
-                const id = e.target.closest('button').dataset.id;
-                this.store.deleteGoal(id);
+                this.store.addGoal({
+                    type: typeKey,
+                    name: name,
+                    target_amount: target,
+                    current_amount: 0 // Always starts at 0, adds via transactions
+                });
                 this.render();
-            }
+            });
+        }
+
+        // Add Fund Handler (Creates REAL transaction)
+        document.querySelectorAll('.add-fund-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.dataset.id;
+                const type = e.target.dataset.type;
+
+                const amountStr = prompt("Monto a abonar hoy ($):");
+                if (!amountStr) return;
+                const amount = parseFloat(amountStr.replace(/\./g, ''));
+                if (isNaN(amount) || amount <= 0) return;
+
+                const accounts = this.store.accounts;
+                const accNames = accounts.map((a, i) => `${i + 1}. ${a.name} ($${a.current_balance})`).join('\n');
+                const accIndex = prompt(`¿De qué cuenta sale el dinero?\n${accNames}`);
+                if (!accIndex) return;
+                const account = accounts[parseInt(accIndex) - 1];
+                if (!account) return;
+
+                // Auto-categorize
+                // Payment of Debt -> Spending/Flow Out -> Type: PAGO_DEUDA
+                // Savings -> Transfer to "Savings" (conceptually) -> Type: AHORRO
+                let txType = 'AHORRO';
+                let catId = 'cat_5'; // Ahorro default
+                let note = 'Abono a meta';
+
+                if (type === 'DEBT') {
+                    txType = 'PAGO_DEUDA';
+                    catId = 'cat_7'; // Deuda default
+                    note = 'Pago abono a deuda';
+                }
+
+                this.store.addTransaction({
+                    type: txType,
+                    amount: amount,
+                    date: new Date().toISOString().split('T')[0],
+                    category_id: catId,
+                    account_id: account.id,
+                    goal_id: id,
+                    note: note
+                });
+
+                alert('✅ Abono registrado correctamente como movimiento.');
+                this.render();
+            });
         });
-    });
-}
 
-renderBudgetProgress() {
-    const budgets = this.store.config.budgets || {};
-    if (Object.keys(budgets).length === 0) return '';
+        // Delete Handler
+        document.querySelectorAll('.delete-goal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (confirm('¿Borrar esta meta? Los movimientos históricos NO se borrarán.')) {
+                    const id = e.target.closest('button').dataset.id;
+                    this.store.deleteGoal(id);
+                    this.render();
+                }
+            });
+        });
+    }
 
-    // Safely get category breakdown
-    let breakdown = {};
-    try {
-        breakdown = this.store.getCategoryBreakdown();
-    } catch (e) { console.error('Error fetching breakdown', e); return ''; }
+    renderBudgetProgress() {
+        const budgets = this.store.config.budgets || {};
+        if (Object.keys(budgets).length === 0) return '';
 
-    let html = `
+        // Safely get category breakdown
+        let breakdown = {};
+        try {
+            breakdown = this.store.getCategoryBreakdown();
+        } catch (e) { console.error('Error fetching breakdown', e); return ''; }
+
+        let html = `
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-header">
                      <h3>Seguimiento de Presupuesto Mensual 🔍</h3>
@@ -3609,31 +3606,31 @@ renderBudgetProgress() {
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
         `;
 
-    Object.keys(budgets).forEach(catId => {
-        const limit = budgets[catId];
-        const cat = this.store.categories.find(c => c.id === catId);
+        Object.keys(budgets).forEach(catId => {
+            const limit = budgets[catId];
+            const cat = this.store.categories.find(c => c.id === catId);
 
-        // Skip invalid categories or zero limits
-        if (!cat || limit <= 0) return;
+            // Skip invalid categories or zero limits
+            if (!cat || limit <= 0) return;
 
-        const spent = breakdown[cat.name] || 0;
-        const percent = (spent / limit) * 100;
-        const remaining = limit - spent;
-        const exceeded = spent - limit;
+            const spent = breakdown[cat.name] || 0;
+            const percent = (spent / limit) * 100;
+            const remaining = limit - spent;
+            const exceeded = spent - limit;
 
-        // Directive Color Logic
-        let color = '#4CAF50'; // Green: On Track
-        let statusText = '✅ En orden';
+            // Directive Color Logic
+            let color = '#4CAF50'; // Green: On Track
+            let statusText = '✅ En orden';
 
-        if (percent >= 80 && percent <= 100) {
-            color = '#FF9800'; // Orange: Warning
-            statusText = '⚠️ Cuidado (80% usado)';
-        } else if (percent > 100) {
-            color = '#F44336'; // Red: Action Needed
-            statusText = `🚨 Excedido en ${this.formatCurrency(exceeded)}`;
-        }
+            if (percent >= 80 && percent <= 100) {
+                color = '#FF9800'; // Orange: Warning
+                statusText = '⚠️ Cuidado (80% usado)';
+            } else if (percent > 100) {
+                color = '#F44336'; // Red: Action Needed
+                statusText = `🚨 Excedido en ${this.formatCurrency(exceeded)}`;
+            }
 
-        html += `
+            html += `
                 <div class="budget-item" style="border-left: 3px solid ${color}; padding-left: 10px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
                         <strong>${cat.name}</strong>
@@ -3650,15 +3647,15 @@ renderBudgetProgress() {
                     </div>
                     
                     ${percent > 100 ?
-                `<div style="font-size: 0.75rem; color: #D32F2F; margin-top: 5px; background: #FFEBEE; padding: 4px; border-radius: 4px;">
+                    `<div style="font-size: 0.75rem; color: #D32F2F; margin-top: 5px; background: #FFEBEE; padding: 4px; border-radius: 4px;">
                             💡 Acción: Reduce ${this.formatCurrency(exceeded)} en otros gastos para compensar.
                         </div>`
-                : ''}
+                    : ''}
                 </div>
             `;
-    });
+        });
 
-    html += `</div></div>`;
-    return html;
-}
+        html += `</div></div>`;
+        return html;
+    }
 }
