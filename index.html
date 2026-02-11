@@ -534,50 +534,44 @@
     <script src="js/ui.js?v=53"></script>
     <script src="js/app.js?v=53"></script>
 
-    <!-- Auto-healing Service Worker Manager -->
+    <!-- FINAL ZOMBIE KILLER SCRIPT -->
     <script>
-        const SW_VERSION = 'v53';
-        (async () => {
-            if (!('serviceWorker' in navigator)) return;
+        const SW_VERSION = 'v54';
 
-            try {
-                // Check if we need to clean up old service workers
-                const regs = await navigator.serviceWorker.getRegistrations();
-                const needsClean = regs.length > 0 && !localStorage.getItem('cc_sw_' + SW_VERSION);
+        // NO ASYNC WAIT on purpose
+        if ('serviceWorker' in navigator) {
 
-                if (needsClean) {
-                    // Kill ALL old service workers
-                    for (const reg of regs) await reg.unregister();
-                    // Kill ALL caches
-                    const keys = await caches.keys();
-                    for (const key of keys) await caches.delete(key);
-                    // Mark as cleaned so we don't loop
-                    localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
-                    // Reload to get fresh content
-                    location.reload();
-                    return;
-                }
+            // Check if we are already cleansed
+            const isClean = localStorage.getItem('cc_killer_' + SW_VERSION);
 
-                // Register fresh SW
-                localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
-                const reg = await navigator.serviceWorker.register('sw-v53.js');
+            if (!isClean) {
+                console.log('💥 STARTING ZOMBIE KILLER PROCESS...');
 
-                // AUTO-UPDATE LOGIC: If a new SW is found, force update
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated') {
-                            // New version installed! Reload page automatically
-                            console.log('New version installed. Reloading...');
-                            window.location.reload();
-                        }
-                    });
+                // 1. Unregister EVERYONE
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                    for (let reg of regs) reg.unregister();
                 });
 
-                // Check for updates every time app opens
-                reg.update();
-            } catch (e) { console.log('SW:', e); }
-        })();
+                // 2. Kill caches
+                caches.keys().then(keys => {
+                    return Promise.all(keys.map(k => caches.delete(k)));
+                }).then(() => {
+                    // 3. Mark as clean
+                    localStorage.setItem('cc_killer_' + SW_VERSION, 'true');
+                    console.log('✅ CLEANSED. RELOADING...');
+
+                    // 4. Force reload from server (true)
+                    window.location.reload(true);
+                });
+
+            } else {
+                // NORMAL STARTUP - Only register the new safe worker
+                console.log('🛡️ System clean. Registering v54...');
+                navigator.serviceWorker.register('sw-v54-final.js').then(reg => {
+                    reg.update(); // Check for updates aggressively
+                });
+            }
+        }
     </script>
 </body>
 
