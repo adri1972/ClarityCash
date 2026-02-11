@@ -1483,4 +1483,23 @@ td {
     .content-container>div>div[style*="background: white"] {
         background: var(--bg-surface) !important;
     }
+}@keyframes bounceInRight {
+    0% {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translateX(-10px);
+    }
+
+    80% {
+        transform: translateX(5px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
