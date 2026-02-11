@@ -720,19 +720,40 @@ class UIManager {
         const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
 
         const compareArrow = (current, previous) => {
-            if (previous === 0) return '<span style="font-size:0.6rem; color:#999; vertical-align:middle;">🆕 Nuevo</span>';
-            const pctChange = Math.round(((current - previous) / previous) * 100);
+            // NEW LOGIC: If previous is 0, we still want to show progress if current > 0
+            let prevVal = previous === 0 ? 0 : previous;
+            let pctChange = 0;
+
+            if (prevVal === 0) {
+                if (current > 0) pctChange = 100; // From 0 to something = 100% gain effectively for UI
+                else return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            } else {
+                pctChange = Math.round(((current - prevVal) / prevVal) * 100);
+            }
+
             if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+
             const color = pctChange > 0 ? '#4CAF50' : '#F44336';
             const arrow = pctChange > 0 ? '↑' : '↓';
+            // If it was 0 and now is X, we show "↑ 100%" or just "↑" to indicate "Good job starting"
             return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
         };
 
         const expenseArrow = (current, previous) => {
-            if (previous === 0) return '<span style="font-size:0.6rem; color:#999; vertical-align:middle;">🆕 Nuevo</span>';
-            const pctChange = Math.round(((current - previous) / previous) * 100);
+            // NEW LOGIC: If previous is 0, we still show the spending trend
+            let prevVal = previous === 0 ? 0 : previous;
+            let pctChange = 0;
+
+            if (prevVal === 0) {
+                if (current > 0) pctChange = 100; // Spending went up from 0
+                else return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            } else {
+                pctChange = Math.round(((current - prevVal) / prevVal) * 100);
+            }
+
             if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
-            // For expenses: UP is BAD (red), DOWN is GOOD (green) - opposite!
+
+            // For expenses: UP is BAD (red), DOWN is GOOD (green)
             const color = pctChange > 0 ? '#F44336' : '#4CAF50';
             const arrow = pctChange > 0 ? '↑' : '↓';
             return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
