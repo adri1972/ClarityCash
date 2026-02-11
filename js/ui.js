@@ -3010,8 +3010,8 @@ class UIManager {
         }
 
 
-        // Handle App Repair
-        window.ui.appRepair = async () => {
+    // Handle App Repair
+    async appRepair() {
             if (!confirm('¿La app no funciona bien? Esto borrará el caché y forzará una actualización completa. Tus datos NO se perderán.')) return;
 
             try {
@@ -3031,7 +3031,7 @@ class UIManager {
             } catch (e) {
                 alert('❌ Error: ' + e.message);
             }
-        };
+        }
 
         // Handle Auto-Suggest Button
         const autoBtn = document.getElementById('auto-budget-btn');
