@@ -561,6 +561,20 @@
                 // Register fresh SW
                 localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
                 const reg = await navigator.serviceWorker.register('sw-v52.js');
+
+                // AUTO-UPDATE LOGIC: If a new SW is found, force update
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') {
+                            // New version installed! Reload page automatically
+                            console.log('New version installed. Reloading...');
+                            window.location.reload();
+                        }
+                    });
+                });
+
+                // Check for updates every time app opens
                 reg.update();
             } catch (e) { console.log('SW:', e); }
         })();
