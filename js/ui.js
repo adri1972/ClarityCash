@@ -618,7 +618,6 @@ class UIManager {
         }
 
         // --- CHECK: Is this a brand new user? ---
-        const hasTransactions = this.store.transactions && this.store.transactions.length > 0;
         const hasApiKey = this.aiAdvisor && this.aiAdvisor.hasApiKey && this.aiAdvisor.hasApiKey();
 
         // --- SECTION 0: WELCOME TIP (only if no transactions) ---
