@@ -1244,6 +1244,8 @@ class UIManager {
         }
 
         if (typeof Chart !== 'undefined') {
+            const total = data.reduce((sum, val) => sum + val, 0);
+
             this.currentChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -1257,7 +1259,38 @@ class UIManager {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right' } }
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                generateLabels: (chart) => {
+                                    const dataset = chart.data.datasets[0];
+                                    return chart.data.labels.map((label, i) => {
+                                        const value = dataset.data[i];
+                                        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        return {
+                                            text: `${label} (${pct}%)`,
+                                            fillStyle: dataset.backgroundColor[i],
+                                            strokeStyle: 'transparent',
+                                            hidden: false,
+                                            index: i
+                                        };
+                                    });
+                                },
+                                font: { size: 11 },
+                                padding: 8
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.raw;
+                                    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return ` $${value.toLocaleString('es-CO')} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
                 }
             });
         } else {
