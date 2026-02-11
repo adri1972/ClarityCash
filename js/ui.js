@@ -765,9 +765,13 @@ class UIManager {
             </div>
         `;
 
+        // --- COACHING NUDGES ---
+        const nudgesHTML = this.generateCoachingNudges(summary);
+
         // LAYOUT ASSEMBLY
         this.container.innerHTML = `
             ${heroHTML}
+            ${nudgesHTML}
             ${metricsHTML}
             ${chartsHTML}
             ${detailsHTML}
@@ -780,6 +784,130 @@ class UIManager {
 
         // Trigger AI Insight if needed
         this.processAIAdvice(plan);
+    }
+
+    generateCoachingNudges(summary) {
+        const nudges = [];
+        const month = this.viewDate.getMonth();
+        const year = this.viewDate.getFullYear();
+        const dayOfMonth = new Date().getDate();
+        const isCurrentMonth = (new Date().getMonth() === month && new Date().getFullYear() === year);
+
+        const txs = this.store.transactions.filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === month && d.getFullYear() === year;
+        });
+
+        const budgets = this.store.config.budgets || {};
+        const breakdown = this.store.getCategoryBreakdown(month, year);
+
+        // 1. SAVINGS NUDGE: Budget says save X but no savings this month
+        const savingsBudget = budgets['cat_5'] || 0;
+        if (savingsBudget > 0 && isCurrentMonth) {
+            const savingsTxs = txs.filter(t => t.type === 'AHORRO' || t.category_id === 'cat_5');
+            const totalSaved = savingsTxs.reduce((s, t) => s + t.amount, 0);
+            if (totalSaved === 0) {
+                nudges.push({
+                    emoji: '🐷',
+                    title: '¿Ya apartaste tu ahorro?',
+                    msg: `Tu meta es ahorrar ${this.formatCurrency(savingsBudget)} este mes y aún no has registrado ningún ahorro.`,
+                    action: 'Registra tu ahorro →',
+                    onclick: "document.getElementById('add-transaction-btn').click()"
+                });
+            } else if (totalSaved < savingsBudget) {
+                const pct = Math.round((totalSaved / savingsBudget) * 100);
+                nudges.push({
+                    emoji: '💪',
+                    title: `Llevas ${pct}% de tu meta de ahorro`,
+                    msg: `Has ahorrado ${this.formatCurrency(totalSaved)} de ${this.formatCurrency(savingsBudget)}. ¡Faltan ${this.formatCurrency(savingsBudget - totalSaved)}!`,
+                    action: 'Registrar abono →',
+                    onclick: "document.getElementById('add-transaction-btn').click()"
+                });
+            }
+        }
+
+        // 2. BUDGET EXCEEDED: Categories over budget
+        const categories = this.store.categories;
+        categories.forEach(c => {
+            const limit = budgets[c.id] || 0;
+            const spent = breakdown[c.name] || 0;
+            if (limit > 0 && spent > limit) {
+                const over = spent - limit;
+                nudges.push({
+                    emoji: '🚨',
+                    title: `Te pasaste en ${c.name}`,
+                    msg: `Gastaste ${this.formatCurrency(spent)} de ${this.formatCurrency(limit)} presupuestados. Exceso: ${this.formatCurrency(over)}.`,
+                    action: 'Ver presupuestos →',
+                    onclick: "document.querySelector('[data-view=settings]').click()"
+                });
+            }
+        });
+
+        // 3. NO TRANSACTIONS: Past the 5th and nothing logged
+        if (isCurrentMonth && dayOfMonth > 5 && txs.length === 0) {
+            nudges.push({
+                emoji: '📝',
+                title: '¿Llevas 5 días sin registrar nada?',
+                msg: 'Para que la IA te ayude, necesita ver tus movimientos. Registra uno o escanea un recibo.',
+                action: 'Agregar movimiento →',
+                onclick: "document.getElementById('add-transaction-btn').click()"
+            });
+        }
+
+        // 4. GOALS BEHIND: Goals not on track
+        const goals = this.store.getGoals();
+        goals.forEach(g => {
+            if (g.deadline) {
+                const deadline = new Date(g.deadline);
+                const now = new Date();
+                const monthsLeft = Math.max(1, (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth()));
+                const remaining = g.target_amount - g.current_amount;
+                if (remaining > 0 && monthsLeft <= 3) {
+                    const perMonth = Math.ceil(remaining / monthsLeft);
+                    nudges.push({
+                        emoji: '⏰',
+                        title: `Meta "${g.name}" necesita atención`,
+                        msg: `Te faltan ${this.formatCurrency(remaining)} y quedan ${monthsLeft} mes(es). Necesitas ${this.formatCurrency(perMonth)}/mes.`,
+                        action: 'Ver metas →',
+                        onclick: "document.querySelector('[data-view=goals]').click()"
+                    });
+                }
+            }
+        });
+
+        // 5. EXPENSES WITHOUT INCOME: Spending but forgot to log income
+        if (isCurrentMonth && summary.expenses > 0 && summary.income === 0 && dayOfMonth > 3) {
+            nudges.push({
+                emoji: '💵',
+                title: '¿Ya registraste tus ingresos?',
+                msg: 'Tienes gastos registrados pero $0 en ingresos. Sin ingresos, el análisis sale incompleto.',
+                action: 'Registrar ingreso →',
+                onclick: "document.getElementById('add-transaction-btn').click()"
+            });
+        }
+
+        // RENDER
+        if (nudges.length === 0) return '';
+
+        // Limit to 3 most important
+        const topNudges = nudges.slice(0, 3);
+
+        return `
+            <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 12px; margin-bottom: 0.5rem; -webkit-overflow-scrolling: touch;">
+                ${topNudges.map(n => `
+                    <div style="min-width: 260px; max-width: 300px; background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #FF9800; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="font-size: 1.4rem;">${n.emoji}</span>
+                            <strong style="font-size: 0.85rem; color: #333;">${n.title}</strong>
+                        </div>
+                        <p style="margin: 0 0 8px; font-size: 0.8rem; color: #666; line-height: 1.4;">${n.msg}</p>
+                        <button onclick="${n.onclick}" style="background: none; border: none; color: #E91E63; font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">
+                            ${n.action}
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
 
     async processAIAdvice(plan) {
