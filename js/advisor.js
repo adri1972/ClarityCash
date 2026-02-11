@@ -165,7 +165,8 @@ class FinancialAdvisor {
         });
 
         // --- SCENARIO 0: EMPTY STATE ---
-        if (summary.income === 0 && txs.length === 0) {
+        // --- SCENARIO 0: EMPTY STATE ---
+        if (summary.income === 0 && summary.expenses === 0 && txs.length === 0) {
             return {
                 status: 'ONBOARDING',
                 priority: "👋 Bienvenida a tu Libertad Financiera",
@@ -232,8 +233,12 @@ class FinancialAdvisor {
 
             diagnosis = `Tienes un hueco de ${this.formatMoney(deficit)}. Tu principal fuga es <b>${topLeakName}</b> (${topLeakAmount}).${merchantText}`;
 
+            diagnosis = `Tienes un hueco de ${this.formatMoney(deficit)}. Tu principal fuga es <b>${topLeakName}</b> (${topLeakAmount}).${merchantText}`;
+
+            adjustments.push(`<b>Acción Inmediata:</b> Recorta ${this.formatMoney(deficit * 0.2)} en ${topLeakName} para equilibrar.`);
             adjustments.push({
                 type: 'AI_ANALYSIS_REQUIRED',
+                fallback: `Analizando cómo tapar el hueco de ${this.formatMoney(deficit)}...`,
                 context: {
                     problem: 'DEFICIT',
                     deficit: this.formatMoney(deficit),
@@ -255,8 +260,10 @@ class FinancialAdvisor {
                 const leakPct = (topLeak[1] / income) * 100;
                 diagnosis = `No ahorras porque <b>${topLeak[0]}</b> consume el ${leakPct.toFixed(0)}% de tu ingreso (${this.formatMoney(topLeak[1])}).`;
 
+                adjustments.push(`<b>Meta Coach:</b> Intenta no gastar más en <b>${topLeak[0]}</b> por el resto de la semana.`);
                 adjustments.push({
                     type: 'AI_ANALYSIS_REQUIRED',
+                    fallback: "Calculando tu margen de seguridad...",
                     context: {
                         problem: 'WARNING',
                         income: this.formatMoney(income),
@@ -283,8 +290,10 @@ class FinancialAdvisor {
                 diagnosis = `Tienes un flujo de caja positivo de ${this.formatMoney(surplus)}. ¡Muy bien!`;
             }
 
+            adjustments.push(`<b>Consejo Pro:</b> Tienes ${this.formatMoney(surplus)} libres. ¿Los pasamos a tu meta?`);
             adjustments.push({
                 type: 'AI_ANALYSIS_REQUIRED',
+                fallback: "Preparando una estrategia de inversión para tu excedente...",
                 context: {
                     problem: 'SURPLUS',
                     surplus: this.formatMoney(surplus),

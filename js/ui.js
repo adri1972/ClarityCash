@@ -720,22 +720,22 @@ class UIManager {
         const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
 
         const compareArrow = (current, previous) => {
-            if (previous === 0) return '';
+            if (previous === 0) return '<span style="font-size:0.6rem; color:#999; vertical-align:middle;">🆕 Nuevo</span>';
             const pctChange = Math.round(((current - previous) / previous) * 100);
             if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
             const color = pctChange > 0 ? '#4CAF50' : '#F44336';
             const arrow = pctChange > 0 ? '↑' : '↓';
-            return `<span style="font-size:0.65rem; color:${color}; font-weight:600;">${arrow}${Math.abs(pctChange)}%</span>`;
+            return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
         };
 
         const expenseArrow = (current, previous) => {
-            if (previous === 0) return '';
+            if (previous === 0) return '<span style="font-size:0.6rem; color:#999; vertical-align:middle;">🆕 Nuevo</span>';
             const pctChange = Math.round(((current - previous) / previous) * 100);
             if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
             // For expenses: UP is BAD (red), DOWN is GOOD (green) - opposite!
             const color = pctChange > 0 ? '#F44336' : '#4CAF50';
             const arrow = pctChange > 0 ? '↑' : '↓';
-            return `<span style="font-size:0.65rem; color:${color}; font-weight:600;">${arrow}${Math.abs(pctChange)}%</span>`;
+            return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
         };
 
         // STREAK: Calculate consecutive days logging transactions
@@ -763,7 +763,7 @@ class UIManager {
                  <div class="metric-card">
                     <span class="label">Gastos ${expenseArrow(summary.expenses, prevSummary.expenses)}</span>
                     <span class="value expense">-${this.formatCurrency(summary.expenses)}</span>
-                    ${coffeeText ? `<span style="font-size:0.65rem; color:#999; margin-top:2px;">${coffeeText}</span>` : ''}
+                    ${coffeeText ? `<span style="font-size:0.75rem; color:#666; font-weight:500; margin-top:4px;">${coffeeText}</span>` : ''}
                 </div>
                  <div class="metric-card">
                     <span class="label">Ahorro ${compareArrow(summary.savings, prevSummary.savings)}</span>
@@ -1180,26 +1180,32 @@ class UIManager {
 
             } catch (err) {
                 console.error("AI Advice Failed:", err);
-                const msg = err.message || '';
-                let friendlyMsg = '';
+                const msg = (err.message || '').toLowerCase();
+                let coachFallback = item.fallback || "Mi consejo: Mantén tus gastos básicos bajo control hoy.";
 
-                if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) {
-                    friendlyMsg = '⏳ Límite temporal alcanzado. Espera 30 segundos y presiona Reintentar.';
-                } else if (msg.includes('NO_KEY') || msg.toLowerCase().includes('api key')) {
-                    friendlyMsg = '🔑 Configura tu API Key en Configuración → Asesor IA Personal.';
-                } else if (msg.includes('INVALID_KEY') || msg.includes('403')) {
-                    friendlyMsg = '🔑 Tu API Key no es válida. Revísala en Configuración.';
-                } else {
-                    friendlyMsg = '❌ Error conectando con la IA. Verifica tu conexión a internet.';
+                if (msg.includes('quota') || msg.includes('rate')) {
+                    coachFallback = "🚀 Mi cerebro IA está descansando un momento, pero aquí va mi consejo: " + coachFallback;
+                } else if (msg.includes('api key')) {
+                    coachFallback = "🔑 Conecta tu API Key para darte consejos a otro nivel.";
                 }
 
+                element.style.background = '#F5F5F5';
+                element.style.border = '1px dashed #DDD';
+                element.classList.remove('ai-loading');
+
                 element.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center;">
-                        <span class="tip-text" style="color:#666; font-size:0.85rem;">${friendlyMsg}</span>
-                        <button onclick="window.ui.forceRefreshAI()" 
-                                style="background:#E91E63; color:white; border:none; padding:6px 16px; border-radius:20px; font-size:0.8rem; cursor:pointer;">
-                            🔄 Reintentar
-                        </button>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <span class="tip-bullet">💡</span>
+                            <span class="tip-text" style="color: #666; line-height: 1.4; font-size: 0.85rem;">
+                                ${coachFallback}
+                            </span>
+                        </div>
+                        <div style="align-self: flex-end; margin-top: 5px;">
+                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:#E91E63; font-size:0.7rem; cursor:pointer; text-decoration:underline;">
+                                Reintentar
+                           </button>
+                        </div>
                     </div>
                 `;
             }
