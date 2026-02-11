@@ -603,6 +603,20 @@ class UIManager {
         // Control Visibility based on Data
         const plan = this.advisor.generateActionPlan(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
+        // --- Manage Quick Expense FAB state ---
+        const hasTransactions = this.store.transactions && this.store.transactions.length > 0;
+        const fab = document.getElementById('quick-expense-fab');
+        const fabHint = document.getElementById('quick-expense-hint');
+        if (fab) {
+            if (hasTransactions) {
+                fab.classList.remove('fab-pulse');
+                if (fabHint) fabHint.style.opacity = '0'; // Hide hint if they already know how to use it
+            } else {
+                fab.classList.add('fab-pulse');
+                if (fabHint) fabHint.style.opacity = '1';
+            }
+        }
+
         // --- CHECK: Is this a brand new user? ---
         const hasTransactions = this.store.transactions && this.store.transactions.length > 0;
         const hasApiKey = this.aiAdvisor && this.aiAdvisor.hasApiKey && this.aiAdvisor.hasApiKey();
@@ -611,23 +625,24 @@ class UIManager {
         let welcomeTipHTML = '';
         if (!hasTransactions) {
             welcomeTipHTML = `
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 24px; margin-bottom: 1.5rem; color: white; text-align: center;">
-                    <div style="font-size: 2.5rem; margin-bottom: 8px;">👋</div>
-                    <h2 style="margin: 0 0 8px 0; font-size: 1.3rem;">¡Bienvenido a ClarityCash!</h2>
-                    <p style="opacity: 0.9; margin: 0 0 16px 0; font-size: 0.9rem; line-height: 1.5;">Tu asistente financiero personal. Empieza en 3 simples pasos:</p>
-                    <div style="display: flex; flex-direction: column; gap: 10px; text-align: left; max-width: 320px; margin: 0 auto;">
-                        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px;">
-                            <span style="background: white; color: #764ba2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">1</span>
-                            <span style="font-size: 0.85rem;">Toca <strong>"+ Nuevo Movimiento"</strong> arriba para registrar tu primer ingreso o gasto</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px;">
-                            <span style="background: white; color: #764ba2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">2</span>
-                            <span style="font-size: 0.85rem;">También puedes <strong>escanear un recibo</strong> con la cámara o importar un extracto bancario (PDF/CSV)</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px;">
-                            <span style="background: white; color: #764ba2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">3</span>
-                            <span style="font-size: 0.85rem;">La IA analizará tus finanzas y te dará <strong>consejos personalizados</strong> 🧠</span>
-                        </div>
+                <div style="background: var(--bg-surface); border-radius: 24px; padding: 32px 24px; margin-bottom: 2rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); text-align: center;">
+                    <img src="assets/logo.png" style="width: 64px; height: 64px; margin-bottom: 16px; border-radius: 16px;">
+                    <h2 style="margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);">ClarityCash</h2>
+                    <p style="color: var(--text-secondary); margin: 0 0 24px 0; font-size: 0.95rem; line-height: 1.6; max-width: 280px; margin-left: auto; margin-right: auto;">
+                        Domina tus finanzas con inteligencia. Tu libertad financiera empieza con el primer registro.
+                    </p>
+                    
+                    <button onclick="window.ui.openQuickExpense()" style="width:100%; max-width: 280px; padding:16px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; margin-bottom:20px; box-shadow: 0 8px 20px rgba(233,30,99,0.25); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                        ⚡ Registrar mi primer gasto
+                    </button>
+
+                    <div style="display: flex; justify-content: center; gap: 16px; opacity: 0.7;">
+                        <small style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
+                            <i data-feather="camera" style="width:14px; height:14px;"></i> Escáner IA
+                        </small>
+                        <small style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
+                            <i data-feather="lock" style="width:14px; height:14px;"></i> 100% Privado
+                        </small>
                     </div>
                 </div>
             `;
@@ -1014,32 +1029,32 @@ class UIManager {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'quick-expense-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; display:flex; align-items:flex-end; justify-content:center;';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.3); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:10000; display:flex; align-items:flex-end; justify-content:center;';
 
         overlay.innerHTML = `
-            <div style="background:white; border-radius: 20px 20px 0 0; padding: 24px; width:100%; max-width:400px; animation: slideUp 0.3s ease;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-                    <h3 style="margin:0; font-size:1.1rem;">⚡ Gasto Rápido</h3>
-                    <button onclick="document.getElementById('quick-expense-overlay').remove()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999;">✕</button>
+            <div style="background:var(--bg-surface); border-radius: 32px 32px 0 0; padding: 32px 24px; width:100%; max-width:440px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+                    <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-main);">Gasto Rápido</h3>
+                    <button onclick="document.getElementById('quick-expense-overlay').remove()" style="background:rgba(0,0,0,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary);">✕</button>
                 </div>
                 
-                <input id="quick-amount" type="number" inputmode="numeric" placeholder="¿Cuánto gastaste?" 
-                    style="width:100%; padding:14px; font-size:1.3rem; border:2px solid #E91E63; border-radius:12px; text-align:center; box-sizing:border-box; margin-bottom:14px; outline:none;"
+                <input id="quick-amount" type="number" inputmode="numeric" placeholder="0" 
+                    style="width:100%; padding:20px; font-size:2.5rem; font-weight:800; border:none; background:rgba(0,0,0,0.03); border-radius:18px; text-align:center; box-sizing:border-box; margin-bottom:24px; outline:none; color:#E91E63;"
                     autofocus />
                 
-                <p style="margin:0 0 8px; font-size:0.8rem; color:#888;">¿En qué?</p>
-                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+                <p style="margin:0 0 12px; font-size:0.85rem; font-weight:600; color:var(--text-secondary); letter-spacing:0.02em;">CATEGORÍA</p>
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:32px;">
                     ${topCats.map(c => `
                         <button class="quick-cat-btn" data-cat="${c.id}" 
-                            style="padding:8px 12px; border:1px solid #eee; border-radius:20px; background:white; font-size:0.8rem; cursor:pointer; transition:all 0.2s;"
-                            onclick="this.parentElement.querySelectorAll('.quick-cat-btn').forEach(b=>b.style.background='white'); this.style.background='#FCE4EC'; this.style.borderColor='#E91E63';">
-                            ${catEmojis[c.id] || '📌'} ${c.name}
+                            style="padding:10px 16px; border:1px solid var(--border-color); border-radius:14px; background:var(--bg-surface); color:var(--text-main); font-size:0.85rem; font-weight:500; cursor:pointer; transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display:flex; align-items:center; gap:6px;"
+                            onclick="this.parentElement.querySelectorAll('.quick-cat-btn').forEach(b=>{b.style.background='var(--bg-surface)'; b.style.borderColor='var(--border-color)'; b.style.color='var(--text-main)';}); this.style.background='#FCE4EC'; this.style.borderColor='#E91E63'; this.style.color='#E91E63'; this.style.transform='scale(1.05)';">
+                            <span style="font-size:1.1rem;">${catEmojis[c.id] || '📌'}</span> ${c.name}
                         </button>
                     `).join('')}
                 </div>
                 
-                <button id="quick-save-btn" style="width:100%; padding:14px; background:#E91E63; color:white; border:none; border-radius:12px; font-size:1rem; font-weight:600; cursor:pointer;">
-                    ✓ Guardar
+                <button id="quick-save-btn" style="width:100%; padding:18px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:16px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow: 0 10px 20px rgba(233,30,99,0.2);">
+                    Confirmar Gasto
                 </button>
             </div>
         `;
