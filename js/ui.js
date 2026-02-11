@@ -178,12 +178,15 @@ class UIManager {
                         else data.category_id = 'cat_10';
                     }
 
-                    const editId = formData.get('edit_tx_id');
                     if (editId) {
                         this.store.updateTransaction(editId, data);
                         alert('Movimiento actualizado correctamente.');
                     } else {
                         this.store.addTransaction(data);
+                        // PROACTIVE AI: Trigger insight if it's an expense
+                        if (data.type === 'GASTO') {
+                            this.triggerSpendingInsight(data);
+                        }
                     }
 
                     if (txModal) {
@@ -676,35 +679,48 @@ class UIManager {
                     </div>
                 </div>
 
-                <!-- Diagnosis Banner -->
-                <div class="diagnosis-banner ${plan.status.toLowerCase()}">
-                    <div class="diagnosis-icon">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
-                    <div class="diagnosis-content">
-                        <h3>${plan.priority}</h3>
-                        <div class="advisor-tips">
-                            ${plan.adjustments.map((step, i) => {
-            if (typeof step === 'object' && step.type === 'AI_ANALYSIS_REQUIRED') {
-                return `
-                                        <div id="ai-advice-tip-${i}" class="tip-item ai-loading" style="background: rgba(255,255,255,0.9); border: 1px dashed #0D47A1;">
-                                            <span class="tip-bullet">🤖</span>
-                                            <span class="tip-text" style="font-style: italic; color: #0D47A1;">
-                                                Analizando estrategia personalizada...
-                                            </span>
-                                        </div>
-                                    `;
-            }
-            return `
-                                <div class="tip-item">
-                                    <span class="tip-bullet">${i + 1}</span>
-                                    <span class="tip-text">${step}</span>
-                                </div>
-                                `;
-        }).join('')}
+                <!-- Diagnosis Banner (Simplified) -->
+                <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 16px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+                        <div>
+                            <span style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); opacity:0.7;">Diagnóstico IA</span>
+                            <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main);">${plan.priority}</h3>
                         </div>
+                        <div style="font-size:1.5rem;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
                     </div>
-                    <div class="diagnosis-balance">
-                         <small>Balance del Mes</small>
-                         <span class="${summary.balance_net < 0 ? 'text-danger' : 'text-success'}">
+
+                    <!-- FINANCIAL HEALTH BAR (SEMAPHORE) -->
+                    ${(() => {
+                const totalIncome = summary.income > 0 ? summary.income : 1; // Avoid div by zero
+                const totalExpense = summary.expenses;
+                const ratio = (totalExpense / totalIncome) * 100;
+
+                let color = '#4CAF50'; // Green (Safe)
+                let healthText = 'Saludable';
+
+                if (ratio > 100) { color = '#9C27B0'; healthText = 'Déficit (Peligro)'; } // Purple
+                else if (ratio > 85) { color = '#F44336'; healthText = 'Crítico'; } // Red
+                else if (ratio > 60) { color = '#FF9800'; healthText = 'Precaución'; } // Orange
+
+                // Cap width at 100% for CSS
+                const width = Math.min(ratio, 100);
+
+                return `
+                        <div style="margin-bottom: 16px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:6px; color:var(--text-secondary);">
+                                <span>Gastado: ${Math.round(ratio)}%</span>
+                                <span style="color:${color}; font-weight:700;">${healthText}</span>
+                            </div>
+                            <div style="height:10px; background:rgba(0,0,0,0.05); border-radius:10px; overflow:hidden;">
+                                <div style="width:${width}%; background:${color}; height:100%; border-radius:10px; transition: width 1s ease-out;"></div>
+                            </div>
+                        </div>
+                        `;
+            })()}
+
+                    <div class="diagnosis-balance" style="text-align: right;">
+                         <small style="display:block; font-size:0.7rem; color:var(--text-secondary);">Disponible Real</small>
+                         <span class="${summary.balance_net < 0 ? 'text-danger' : 'text-success'}" style="font-size:1.5rem; font-weight:800;">
                             ${summary.balance_net < 0 ? '-' : '+'}${this.formatCurrency(Math.abs(summary.balance_net))}
                          </span>
                     </div>
@@ -1165,14 +1181,19 @@ class UIManager {
             // Find accounting
             const accountId = this.store.accounts.find(a => a.type === 'EFECTIVO')?.id || this.store.accounts[0]?.id || 'acc_1';
 
-            this.store.addTransaction({
+            const txData = {
                 type: 'GASTO',
                 amount: amount,
                 date: new Date().toISOString().split('T')[0],
                 category_id: catId,
                 account_id: accountId,
                 note: `Gasto rápido: ${catName}`
-            });
+            };
+
+            this.store.addTransaction(txData);
+
+            // PROACTIVE AI: Trigger insight
+            setTimeout(() => this.triggerSpendingInsight(txData), 500);
 
             closeOverlay();
 
@@ -1422,6 +1443,119 @@ class UIManager {
                 }
             }
         });
+    }
+
+    // --- PROACTIVE AI INSIGHTS ---
+    triggerSpendingInsight(tx) {
+        if (!tx || tx.type !== 'GASTO') return;
+
+        const category = this.store.categories.find(c => c.id === tx.category_id);
+        const catName = category ? category.name : 'esta categoría';
+
+        // 1. Calculate stats for this category this month
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const monthlyTxs = this.store.transactions.filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === currentMonth &&
+                d.getFullYear() === currentYear &&
+                t.type === 'GASTO';
+        });
+
+        const totalExpense = monthlyTxs.reduce((sum, t) => sum + t.amount, 0);
+        const catExpense = monthlyTxs
+            .filter(t => t.category_id === tx.category_id)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const catCount = monthlyTxs.filter(t => t.category_id === tx.category_id).length;
+
+        // 2. Get Budget Limit (if exists)
+        const budgetLimit = this.store.config.budgets ? this.store.config.budgets[tx.category_id] : 0;
+
+        // 3. Generate Insight Message
+        let message = '';
+        let type = 'info'; // info, warning, danger
+        let icon = '💡';
+
+        // Logic Hierarchy
+        if (budgetLimit > 0 && catExpense > budgetLimit) {
+            const over = catExpense - budgetLimit;
+            message = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatCurrency(over)}`;
+            type = 'danger';
+            icon = '🚨';
+        } else if (budgetLimit > 0 && catExpense > (budgetLimit * 0.8)) {
+            message = `Cuidado, estás al 80% de tu límite para ${catName}`;
+            type = 'warning';
+            icon = '⚠️';
+        } else if (catExpense > (totalExpense * 0.3) && totalExpense > 0) {
+            message = `${catName} se está llevando el 30% de tus gastos este mes.`;
+            type = 'warning';
+            icon = '📊';
+        } else if (category.id === 'cat_2' || category.id === 'cat_ant') {
+            // Coffee/Food specific
+            if (catCount > 10) {
+                message = `Vas ${catCount} veces en ${catName} este mes. ¿Cocinamos más?`;
+                type = 'info';
+                icon = '🍳';
+            } else if (tx.amount > 50000 && category.id === 'cat_ant') {
+                message = `Un antojo de ${this.formatCurrency(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
+                icon = '🍩';
+            }
+        }
+
+        // 4. Show Toast if we have something to say
+        if (message) {
+            this.showToast(message, type, icon);
+        }
+    }
+
+    showToast(text, type = 'info', icon = '💡') {
+        // Remove existing toasts to avoid clutter
+        const existing = document.querySelectorAll('.ai-toast');
+        existing.forEach(e => e.remove());
+
+        const toast = document.createElement('div');
+        toast.className = 'ai-toast';
+
+        let bg = 'white';
+        let color = '#333';
+        let border = '#eee';
+
+        if (type === 'danger') { bg = '#FFEBEE'; color = '#D32F2F'; border = '#FFCDD2'; }
+        if (type === 'warning') { bg = '#FFF3E0'; color = '#EF6C00'; border = '#FFE0B2'; }
+        if (type === 'info') { bg = '#E3F2FD'; color = '#1565C0'; border = '#BBDEFB'; }
+
+        toast.style.cssText = `
+            position: fixed; 
+            top: 80px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: ${bg}; 
+            color: ${color}; 
+            border: 1px solid ${border};
+            padding: 12px 20px; 
+            border-radius: 50px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            z-index: 10002; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-size: 0.9rem; 
+            font-weight: 500; 
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90%;
+            width: max-content;
+        `;
+
+        toast.innerHTML = `<span style="font-size:1.2rem">${icon}</span> <span>${text}</span>`;
+
+        document.body.appendChild(toast);
+
+        // Auto remove
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.5s forwards';
+            setTimeout(() => toast.remove(), 500);
+        }, 4000);
     }
 
     renderGoalsWidget() {

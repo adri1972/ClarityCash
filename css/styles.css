@@ -867,29 +867,31 @@ td {
 
 .metric-card {
     background: white;
-    padding: 1.5rem;
-    /* More padding */
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
+    padding: 1.75rem;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+    /* Minimalist soft shadow */
     display: flex;
     flex-direction: column;
     justify-content: center;
-    transition: var(--transition);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: none;
+    background: #fff;
 }
 
 .metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.12);
 }
 
 .metric-card .label {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    color: #9E9E9E;
+    /* Softer gray */
+    margin-bottom: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .metric-card .value {
@@ -1483,7 +1485,9 @@ td {
     .content-container>div>div[style*="background: white"] {
         background: var(--bg-surface) !important;
     }
-}@keyframes bounceInRight {
+}
+
+@keyframes bounceInRight {
     0% {
         opacity: 0;
         transform: translateX(20px);
