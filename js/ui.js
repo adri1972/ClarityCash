@@ -16,6 +16,17 @@ class UIManager {
         this.currentChart = null;
         this.viewDate = new Date();
 
+        // Friendly names for category groups
+        this.groupLabels = {
+            'INGRESOS': '💵 Ingresos',
+            'NECESIDADES': '🏠 Lo Esencial',
+            'VIVIENDA': '🏡 Casa y Servicios',
+            'FINANCIERO': '💰 Ahorro y Deudas',
+            'CRECIMIENTO': '📚 Educación',
+            'ESTILO_DE_VIDA': '🎭 Gustos y Ocio',
+            'OTROS': '📦 Otros'
+        };
+
         // Smart Date: Jump to latest transaction date if current month is empty
         this.setSmartViewDate();
     }
@@ -532,7 +543,7 @@ class UIManager {
 
         let catHtml = '<option value="" disabled selected>Selecciona una categoría</option>';
         groups.forEach(group => {
-            catHtml += `<optgroup label="${group}">`;
+            catHtml += `<optgroup label="${this.groupLabels[group] || group}">`;
             filteredCats.filter(c => c.group === group).forEach(c => {
                 catHtml += `<option value="${c.id}">${c.name}</option>`;
             });
@@ -575,6 +586,7 @@ class UIManager {
 
     renderDashboard() {
         this.pageTitle.textContent = 'Tu Panorama Financiero';
+
 
         // --- 0. Month Navigation & Header ---
         const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -677,7 +689,7 @@ class UIManager {
                         </div>
                     </div>
                     <div class="diagnosis-balance">
-                         <small>Flujo Neto</small>
+                         <small>Balance del Mes</small>
                          <span class="${summary.balance_net < 0 ? 'text-danger' : 'text-success'}">
                             ${summary.balance_net < 0 ? '-' : '+'}${this.formatCurrency(Math.abs(summary.balance_net))}
                          </span>
@@ -1299,7 +1311,7 @@ class UIManager {
     }
 
     renderTransactions() {
-        this.pageTitle.textContent = 'Historial de Movimientos';
+        this.pageTitle.textContent = 'Mis Movimientos';
         // Ensure we use the getter to retrieve sorted transactions
         const txs = this.store.getAllTransactions ? this.store.getAllTransactions() : this.store.data.transactions;
         const categories = this.store.data.categories || [];
@@ -2042,7 +2054,7 @@ class UIManager {
     }
 
     renderInsightsPage() {
-        this.pageTitle.textContent = 'Análisis Profundo (IA)';
+        this.pageTitle.textContent = 'Análisis de tus Finanzas 🔍';
 
         // 1. CHART SECTION
         let html = `

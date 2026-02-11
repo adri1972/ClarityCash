@@ -219,7 +219,7 @@ class FinancialAdvisor {
         if (summary.balance_net < 0) {
             status = 'CRITICAL';
             const deficit = Math.abs(summary.balance_net);
-            priority = `🚨 DÉFICIT DE ${this.formatMoney(deficit)}`;
+            priority = `😟 Gastaste ${this.formatMoney(deficit)} más de lo que ganaste`;
 
             const topLeakName = topLeak ? topLeak[0] : 'Gastos Generales';
             const topLeakAmount = topLeak ? this.formatMoney(topLeak[1]) : '$0';
@@ -249,7 +249,7 @@ class FinancialAdvisor {
         // CASE B: LIVING ON EDGE
         else if (effectiveSavings < (income * 0.05)) {
             status = 'WARNING';
-            priority = "⚠️ RIESGO ALTO (Vives al día)";
+            priority = "😬 Cuidado, estás gastando casi todo";
 
             if (topLeak) {
                 const leakPct = (topLeak[1] / income) * 100;
@@ -273,7 +273,7 @@ class FinancialAdvisor {
         // CASE C: SURPLUS
         else {
             status = 'OK';
-            priority = "📈 SUPERÁVIT: Optimización";
+            priority = "😊 ¡Bien! Te sobró dinero este mes";
             const surplus = effectiveSavings;
             const fixedCostPct = income > 0 ? ((totalFixedCosts / income) * 100).toFixed(0) : 0;
 
