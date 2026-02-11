@@ -996,25 +996,39 @@ class UIManager {
     }
 
     openQuickExpense() {
-        // Get top 8 most used expense categories
+        // --- 1. Get Top Categories + Force Priority (Coffee/Food) ---
         const txs = this.store.transactions.filter(t => t.type === 'GASTO');
         const catCounts = {};
         txs.forEach(t => { catCounts[t.category_id] = (catCounts[t.category_id] || 0) + 1; });
 
-        const topCats = Object.entries(catCounts)
+        // Get historically top categories
+        let topCats = Object.entries(catCounts)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 8)
+            .slice(0, 6)
             .map(([id]) => this.store.categories.find(c => c.id === id))
             .filter(Boolean);
 
-        // Fallback if no history
+        // FORCE PRIORITY: Always include Food (cat_2) and Cravings/Coffee (cat_ant) at the start
+        const priorityIds = ['cat_2', 'cat_ant'];
+        priorityIds.reverse().forEach(pid => {
+            // Remove if already in list to avoid duplicates
+            topCats = topCats.filter(c => c.id !== pid);
+            // Add to front
+            const cat = this.store.categories.find(c => c.id === pid);
+            if (cat) topCats.unshift(cat);
+        });
+
+        // Fallback if list is empty
         if (topCats.length === 0) {
-            const defaultIds = ['cat_2', 'cat_3', 'cat_rest', 'cat_ant', 'cat_9', 'cat_gasolina'];
+            const defaultIds = ['cat_2', 'cat_ant', 'cat_3', 'cat_9'];
             defaultIds.forEach(id => {
                 const cat = this.store.categories.find(c => c.id === id);
                 if (cat) topCats.push(cat);
             });
         }
+
+        // Limit to 8 total
+        topCats = topCats.slice(0, 8);
 
         const catEmojis = {
             'cat_2': '🍔', 'cat_3': '🚗', 'cat_rest': '🍽️', 'cat_ant': '☕',
@@ -1028,84 +1042,126 @@ class UIManager {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'quick-expense-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.3); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:10000; display:flex; align-items:flex-end; justify-content:center;';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:10000; display:flex; align-items:flex-end; justify-content:center; animation: fadeIn 0.2s;';
 
-        overlay.innerHTML = `
-            <div style="background:var(--bg-surface); border-radius: 32px 32px 0 0; padding: 32px 24px; width:100%; max-width:440px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+        const overlayContent = `
+            <div style="background:var(--bg-surface); border-radius: 32px 32px 0 0; padding: 32px 24px; width:100%; max-width:500px; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding-bottom: max(32px, env(safe-area-inset-bottom));">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-                    <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-main);">Gasto Rápido</h3>
-                    <button onclick="document.getElementById('quick-expense-overlay').remove()" style="background:rgba(0,0,0,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary);">✕</button>
+                    <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-main);">⚡ Gasto Rápido</h3>
+                    <button id="close-quick-btn" style="background:rgba(0,0,0,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); font-size: 1.2rem;">&times;</button>
                 </div>
                 
-                <input id="quick-amount" type="number" inputmode="numeric" placeholder="0" 
-                    style="width:100%; padding:20px; font-size:2.5rem; font-weight:800; border:none; background:rgba(0,0,0,0.03); border-radius:18px; text-align:center; box-sizing:border-box; margin-bottom:24px; outline:none; color:#E91E63;"
-                    autofocus />
+                <div style="position:relative; margin-bottom: 24px;">
+                    <span style="position:absolute; left:20px; top:50%; transform:translateY(-50%); font-size:1.5rem; color: #E91E63; font-weight:700;">$</span>
+                    <input id="quick-amount" type="number" inputmode="decimal" placeholder="0" 
+                        style="width:100%; padding:20px 20px 20px 40px; font-size:2.5rem; font-weight:800; border:none; background:rgba(233, 30, 99, 0.05); border-radius:18px; text-align:center; box-sizing:border-box; outline:none; color:#E91E63;"
+                        autofocus />
+                </div>
                 
-                <p style="margin:0 0 12px; font-size:0.85rem; font-weight:600; color:var(--text-secondary); letter-spacing:0.02em;">CATEGORÍA</p>
-                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:32px;">
-                    ${topCats.map(c => `
+                <p style="margin:0 0 12px; font-size:0.85rem; font-weight:600; color:var(--text-secondary); letter-spacing:0.02em; text-transform:uppercase;">¿En qué gastaste?</p>
+                
+                <div id="quick-cats-container" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:32px;">
+                    ${topCats.map((c, index) => `
                         <button class="quick-cat-btn" data-cat="${c.id}" 
-                            style="padding:10px 16px; border:1px solid var(--border-color); border-radius:14px; background:var(--bg-surface); color:var(--text-main); font-size:0.85rem; font-weight:500; cursor:pointer; transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display:flex; align-items:center; gap:6px;"
-                            onclick="this.parentElement.querySelectorAll('.quick-cat-btn').forEach(b=>{b.style.background='var(--bg-surface)'; b.style.borderColor='var(--border-color)'; b.style.color='var(--text-main)';}); this.style.background='#FCE4EC'; this.style.borderColor='#E91E63'; this.style.color='#E91E63'; this.style.transform='scale(1.05)';">
-                            <span style="font-size:1.1rem;">${catEmojis[c.id] || '📌'}</span> ${c.name}
+                            style="padding:14px; border:1px solid var(--border-color); border-radius:16px; background:var(--bg-surface); color:var(--text-main); font-size:0.95rem; font-weight:600; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:10px; justify-content: flex-start; text-align: left;">
+                            <span style="font-size:1.4rem; background:rgba(0,0,0,0.03); width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; border-radius:12px;">${catEmojis[c.id] || '📌'}</span>
+                            <span>${c.name}</span>
                         </button>
                     `).join('')}
                 </div>
                 
-                <button id="quick-save-btn" style="width:100%; padding:18px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:16px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow: 0 10px 20px rgba(233,30,99,0.2);">
-                    Confirmar Gasto
+                <button id="quick-save-btn" style="width:100%; padding:18px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:16px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow: 0 8px 20px rgba(233,30,99,0.3); opacity: 0.5; pointer-events: none; transition: opacity 0.3s;">
+                    Guardar Gasto
                 </button>
             </div>
         `;
 
+        overlay.innerHTML = overlayContent;
         document.body.appendChild(overlay);
 
-        // Focus amount input
-        setTimeout(() => document.getElementById('quick-amount').focus(), 100);
+        // --- Event Handlers ---
+        const amountInput = document.getElementById('quick-amount');
+        const saveBtn = document.getElementById('quick-save-btn');
+        const closeBtn = document.getElementById('close-quick-btn');
+        const catContainer = document.getElementById('quick-cats-container');
+        let selectedCatId = null;
 
-        // Close on overlay tap
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) overlay.remove();
+        // Auto-focus input
+        setTimeout(() => amountInput.focus(), 100);
+
+        // Close Logic
+        const closeOverlay = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        };
+        closeBtn.addEventListener('click', closeOverlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+
+        // Category Selection Logic
+        catContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-cat-btn');
+            if (!btn) return;
+
+            // Update UI
+            document.querySelectorAll('.quick-cat-btn').forEach(b => {
+                b.style.background = 'var(--bg-surface)';
+                b.style.borderColor = 'var(--border-color)';
+                b.style.color = 'var(--text-main)';
+                b.style.transform = 'scale(1)';
+                b.style.boxShadow = 'none';
+            });
+
+            btn.style.background = '#FCE4EC';
+            btn.style.borderColor = '#E91E63';
+            btn.style.color = '#C2185B';
+            btn.style.transform = 'scale(1.02)';
+            btn.style.boxShadow = '0 4px 12px rgba(233,30,99,0.15)';
+
+            selectedCatId = btn.dataset.cat;
+            checkForm();
         });
 
-        // Save logic
-        document.getElementById('quick-save-btn').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('quick-amount').value);
-            const selectedCat = overlay.querySelector('.quick-cat-btn[style*="FCE4EC"]');
+        // Input Logic
+        amountInput.addEventListener('input', checkForm);
 
-            if (!amount || amount <= 0) {
-                document.getElementById('quick-amount').style.borderColor = 'red';
-                document.getElementById('quick-amount').focus();
-                return;
+        function checkForm() {
+            const val = parseFloat(amountInput.value);
+            if (val > 0 && selectedCatId) {
+                saveBtn.style.opacity = '1';
+                saveBtn.style.pointerEvents = 'auto';
+            } else {
+                saveBtn.style.opacity = '0.5';
+                saveBtn.style.pointerEvents = 'none';
             }
+        }
 
-            if (!selectedCat) {
-                alert('Selecciona en qué gastaste');
-                return;
-            }
-
-            const catId = selectedCat.dataset.cat;
+        // Save Logic
+        saveBtn.addEventListener('click', () => {
+            const amount = parseFloat(amountInput.value);
+            const catId = selectedCatId;
             const catName = this.store.categories.find(c => c.id === catId)?.name || '';
+
+            // Find accounting
+            const accountId = this.store.accounts.find(a => a.type === 'EFECTIVO')?.id || this.store.accounts[0]?.id || 'acc_1';
 
             this.store.addTransaction({
                 type: 'GASTO',
                 amount: amount,
                 date: new Date().toISOString().split('T')[0],
                 category_id: catId,
-                account_id: this.store.accounts[0]?.id || 'acc_1',
+                account_id: accountId,
                 note: `Gasto rápido: ${catName}`
             });
 
-            overlay.remove();
+            closeOverlay();
 
-            // Haptic-like visual feedback
+            // Success Feedback
             const toast = document.createElement('div');
-            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#4CAF50; color:white; padding:10px 20px; border-radius:20px; font-size:0.9rem; z-index:10001; animation: fadeIn 0.3s;';
-            toast.textContent = `✅ -${this.formatCurrency(amount)} en ${catName}`;
+            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:1rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;';
+            toast.innerHTML = `✅ Gasto guardado: <b>${this.formatCurrency(amount)}</b>`;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+            setTimeout(() => toast.remove(), 3000);
 
-            // Refresh dashboard
             if (this.currentView === 'dashboard') this.renderDashboard();
         });
     }
