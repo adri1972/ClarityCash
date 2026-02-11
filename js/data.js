@@ -69,6 +69,7 @@ const DEFAULT_DATA = {
 class Store {
     constructor() {
         this.STORAGE_KEY = 'clarity_cash_data_v2';
+        this.BACKUP_KEY = 'clarity_cash_backup';
         this.usingMemory = false;
         this.memoryStore = null;
         this.data = this.init();
@@ -77,7 +78,17 @@ class Store {
     init() {
         try {
             const stored = localStorage.getItem(this.STORAGE_KEY);
-            if (!stored) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+            if (!stored) {
+                // TRY BACKUP RECOVERY
+                const backup = localStorage.getItem(this.BACKUP_KEY);
+                if (backup) {
+                    console.log('⚠️ Main data lost! Recovering from backup...');
+                    const recovered = JSON.parse(backup);
+                    localStorage.setItem(this.STORAGE_KEY, backup);
+                    return recovered;
+                }
+                return JSON.parse(JSON.stringify(DEFAULT_DATA));
+            }
 
             const data = JSON.parse(stored);
 
@@ -181,6 +192,8 @@ class Store {
         }
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+            // AUTO-BACKUP: Save a copy for recovery
+            localStorage.setItem(this.BACKUP_KEY, JSON.stringify(this.data));
             window.dispatchEvent(new CustomEvent('c_store_updated'));
         } catch (e) {
             console.error('Save failed:', e);
