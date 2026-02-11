@@ -538,42 +538,23 @@
     <script src="js/app.js?v=53"></script>
 
     <!-- FINAL ZOMBIE KILLER SCRIPT -->
+    <!-- SERVICE WORKER KILL SWITCH - MODE: NUCLEAR -->
     <script>
-        const SW_VERSION = 'v54';
-
-        // NO ASYNC WAIT on purpose
+        // INTENTION: Completely disable PWA functionality to force fresh load
         if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
+                    console.log('💀 Killing SW:', registration);
+                    registration.unregister();
+                }
+            });
 
-            // Check if we are already cleansed
-            const isClean = localStorage.getItem('cc_killer_' + SW_VERSION);
-
-            if (!isClean) {
-                console.log('💥 STARTING ZOMBIE KILLER PROCESS...');
-
-                // 1. Unregister EVERYONE
-                navigator.serviceWorker.getRegistrations().then(regs => {
-                    for (let reg of regs) reg.unregister();
-                });
-
-                // 2. Kill caches
-                caches.keys().then(keys => {
-                    return Promise.all(keys.map(k => caches.delete(k)));
-                }).then(() => {
-                    // 3. Mark as clean
-                    localStorage.setItem('cc_killer_' + SW_VERSION, 'true');
-                    console.log('✅ CLEANSED. RELOADING...');
-
-                    // 4. Force reload from server (true)
-                    window.location.reload(true);
-                });
-
-            } else {
-                // NORMAL STARTUP - Only register the new safe worker
-                console.log('🛡️ System clean. Registering v54...');
-                navigator.serviceWorker.register('sw-v54-final.js').then(reg => {
-                    reg.update(); // Check for updates aggressively
-                });
-            }
+            caches.keys().then(function (names) {
+                for (let name of names) {
+                    console.log('💀 Deleting Cache:', name);
+                    caches.delete(name);
+                }
+            });
         }
     </script>
 </body>
