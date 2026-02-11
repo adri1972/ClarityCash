@@ -2704,12 +2704,7 @@ class UIManager {
             <div class="settings-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
                 <!-- Column 1: Profile -->
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin:0;">Perfil Financiero</h3>
-                        <button onclick="window.ui.appRepair()" style="background:#FFEBEE; color:#D32F2F; border:1px solid #FFCDD2; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; cursor:pointer;">
-                            🛠️ Reparar App
-                        </button>
-                    </div>
+                    <h3>Perfil Financiero</h3>
                     <form id="settings-form">
                         <div class="form-group">
                             <label>Ingreso Mensual Objetivo</label>
@@ -3007,30 +3002,6 @@ class UIManager {
                 alert('✅ Configuración de IA guardada.');
                 this.render();
             });
-        }
-
-
-    // Handle App Repair
-    async appRepair() {
-            if (!confirm('¿La app no funciona bien? Esto borrará el caché y forzará una actualización completa. Tus datos NO se perderán.')) return;
-
-            try {
-                // Unregister legacy SWs
-                if ('serviceWorker' in navigator) {
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    for (const reg of regs) await reg.unregister();
-                }
-                // Clear Caches
-                if ('caches' in window) {
-                    const keys = await caches.keys();
-                    for (const key of keys) await caches.delete(key);
-                }
-                // Reload
-                alert('✅ Limpieza completada. La app se reiniciará.');
-                window.location.reload();
-            } catch (e) {
-                alert('❌ Error: ' + e.message);
-            }
         }
 
         // Handle Auto-Suggest Button
