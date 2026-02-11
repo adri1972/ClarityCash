@@ -3106,7 +3106,7 @@ class UIManager {
                 <button id="force-update-env-btn" class="btn-text" style="color: #2E7D32; font-size: 0.85rem; text-decoration: underline; font-weight: 600;">
                     🔄 Buscar Actualizaciones / Recargar
                 </button>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 0.5rem;">Versión instalada: v60 (UI Polished)</p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 0.5rem;">Versión instalada: v61 (Minimal + Proactive AI)</p>
             </div>
             </div>
         `;
