@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#2E7D32">
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/styles.css?v=53">
+    <link rel="stylesheet" href="css/styles.css?v=51">
 
     <!-- Fonts: Inter for modern clean look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -528,15 +528,15 @@
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
     <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
-    <script src="js/data.js?v=53"></script>
-    <script src="js/advisor.js?v=53"></script>
-    <script src="js/gemini.js?v=53"></script>
-    <script src="js/ui.js?v=53"></script>
-    <script src="js/app.js?v=53"></script>
+    <script src="js/data.js?v=51"></script>
+    <script src="js/advisor.js?v=51"></script>
+    <script src="js/gemini.js?v=51"></script>
+    <script src="js/ui.js?v=51"></script>
+    <script src="js/app.js?v=51"></script>
 
     <!-- Auto-healing Service Worker Manager -->
     <script>
-        const SW_VERSION = 'v53';
+        const SW_VERSION = 'v52';
         (async () => {
             if (!('serviceWorker' in navigator)) return;
 
@@ -560,21 +560,7 @@
 
                 // Register fresh SW
                 localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
-                const reg = await navigator.serviceWorker.register('sw-v53.js');
-
-                // AUTO-UPDATE LOGIC: If a new SW is found, force update
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated') {
-                            // New version installed! Reload page automatically
-                            console.log('New version installed. Reloading...');
-                            window.location.reload();
-                        }
-                    });
-                });
-
-                // Check for updates every time app opens
+                const reg = await navigator.serviceWorker.register('sw-v52.js');
                 reg.update();
             } catch (e) { console.log('SW:', e); }
         })();

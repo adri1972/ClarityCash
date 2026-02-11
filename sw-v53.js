@@ -1,5 +1,5 @@
-// ClarityCash Service Worker v50 - Self-Healing
-const CACHE_NAME = 'cc-v50';
+// ClarityCash Service Worker v52 - Cache Buster Extreme
+const CACHE_NAME = 'cc-v52';
 
 self.addEventListener('install', () => {
     // Take control IMMEDIATELY - don't wait

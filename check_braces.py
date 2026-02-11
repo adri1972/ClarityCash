@@ -1,24 +1,29 @@
 
 def check_braces(filename):
     with open(filename, 'r') as f:
-        content = f.read()
+        lines = f.readlines()
     
     stack = []
-    lines = content.split('\n')
     
     for i, line in enumerate(lines):
-        for j, char in enumerate(line):
-            if char == '{':
-                stack.append((i+1, j+1))
-            elif char == '}':
+        for char in line:
+            if char in '{[(':
+                stack.append((char, i + 1))
+            elif char in '}])':
                 if not stack:
-                    print(f"Error: Unexpected closing brace at line {i+1}, col {j+1}")
+                    print(f"Error: Unmatched '{char}' at line {i + 1}")
                     return
-                stack.pop()
-    
+                last, line_num = stack.pop()
+                if (last == '{' and char != '}') or \
+                   (last == '[' and char != ']') or \
+                   (last == '(' and char != ')'):
+                    print(f"Error: Mismatched '{last}' (line {line_num}) with '{char}' at line {i + 1}")
+                    return
+
     if stack:
-        print(f"Error: Unclosed brace at line {stack[-1][0]}, col {stack[-1][1]}")
+        last, line_num = stack.pop()
+        print(f"Error: Unclosed '{last}' at line {line_num}")
     else:
-        print("Braces are balanced.")
+        print("Success: All braces matched correctly!")
 
 check_braces('js/ui.js')
