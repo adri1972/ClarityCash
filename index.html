@@ -536,7 +536,7 @@
 
     <!-- Auto-healing Service Worker Manager -->
     <script>
-        const SW_VERSION = 'v50';
+        const SW_VERSION = 'v51';
         (async () => {
             if (!('serviceWorker' in navigator)) return;
 
@@ -560,7 +560,7 @@
 
                 // Register fresh SW
                 localStorage.setItem('cc_sw_' + SW_VERSION, 'ok');
-                const reg = await navigator.serviceWorker.register('service-worker.js?v=50');
+                const reg = await navigator.serviceWorker.register('service-worker.js?v=51');
                 reg.update();
             } catch (e) { console.log('SW:', e); }
         })();
