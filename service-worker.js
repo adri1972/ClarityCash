@@ -1,51 +1,31 @@
-const CACHE_NAME = 'clarity-cash-v43'; // Bump to v43
-const ASSETS_TO_CACHE = [
-    './',
-    './index.html',
-    './manifest.json',
-    './assets/icon.svg',
-    './css/styles.css',
-    './js/advisor.js',
-    './js/gemini.js',
-    './js/app.js',
-    './js/data.js',
-    './js/ui.js'
-];
+// ClarityCash Service Worker v50 - Network First, No Static Cache Issues
+const CACHE_NAME = 'cc-v50';
 
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            console.log('[Service Worker] Caching assets');
-            return cache.addAll(ASSETS_TO_CACHE);
-        })
-    );
+self.addEventListener('install', () => {
+    self.skipWaiting(); // Take control immediately
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((keys) => {
-            return Promise.all(
-                keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-            );
-        })
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+        )
     );
     self.clients.claim();
 });
 
+// NETWORK FIRST: Always fetch from server, only use cache when offline
 self.addEventListener('fetch', (event) => {
-    // Network First: Always try to get fresh content, fall back to cache if offline
     event.respondWith(
         fetch(event.request)
-            .then((response) => {
-                // Save fresh copy to cache
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            .then(response => {
+                // Save fresh copy to cache for offline use
+                if (response.ok && event.request.method === 'GET') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
                 return response;
             })
-            .catch(() => {
-                // Offline: serve from cache
-                return caches.match(event.request);
-            })
+            .catch(() => caches.match(event.request))
     );
 });
