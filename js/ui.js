@@ -2966,6 +2966,28 @@ class UIManager {
 
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Perfil</button>
                     </form>
+                    
+                    <div style="margin-top: 2rem; padding: 1rem; border: 1px dashed #F44336; border-radius: 8px; background: #FFEBEE;">
+                        <h4 style="color: #D32F2F; margin: 0 0 0.5rem 0;">🛠️ Zona de Peligro (Debug)</h4>
+                        <p style="font-size: 0.8rem; color: #D32F2F; margin-bottom: 1rem;">
+                            Si la app no actualiza o se comporta extraño, usa este botón para limpiar todo el caché y recargar desde cero.
+                        </p>
+                        <button onclick="
+                            if(confirm('¿Seguro? Esto recargará la app.')) {
+                                if(navigator.serviceWorker) {
+                                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                                        for(let registration of registrations) { registration.unregister(); }
+                                    });
+                                }
+                                caches.keys().then(function(names) {
+                                    for (let name of names) caches.delete(name);
+                                });
+                                window.location.reload(true);
+                            }
+                        " style="width: 100%; padding: 10px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: 700;">
+                            💣 BORRAR CACHÉ Y FORZAR RECARGA
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Column 2: Fixed Expenses & Recurring Incomes -->
@@ -3106,7 +3128,7 @@ class UIManager {
                 <button id="force-update-env-btn" class="btn-text" style="color: #2E7D32; font-size: 0.85rem; text-decoration: underline; font-weight: 600;">
                     🔄 Buscar Actualizaciones / Recargar
                 </button>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 0.5rem;">Versión instalada: v61 (Minimal + Proactive AI)</p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 0.5rem;">Versión instalada: v62 (Cache Fix + Minimal UI + Proactive AI)</p>
             </div>
             </div>
         `;
