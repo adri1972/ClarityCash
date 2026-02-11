@@ -791,14 +791,44 @@ class UIManager {
 
         if (aiItems.length === 0) return;
 
+        // Cache key based on month/year
+        const cacheKey = `cc_ai_v41_${this.viewDate.getFullYear()}_${this.viewDate.getMonth()}`;
+        const cached = localStorage.getItem(cacheKey);
+
         for (const { item, index } of aiItems) {
             const element = document.getElementById(`ai-advice-tip-${index}`);
             if (!element) continue;
+
+            // If we have cached advice, show it immediately (no API call!)
+            if (cached) {
+                element.style.background = 'white';
+                element.style.border = 'none';
+                element.classList.remove('ai-loading');
+                element.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <span class="tip-bullet">✨</span>
+                            <span class="tip-text" style="color: #333; line-height: 1.4;">
+                                ${cached.replace(/\\n/g, '<br>')}
+                            </span>
+                        </div>
+                        <div style="align-self: flex-end; margin-top: 5px;">
+                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:#999; font-size:0.7rem; cursor:pointer; text-decoration:underline;">
+                               🔄 Nueva Opinión
+                           </button>
+                        </div>
+                    </div>
+                `;
+                continue;
+            }
 
             try {
                 await new Promise(r => setTimeout(r, 100));
 
                 const adviceText = await this.aiAdvisor.getConsultation(item.context);
+
+                // Save to cache so we don't call API again
+                localStorage.setItem(cacheKey, adviceText);
 
                 element.style.background = 'white';
                 element.style.border = 'none';
