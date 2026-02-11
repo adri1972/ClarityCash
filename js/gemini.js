@@ -241,7 +241,7 @@ REGLAS DE FORMATO:
      * Cache response to avoid unnecessary API calls
      */
     cacheResponse(month, year, text) {
-        const key = `cc_ai_v41_${year}_${month}`; // Force fresh advice for v41
+        const key = `cc_ai_v59_${year}_${month}`; // Force fresh advice for v59
         const data = { text, timestamp: Date.now(), provider: this.getProvider() };
         localStorage.setItem(key, JSON.stringify(data));
     }
@@ -250,7 +250,7 @@ REGLAS DE FORMATO:
      * Get cached response if less than 24 hours old
      */
     getCachedResponse(month, year) {
-        const key = `cc_ai_v41_${year}_${month}`; // Check specifically for v41 advice
+        const key = `cc_ai_v59_${year}_${month}`; // Check specifically for v59 advice
         const raw = localStorage.getItem(key);
         if (!raw) return null;
 
