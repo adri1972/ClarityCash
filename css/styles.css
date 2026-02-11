@@ -1330,3 +1330,136 @@ td {
         -webkit-overflow-scrolling: touch;
     }
 }
+
+/* ===== ANIMATIONS ===== */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ===== DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-body: #121212;
+        --bg-surface: #1E1E1E;
+        --bg-sidebar: #1A1A1A;
+
+        --text-main: #E8E8E8;
+        --text-secondary: #A0A0A0;
+        --text-muted: #777;
+
+        --border-color: #333;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+    }
+
+    .sidebar {
+        background: var(--bg-sidebar);
+        border-color: var(--border-color);
+    }
+
+    .nav-item {
+        color: var(--text-secondary);
+    }
+
+    .nav-item.active,
+    .nav-item:hover {
+        background: rgba(233, 30, 99, 0.15);
+        color: #FF80AB;
+    }
+
+    .top-bar {
+        background: var(--bg-surface);
+        border-color: var(--border-color);
+    }
+
+    .metric-card,
+    .chart-card,
+    .details-card,
+    .card {
+        background: var(--bg-surface) !important;
+        border-color: var(--border-color) !important;
+    }
+
+    .modal-content {
+        background: var(--bg-surface);
+        color: var(--text-main);
+    }
+
+    input,
+    select,
+    textarea {
+        background: #2A2A2A !important;
+        color: var(--text-main) !important;
+        border-color: #444 !important;
+    }
+
+    .badge {
+        background: #333;
+        color: var(--text-main);
+    }
+
+    .budget-bar-bg {
+        background: #333;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: var(--text-main);
+    }
+
+    .empty-state {
+        color: var(--text-secondary);
+    }
+
+    /* Quick expense in dark mode */
+    #quick-expense-overlay>div {
+        background: var(--bg-surface) !important;
+    }
+
+    #quick-expense-overlay .quick-cat-btn {
+        background: #2A2A2A !important;
+        color: var(--text-main) !important;
+        border-color: #444 !important;
+    }
+
+    #quick-expense-overlay input {
+        background: #2A2A2A !important;
+        color: var(--text-main) !important;
+    }
+
+    /* Coaching nudge cards in dark mode */
+    .content-container>div>div[style*="background: white"] {
+        background: var(--bg-surface) !important;
+    }
+}

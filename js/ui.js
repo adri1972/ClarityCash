@@ -698,19 +698,59 @@ class UIManager {
             </div>
         `;
 
-        // --- SECTION 2: METRICS ROW ---
+        // --- SECTION 2: METRICS ROW (with month-over-month comparison) ---
+        const prevMonth = month === 0 ? 11 : month - 1;
+        const prevYear = month === 0 ? year - 1 : year;
+        const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
+
+        const compareArrow = (current, previous) => {
+            if (previous === 0) return '';
+            const pctChange = Math.round(((current - previous) / previous) * 100);
+            if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            const color = pctChange > 0 ? '#4CAF50' : '#F44336';
+            const arrow = pctChange > 0 ? '↑' : '↓';
+            return `<span style="font-size:0.65rem; color:${color}; font-weight:600;">${arrow}${Math.abs(pctChange)}%</span>`;
+        };
+
+        const expenseArrow = (current, previous) => {
+            if (previous === 0) return '';
+            const pctChange = Math.round(((current - previous) / previous) * 100);
+            if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            // For expenses: UP is BAD (red), DOWN is GOOD (green) - opposite!
+            const color = pctChange > 0 ? '#F44336' : '#4CAF50';
+            const arrow = pctChange > 0 ? '↑' : '↓';
+            return `<span style="font-size:0.65rem; color:${color}; font-weight:600;">${arrow}${Math.abs(pctChange)}%</span>`;
+        };
+
+        // STREAK: Calculate consecutive days logging transactions
+        const streakCount = this.calculateStreak();
+        const streakHTML = streakCount > 0 ? `
+            <div style="text-align:center; margin-bottom: 8px;">
+                <span style="background: linear-gradient(135deg, #FF9800, #F44336); color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                    🔥 Racha: ${streakCount} día${streakCount > 1 ? 's' : ''} registrando
+                </span>
+            </div>
+        ` : '';
+
+        // COFFEE EQUIVALENT
+        const coffeePrice = 5000; // $5.000 COP aprox
+        const coffees = Math.round(summary.expenses / coffeePrice);
+        const coffeeText = summary.expenses > 0 ? `☕ ${coffees} cafés` : '';
+
         const metricsHTML = `
+            ${streakHTML}
             <div class="metrics-row">
                 <div class="metric-card">
-                    <span class="label">Ingresos</span>
+                    <span class="label">Ingresos ${compareArrow(summary.income, prevSummary.income)}</span>
                     <span class="value income">+${this.formatCurrency(summary.income)}</span>
                 </div>
                  <div class="metric-card">
-                    <span class="label">Gastos</span>
+                    <span class="label">Gastos ${expenseArrow(summary.expenses, prevSummary.expenses)}</span>
                     <span class="value expense">-${this.formatCurrency(summary.expenses)}</span>
+                    ${coffeeText ? `<span style="font-size:0.65rem; color:#999; margin-top:2px;">${coffeeText}</span>` : ''}
                 </div>
                  <div class="metric-card">
-                    <span class="label">Ahorro</span>
+                    <span class="label">Ahorro ${compareArrow(summary.savings, prevSummary.savings)}</span>
                     <span class="value savings">${this.formatCurrency(summary.savings)}</span>
                 </div>
                  <div class="metric-card">
@@ -908,6 +948,150 @@ class UIManager {
                 `).join('')}
             </div>
         `;
+    }
+
+    calculateStreak() {
+        const txDates = new Set(
+            this.store.transactions.map(t => {
+                const d = new Date(t.date);
+                return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+            })
+        );
+
+        let streak = 0;
+        const today = new Date();
+
+        // Check backwards from today
+        for (let i = 0; i < 365; i++) {
+            const checkDate = new Date(today);
+            checkDate.setDate(today.getDate() - i);
+            const key = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+
+            if (txDates.has(key)) {
+                streak++;
+            } else if (i === 0) {
+                // Today has no transactions yet - that's OK, don't break streak
+                continue;
+            } else {
+                break;
+            }
+        }
+        return streak;
+    }
+
+    openQuickExpense() {
+        // Get top 8 most used expense categories
+        const txs = this.store.transactions.filter(t => t.type === 'GASTO');
+        const catCounts = {};
+        txs.forEach(t => { catCounts[t.category_id] = (catCounts[t.category_id] || 0) + 1; });
+
+        const topCats = Object.entries(catCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([id]) => this.store.categories.find(c => c.id === id))
+            .filter(Boolean);
+
+        // Fallback if no history
+        if (topCats.length === 0) {
+            const defaultIds = ['cat_2', 'cat_3', 'cat_rest', 'cat_ant', 'cat_9', 'cat_gasolina'];
+            defaultIds.forEach(id => {
+                const cat = this.store.categories.find(c => c.id === id);
+                if (cat) topCats.push(cat);
+            });
+        }
+
+        const catEmojis = {
+            'cat_2': '🍔', 'cat_3': '🚗', 'cat_rest': '🍽️', 'cat_ant': '☕',
+            'cat_9': '🎬', 'cat_gasolina': '⛽', 'cat_subs': '📱', 'cat_personal': '👕',
+            'cat_deporte': '🏋️', 'cat_vicios': '🍺', 'cat_4': '💊',
+            'cat_1': '🏠', 'cat_viv_luz': '💡', 'cat_viv_agua': '💧', 'cat_viv_gas': '🔥',
+            'cat_viv_net': '📡', 'cat_viv_cel': '📱', 'cat_fin_4': '💳', 'cat_7': '📉',
+            'cat_8': '📚', 'cat_10': '📦', 'cat_5': '🐷', 'cat_6': '📈'
+        };
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'quick-expense-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; display:flex; align-items:flex-end; justify-content:center;';
+
+        overlay.innerHTML = `
+            <div style="background:white; border-radius: 20px 20px 0 0; padding: 24px; width:100%; max-width:400px; animation: slideUp 0.3s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                    <h3 style="margin:0; font-size:1.1rem;">⚡ Gasto Rápido</h3>
+                    <button onclick="document.getElementById('quick-expense-overlay').remove()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999;">✕</button>
+                </div>
+                
+                <input id="quick-amount" type="number" inputmode="numeric" placeholder="¿Cuánto gastaste?" 
+                    style="width:100%; padding:14px; font-size:1.3rem; border:2px solid #E91E63; border-radius:12px; text-align:center; box-sizing:border-box; margin-bottom:14px; outline:none;"
+                    autofocus />
+                
+                <p style="margin:0 0 8px; font-size:0.8rem; color:#888;">¿En qué?</p>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+                    ${topCats.map(c => `
+                        <button class="quick-cat-btn" data-cat="${c.id}" 
+                            style="padding:8px 12px; border:1px solid #eee; border-radius:20px; background:white; font-size:0.8rem; cursor:pointer; transition:all 0.2s;"
+                            onclick="this.parentElement.querySelectorAll('.quick-cat-btn').forEach(b=>b.style.background='white'); this.style.background='#FCE4EC'; this.style.borderColor='#E91E63';">
+                            ${catEmojis[c.id] || '📌'} ${c.name}
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <button id="quick-save-btn" style="width:100%; padding:14px; background:#E91E63; color:white; border:none; border-radius:12px; font-size:1rem; font-weight:600; cursor:pointer;">
+                    ✓ Guardar
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Focus amount input
+        setTimeout(() => document.getElementById('quick-amount').focus(), 100);
+
+        // Close on overlay tap
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        // Save logic
+        document.getElementById('quick-save-btn').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('quick-amount').value);
+            const selectedCat = overlay.querySelector('.quick-cat-btn[style*="FCE4EC"]');
+
+            if (!amount || amount <= 0) {
+                document.getElementById('quick-amount').style.borderColor = 'red';
+                document.getElementById('quick-amount').focus();
+                return;
+            }
+
+            if (!selectedCat) {
+                alert('Selecciona en qué gastaste');
+                return;
+            }
+
+            const catId = selectedCat.dataset.cat;
+            const catName = this.store.categories.find(c => c.id === catId)?.name || '';
+
+            this.store.addTransaction({
+                type: 'GASTO',
+                amount: amount,
+                date: new Date().toISOString().split('T')[0],
+                category_id: catId,
+                account_id: this.store.accounts[0]?.id || 'acc_1',
+                note: `Gasto rápido: ${catName}`
+            });
+
+            overlay.remove();
+
+            // Haptic-like visual feedback
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#4CAF50; color:white; padding:10px 20px; border-radius:20px; font-size:0.9rem; z-index:10001; animation: fadeIn 0.3s;';
+            toast.textContent = `✅ -${this.formatCurrency(amount)} en ${catName}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+
+            // Refresh dashboard
+            if (this.currentView === 'dashboard') this.renderDashboard();
+        });
     }
 
     async processAIAdvice(plan) {

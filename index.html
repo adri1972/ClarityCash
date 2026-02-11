@@ -107,6 +107,13 @@
             </div>
         </main>
     </div>
+    <!-- Quick Expense FAB -->
+    <button id="quick-expense-fab" onclick="window.ui.openQuickExpense()"
+        style="position:fixed; bottom:80px; right:20px; width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, #E91E63, #C2185B); color:white; border:none; font-size:1.5rem; cursor:pointer; box-shadow:0 4px 12px rgba(233,30,99,0.4); z-index:999; display:flex; align-items:center; justify-content:center; transition: transform 0.2s;"
+        onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'"
+        ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+        ⚡
+    </button>
 
     <!-- Modals -->
     <div id="transaction-modal" class="modal hidden">
