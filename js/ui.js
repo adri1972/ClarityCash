@@ -699,6 +699,8 @@ class UIManager {
         `;
 
         // --- SECTION 2: METRICS ROW (with month-over-month comparison) ---
+        const month = this.viewDate.getMonth();
+        const year = this.viewDate.getFullYear();
         const prevMonth = month === 0 ? 11 : month - 1;
         const prevYear = month === 0 ? year - 1 : year;
         const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
