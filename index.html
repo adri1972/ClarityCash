@@ -1,15 +1,565 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 
 <head>
-    <meta http-equiv="refresh" content="0; url=app.html">
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <title>Clarity Cash AI</title>
+    <meta name="description" content="Domina tus finanzas con Inteligencia Artificial">
+    <meta name="theme-color" content="#2E7D32">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="stylesheet" href="css/styles.css?v=58">
+
+    <!-- Fonts: Inter for modern clean look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons (feather icons or similar lightweight) - loading from CDN for UI icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PDF.js for Bank Statement Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        window.location.href = "app.html";
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 </head>
 
 <body>
-    <p>Actualizando ClarityCash... <a href="app.html">Click aquí si no redirige</a>.</p>
+    <script>
+        window.onerror = function (msg, url, line) {
+            if (msg.includes('ResizeObserver')) return;
+            if (msg === 'Script error.') return;
+            console.error('App Error:', msg, 'at', url, 'line', line);
+        };
+    </script>
+    <div id="app">
+        <!-- Sidebar / Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="assets/logo.png" alt="ClarityCash" style="width:40px; height:40px; border-radius:10px;">
+                <h1>ClarityCash</h1>
+            </div>
+
+            <nav>
+                <button class="nav-item active" data-view="dashboard">
+                    <i data-feather="pie-chart"></i>
+                    <span>Inicio</span>
+                </button>
+                <button class="nav-item" data-view="transactions">
+                    <i data-feather="list"></i>
+                    <span>Historial</span>
+                </button>
+                <button class="nav-item" data-view="insights">
+                    <i data-feather="zap"></i>
+                    <span>Análisis</span>
+                </button>
+                <button class="nav-item" data-view="goals">
+                    <i data-feather="target"></i>
+                    <span>Metas</span>
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <i data-feather="settings"></i>
+                    <span>Configuración</span>
+                </button>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar">YO</div>
+                <div class="info">
+                    <span class="name">Mi Espacio</span>
+                    <span class="status">Offline Mode</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Overlay (clicks close sidebar) -->
+        <div class="sidebar-overlay"
+            onclick="document.querySelector('.sidebar').classList.remove('open'); this.classList.remove('active');">
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button class="hamburger-btn"
+                        onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('active');">
+                        <i data-feather="menu"></i>
+                    </button>
+                    <h2 id="page-title">Resumen Financiero</h2>
+                </div>
+                <div class="actions">
+                    <button id="add-transaction-btn" class="btn btn-primary">
+                        <i data-feather="plus"></i> Nuevo Movimiento
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-area" class="content-container">
+                <!-- Views will be injected here via JS -->
+                <div class="empty-state">
+                    <h3>Cargando tu información financiera...</h3>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- Quick Expense FAB -->
+    <div id="quick-expense-container"
+        style="position:fixed; bottom:80px; right:20px; z-index:999; display:flex; align-items:center; gap:12px;">
+        <span id="quick-expense-hint"
+            style="background:rgba(255,255,255,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#E91E63; padding:8px 16px; border-radius:20px; font-size:0.75rem; font-weight:700; pointer-events:none; opacity:1; transition:opacity 0.5s; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid rgba(255,255,255,0.4);">
+            Gasto Rápido
+        </span>
+        <button id="quick-expense-fab" onclick="window.ui.openQuickExpense()" class="fab-pulse"
+            style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; font-size:1.6rem; cursor:pointer; box-shadow:0 8px 25px rgba(233,30,99,0.3); display:flex; align-items:center; justify-content:center; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);"
+            onmousedown="this.style.transform='scale(0.85)'" onmouseup="this.style.transform='scale(1)'"
+            ontouchstart="this.style.transform='scale(0.85)'" ontouchend="this.style.transform='scale(1)'">
+            ⚡
+        </button>
+    </div>
+
+    <!-- Modals -->
+    <div id="transaction-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Registrar Movimiento</h3>
+                <button class="close-modal"><i data-feather="x"></i></button>
+            </div>
+            <form id="transaction-form">
+                <div class="form-group type-selector" style="flex-wrap: wrap;">
+                    <label>
+                        <input type="radio" name="type" value="GASTO" checked>
+                        <span class="badge expense">Gasto</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="type" value="INGRESO">
+                        <span class="badge income">Ingreso</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="type" value="AHORRO">
+                        <span class="badge savings">Ahorro</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="type" value="INVERSION">
+                        <span class="badge investment">Inversión</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="type" value="PAGO_DEUDA">
+                        <span class="badge debt" style="background: #FF5722; color: white;">Pago Deuda</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        Monto
+                        <button type="button" id="scan-btn" class="btn-text"
+                            style="font-size: 0.8rem; color: var(--primary-color); display: flex; align-items: center; gap: 4px;">
+                            <i data-feather="camera" style="width: 14px; height: 14px;"></i> Escanear Recibo
+                        </button>
+                    </label>
+                    <input type="file" id="receipt-upload" capture="environment" accept="image/*"
+                        style="display: none;">
+                    <div id="scan-loading"
+                        style="display: none; font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">
+                        <span class="spinner"
+                            style="display: inline-block; width: 12px; height: 12px; border: 2px solid #ccc; border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 5px;"></span>
+                        Leyendo recibo...
+                    </div>
+                    <input type="number" name="amount" placeholder="0" required Step="0.01">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select name="category_id" required>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Cuenta</label>
+                    <select name="account_id" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Nota (Opcional)</label>
+                    <textarea name="note" rows="2"></textarea>
+                </div>
+
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-text close-modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Info Modal (Correctly Placed) -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>🎓 Guía de Estilos Financieros</h3>
+                <button class="close-modal"><i data-feather="x"></i></button>
+            </div>
+
+            <div class="profile-education">
+                <p style="color: #666; margin-bottom: 1.5rem; line-height: 1.5;">
+                    El éxito financiero no es cuánto ganas, sino cómo lo administras. Elige el perfil que mejor se
+                    adapte a tu <strong>momento de vida actual</strong>:
+                </p>
+
+                <!-- Conservador -->
+                <div class="education-card"
+                    style="background: #F1F8E9; border: 1px solid #C5E1A5; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #33691E; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <span>🛡️</span> Conservador (Modo Guerra / Ahorro)
+                    </h4>
+                    <p style="font-size: 0.9rem; margin-bottom: 1rem;"><strong>Propósito:</strong> Máxima seguridad y
+                        eliminación de riesgos. Ideal si estás saliendo de deudas o construyendo tu primer fondo de
+                        emergencia.</p>
+
+                    <div style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: 8px;">
+                        <h5 style="font-size: 0.85rem; color: #558B2F; margin-bottom: 0.5rem;">DISTRIBUCIÓN SUGERIDA:
+                        </h5>
+                        <ul style="font-size: 0.85rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <li>🏠 <strong>Vivienda:</strong> Máx 30%</li>
+                            <li>🛒 <strong>Alimentación:</strong> 15%</li>
+                            <li>🚌 <strong>Transporte:</strong> 10%</li>
+                            <li>💊 <strong>Salud/Seguros:</strong> 5%</li>
+                            <li>🐷 <strong>Ahorro/Deuda:</strong> 30% (Prioridad Alta)</li>
+                            <li>🎉 <strong>Ocio:</strong> 10% (Muy Limitado)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Balanceado -->
+                <div class="education-card"
+                    style="background: #E3F2FD; border: 1px solid #90CAF9; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #0D47A1; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <span>⚖️</span> Balanceado (Regla 50/30/20)
+                    </h4>
+                    <p style="font-size: 0.9rem; margin-bottom: 1rem;"><strong>Propósito:</strong> Crecimiento
+                        sostenible. El estándar mundial para mantener salud financiera sin privarse de disfrutar la
+                        vida.</p>
+
+                    <div style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: 8px;">
+                        <h5 style="font-size: 0.85rem; color: #1565C0; margin-bottom: 0.5rem;">DISTRIBUCIÓN SUGERIDA:
+                        </h5>
+                        <ul style="font-size: 0.85rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <li>🏢 <strong>Necesidades:</strong> 50%</li>
+                            <li style="color: #666; font-size: 0.8rem; grid-column: span 2;">(Incluye vivienda, comida,
+                                transporte, servicios)</li>
+                            <li>🍿 <strong>Deseos/Estilo:</strong> 30%</li>
+                            <li>📈 <strong>Ahorro/Inversión:</strong> 20%</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Flexible -->
+                <div class="education-card"
+                    style="background: #FFF3E0; border: 1px solid #FFCC80; border-radius: 12px; padding: 1.5rem;">
+                    <h4 style="color: #E65100; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <span>🧘</span> Flexible (Disfrute)
+                    </h4>
+                    <p style="font-size: 0.9rem; margin-bottom: 1rem;"><strong>Propósito:</strong> Calidad de vida
+                        actual. Úsalo solo si ya tienes fondos de respaldo y quieres priorizar experiencias a corto
+                        plazo.</p>
+
+                    <div style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: 8px;">
+                        <h5 style="font-size: 0.85rem; color: #EF6C00; margin-bottom: 0.5rem;">DISTRIBUCIÓN SUGERIDA:
+                        </h5>
+                        <ul style="font-size: 0.85rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <li>🏠 <strong>Vivienda:</strong> Hasta 35%</li>
+                            <li>🎉 <strong>Ocio/Viajes:</strong> 25-30%</li>
+                            <li>🐷 <strong>Ahorro:</strong> Mínimo 10%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions"
+                style="margin-top: 2rem; border-top: 1px solid #eee; padding-top: 1rem; text-align: right;">
+                <button type="button" class="btn btn-primary close-modal">¡Entendido, gracias!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ONBOARDING GUIDE MODAL -->
+    <div id="guide-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px; padding: 0; overflow: hidden;">
+            <!-- Guide Steps -->
+            <div id="guide-steps">
+                <!-- Step 1 -->
+                <div class="guide-step active" data-step="1">
+                    <div
+                        style="background: linear-gradient(135deg, #E91E63, #9C27B0); padding: 2rem; text-align: center; color: white;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">👋</div>
+                        <h2 style="margin: 0; font-size: 1.5rem;">¡Bienvenido a ClarityCash!</h2>
+                        <p style="margin-top: 0.5rem; opacity: 0.9; font-size: 0.95rem;">Tu asistente financiero
+                            personal con IA</p>
+                    </div>
+                    <div style="padding: 1.5rem;">
+                        <p style="font-size: 0.95rem; color: #555; line-height: 1.6;">
+                            En <strong>3 minutos</strong> tendrás tu app lista para tomar el control de tus finanzas.
+                            Te guiaremos paso a paso. 🚀
+                        </p>
+                        <ul style="list-style: none; padding: 0; margin-top: 1rem;">
+                            <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
+                                <span
+                                    style="background: #E8F5E9; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">1</span>
+                                Configura tu perfil financiero
+                            </li>
+                            <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
+                                <span
+                                    style="background: #E8F5E9; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">2</span>
+                                Agrega tus gastos fijos e ingresos
+                            </li>
+                            <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
+                                <span
+                                    style="background: #E8F5E9; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">3</span>
+                                Define presupuestos por categoría
+                            </li>
+                            <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
+                                <span
+                                    style="background: #E8F5E9; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">4</span>
+                                Registra movimientos
+                            </li>
+                            <li style="padding: 0.5rem 0; display: flex; gap: 0.75rem; align-items: center;">
+                                <span
+                                    style="background: #FCE4EC; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">5</span>
+                                Activa tu Asesor IA personal ✨
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Step 2: Perfil -->
+                <div class="guide-step" data-step="2" style="display:none;">
+                    <div
+                        style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 1.5rem; text-align: center; color: white;">
+                        <div style="font-size: 2.5rem;">⚙️</div>
+                        <h3 style="margin: 0.5rem 0 0;">Paso 1: Tu Perfil</h3>
+                    </div>
+                    <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
+                        <p>Ve a <strong>☰ Menú → Configuración</strong> y completa:</p>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <p>💰 <strong>Ingreso mensual</strong> — ¿Cuánto ganas al mes?</p>
+                            <p>📊 <strong>Perfil de gasto</strong> — ¿Eres conservador, balanceado o flexible?</p>
+                            <p>💱 <strong>Moneda</strong> — COP, USD o EUR</p>
+                        </div>
+                        <p style="color: #999; font-size: 0.85rem;">💡 Esto ayuda a la IA a darte mejores
+                            recomendaciones.</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Gastos e Ingresos Fijos -->
+                <div class="guide-step" data-step="3" style="display:none;">
+                    <div
+                        style="background: linear-gradient(135deg, #FF9800, #EF6C00); padding: 1.5rem; text-align: center; color: white;">
+                        <div style="font-size: 2.5rem;">🔄</div>
+                        <h3 style="margin: 0.5rem 0 0;">Paso 2: Gastos e Ingresos Fijos</h3>
+                    </div>
+                    <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
+                        <p>En <strong>Configuración</strong> también puedes agregar:</p>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <p>📥 <strong>Ingresos recurrentes</strong> — Salario, arriendos, etc. Se registran solos
+                                cada mes.</p>
+                            <p>📤 <strong>Gastos fijos</strong> — Arriendo, servicios, seguros. También se registran
+                                automáticamente.</p>
+                        </div>
+                        <p style="color: #999; font-size: 0.85rem;">💡 Así no tienes que registrarlos manualmente cada
+                            mes.</p>
+                    </div>
+                </div>
+
+                <!-- Step 4: Presupuestos -->
+                <div class="guide-step" data-step="4" style="display:none;">
+                    <div
+                        style="background: linear-gradient(135deg, #2196F3, #1565C0); padding: 1.5rem; text-align: center; color: white;">
+                        <div style="font-size: 2.5rem;">🎯</div>
+                        <h3 style="margin: 0.5rem 0 0;">Paso 3: Presupuestos</h3>
+                    </div>
+                    <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
+                        <p>En <strong>Configuración → Metas Mensuales</strong>:</p>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <p>🍔 <strong>Alimentación:</strong> $500.000</p>
+                            <p>🚗 <strong>Transporte:</strong> $200.000</p>
+                            <p>🎉 <strong>Entretenimiento:</strong> $150.000</p>
+                            <p style="color: #999; font-size: 0.85rem;">(Pon los límites que quieras para cada
+                                categoría)</p>
+                        </div>
+                        <p style="color: #999; font-size: 0.85rem;">💡 La app te avisará si te pasas del presupuesto. 🚨
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 5: Registrar Movimientos -->
+                <div class="guide-step" data-step="5" style="display:none;">
+                    <div
+                        style="background: linear-gradient(135deg, #E91E63, #AD1457); padding: 1.5rem; text-align: center; color: white;">
+                        <div style="font-size: 2.5rem;">✅</div>
+                        <h3 style="margin: 0.5rem 0 0;">Paso 4: ¡A Registrar!</h3>
+                    </div>
+                    <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
+                        <p>Para registrar un gasto o ingreso:</p>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <p>1️⃣ Toca <strong>"+ Nuevo Movimiento"</strong></p>
+                            <p>2️⃣ Elige tipo (Gasto, Ingreso, etc.)</p>
+                            <p>3️⃣ Escribe el monto o <strong>📷 foto al recibo</strong></p>
+                            <p>4️⃣ Categoría y cuenta</p>
+                            <p>5️⃣ ¡Guardar!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 6: Activar IA -->
+                <div class="guide-step" data-step="6" style="display:none;">
+                    <div
+                        style="background: linear-gradient(135deg, #9C27B0, #6A1B9A); padding: 1.5rem; text-align: center; color: white;">
+                        <div style="font-size: 2.5rem;">🧠</div>
+                        <h3 style="margin: 0.5rem 0 0;">Paso 5: Activa tu Asesor IA</h3>
+                    </div>
+                    <div style="padding: 1.5rem; font-size: 0.95rem; color: #555; line-height: 1.7;">
+                        <p>Conecta <strong>Google Gemini (gratis)</strong> o <strong>ChatGPT</strong> para recibir
+                            consejos personalizados:</p>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <p>1️⃣ Ve a <strong>Configuración</strong> (abajo)</p>
+                            <p>2️⃣ Busca <strong>"Asesor IA Personal"</strong></p>
+                            <p>3️⃣ Elige <strong>Google Gemini</strong> (recomendado, es gratis)</p>
+                            <p>4️⃣ Toca <strong>"Obtener API Key gratis"</strong></p>
+                            <p>5️⃣ Inicia sesión con tu cuenta de Google</p>
+                            <p>6️⃣ Copia la key y pégala en la app</p>
+                        </div>
+                        <div style="background: #EDE7F6; border-radius: 8px; padding: 0.8rem; text-align: center;">
+                            <p style="margin:0; font-size: 0.85rem; color: #4A148C;">🔒 Tus datos van directo de tu
+                                celular a la IA. Nadie más los ve.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-top: 1px solid #eee;">
+                <button id="guide-prev" class="btn-text" style="color: #999; font-size: 0.9rem;"
+                    onclick="window.guideNav(-1)">← Anterior</button>
+                <div id="guide-dots" style="display: flex; gap: 6px;"></div>
+                <button id="guide-next" class="btn btn-primary" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;"
+                    onclick="window.guideNav(1)">Siguiente →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Help Button -->
+    <button id="help-fab" onclick="window.showGuide()" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px;
+               background: linear-gradient(135deg, #E91E63, #9C27B0); color: white;
+               border: none; border-radius: 50%; font-size: 1.3rem; cursor: pointer;
+               box-shadow: 0 4px 15px rgba(233,30,99,0.4); z-index: 900;
+               display: flex; align-items: center; justify-content: center;
+               transition: transform 0.2s;">
+        ?
+    </button>
+
+    <script>
+        // Guide Navigation Logic
+        window.guideStep = 1;
+        window.guideTotalSteps = 6;
+
+        window.showGuide = function () {
+            document.getElementById('guide-modal').classList.remove('hidden');
+            window.guideStep = 1;
+            window.updateGuide();
+        };
+
+        window.guideNav = function (dir) {
+            window.guideStep += dir;
+            if (window.guideStep > window.guideTotalSteps) {
+                // Close and mark as seen
+                document.getElementById('guide-modal').classList.add('hidden');
+                localStorage.setItem('cc_guide_seen', 'true');
+                return;
+            }
+            if (window.guideStep < 1) window.guideStep = 1;
+            window.updateGuide();
+        };
+
+        window.updateGuide = function () {
+            // Show/hide steps
+            document.querySelectorAll('.guide-step').forEach(s => {
+                s.style.display = parseInt(s.dataset.step) === window.guideStep ? 'block' : 'none';
+            });
+            // Update prev button
+            document.getElementById('guide-prev').style.visibility = window.guideStep === 1 ? 'hidden' : 'visible';
+            // Update next button text
+            const nextBtn = document.getElementById('guide-next');
+            nextBtn.textContent = window.guideStep === window.guideTotalSteps ? '¡Empezar! 🚀' : 'Siguiente →';
+            // Update dots
+            let dots = '';
+            for (let i = 1; i <= window.guideTotalSteps; i++) {
+                dots += `<div style="width: 8px; height: 8px; border-radius: 50%; background: ${i === window.guideStep ? '#E91E63' : '#ddd'}; transition: background 0.3s;"></div>`;
+            }
+            document.getElementById('guide-dots').innerHTML = dots;
+        };
+
+        // Auto-show on first visit
+        window.addEventListener('load', () => {
+            if (!localStorage.getItem('cc_guide_seen')) {
+                setTimeout(() => window.showGuide(), 1500);
+            }
+        });
+    </script>
+
+    <!-- Scripts -->
+    <!-- OCR Library (Tesseract.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+
+    <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
+    <script src="js/data.js?v=58"></script>
+    <script src="js/advisor.js?v=58"></script>
+    <script src="js/gemini.js?v=58"></script>
+    <script src="js/ui.js?v=58"></script>
+    <script src="js/app.js?v=58"></script>
+
+    <!-- Standard Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw-v58.js')
+                    .then(registration => {
+                        console.log('SW Registered:', registration.scope);
+
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                                    // New version installed and ready
+                                    console.log('Update available. Reloading...');
+                                    window.location.reload();
+                                }
+                            });
+                        });
+                    })
+                    .catch(e => console.log('SW Registration Failed:', e));
+            });
+        }
+    </script>
 </body>
 
 </html>
