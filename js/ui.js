@@ -4061,8 +4061,8 @@ class UIManager {
         else this.store.config.openai_api_key = apiKey;
 
         // 2. Re-init Advisor with this new temporary config
-        // Pass the key directly to bypass internal getters if needed
-        this.aiAdvisor = new AIAdvisor(this.store.config);
+        // Pass the STORE (not config) as expected by AIAdvisor constructor
+        this.aiAdvisor = new AIAdvisor(this.store);
 
         try {
             await this.aiAdvisor.checkConnection();
