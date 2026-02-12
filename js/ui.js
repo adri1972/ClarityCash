@@ -1448,64 +1448,80 @@ class UIManager {
     }
 
     // --- PROACTIVE AI INSIGHTS ---
-    triggerSpendingInsight(tx) {
+    // --- PROACTIVE AI INSIGHTS ---
+    async triggerSpendingInsight(tx) {
         if (!tx || tx.type !== 'GASTO') return;
 
+        // 1. Prepare Data
         const category = this.store.categories.find(c => c.id === tx.category_id);
         const catName = category ? category.name : 'esta categoría';
-
-        // 1. Calculate stats for this category this month
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
+
+        // Calculate totals locally first
         const monthlyTxs = this.store.transactions.filter(t => {
             const d = new Date(t.date);
-            return d.getMonth() === currentMonth &&
-                d.getFullYear() === currentYear &&
-                t.type === 'GASTO';
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && t.type === 'GASTO';
         });
 
+        const catTxs = monthlyTxs.filter(t => t.category_id === tx.category_id);
+        const catTotal = catTxs.reduce((sum, t) => sum + t.amount, 0);
+        const budgetLimit = this.store.config.budgets ? (this.store.config.budgets[tx.category_id] || 0) : 0;
+
+        // 2. TRY REAL AI FIRST (If Key Exists)
+        if (this.aiAdvisor && this.aiAdvisor.hasApiKey()) {
+            console.log('🤖 Asking AI for instant insight...');
+            // Show subtle "Thinking..." toast
+            this.showToast('🧠 Analizando gasto...', 'thinking', '💭');
+
+            const insight = await this.aiAdvisor.getInstantInsight(tx, {
+                catName,
+                catTotal,
+                budgetLimit,
+                isOverBudget: budgetLimit > 0 && catTotal > budgetLimit
+            });
+
+            if (insight) {
+                // Remove thinking toast and show real one
+                this.removeToast('thinking'); // Hypothetical helper or just overwrite
+                this.showToast(insight, 'ai-success', '✨');
+                return;
+            }
+        }
+
+        // 3. FALLBACK: Rule-Based Logic (Original)
+        // ... (Keep existing logic as fallback)
         const totalExpense = monthlyTxs.reduce((sum, t) => sum + t.amount, 0);
-        const catExpense = monthlyTxs
-            .filter(t => t.category_id === tx.category_id)
-            .reduce((sum, t) => sum + t.amount, 0);
+        const catCount = catTxs.length;
 
-        const catCount = monthlyTxs.filter(t => t.category_id === tx.category_id).length;
-
-        // 2. Get Budget Limit (if exists)
-        const budgetLimit = this.store.config.budgets ? this.store.config.budgets[tx.category_id] : 0;
-
-        // 3. Generate Insight Message
         let message = '';
-        let type = 'info'; // info, warning, danger
+        let type = 'info';
         let icon = '💡';
 
-        // Logic Hierarchy
-        if (budgetLimit > 0 && catExpense > budgetLimit) {
-            const over = catExpense - budgetLimit;
-            message = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatCurrency(over)}`;
+        if (budgetLimit > 0 && catTotal > budgetLimit) {
+            const over = catTotal - budgetLimit;
+            message = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatMoney(over)}`;
             type = 'danger';
             icon = '🚨';
-        } else if (budgetLimit > 0 && catExpense > (budgetLimit * 0.8)) {
+        } else if (budgetLimit > 0 && catTotal > (budgetLimit * 0.8)) {
             message = `Cuidado, estás al 80% de tu límite para ${catName}`;
             type = 'warning';
             icon = '⚠️';
-        } else if (catExpense > (totalExpense * 0.3) && totalExpense > 0) {
+        } else if (catTotal > (totalExpense * 0.3) && totalExpense > 0) {
             message = `${catName} se está llevando el 30% de tus gastos este mes.`;
             type = 'warning';
             icon = '📊';
         } else if (category.id === 'cat_2' || category.id === 'cat_ant') {
-            // Coffee/Food specific
             if (catCount > 10) {
                 message = `Vas ${catCount} veces en ${catName} este mes. ¿Cocinamos más?`;
                 type = 'info';
                 icon = '🍳';
-            } else if (tx.amount > 50000 && category.id === 'cat_ant') {
-                message = `Un antojo de ${this.formatCurrency(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
-                icon = '🍩';
             }
+        } else if (tx.amount > 50000 && category.id === 'cat_ant') {
+            message = `Un antojo de ${this.formatMoney(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
+            icon = '🍩';
         }
 
-        // 4. Show Toast if we have something to say
         if (message) {
             this.showToast(message, type, icon);
         }

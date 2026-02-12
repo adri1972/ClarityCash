@@ -458,4 +458,83 @@ REGLAS DE FORMATO:
             throw error;
         }
     }
+
+
+    /**
+     * REACTIVE AI: Instant feedback on a new transaction
+     * Called immediately after user adds an expense/income
+     */
+    async getInstantInsight(tx, categoryParams) {
+        if (!this.hasApiKey()) return null; // Fallback to local logic
+
+        const apiKey = this.getApiKey();
+        const provider = this.getProvider();
+        const { catName, catTotal, budgetLimit, isOverBudget } = categoryParams;
+
+        // Personality: "Pazion" (Witty, Direct, Colombian/Latam slang friendly)
+        const prompt = `
+            ACTÚA COMO: Un amigo financiero brutalmente honesto y con sentido del humor (estilo 'Pazion').
+            CONTEXTO: El usuario acaba de registrar un GASTO nuevo.
+            
+            DATOS DEL GASTO:
+            - Monto: $${tx.amount.toLocaleString()}
+            - Categoría: ${catName}
+            - Nota: "${tx.note || ''}"
+            
+            ESTADO FINANCIERO ACTUAL DE ESA CATEGORÍA:
+            - Total gastado este mes (incluyendo este): $${catTotal.toLocaleString()}
+            - Límite Presupuesto: $${budgetLimit > 0 ? budgetLimit.toLocaleString() : 'No definido'}
+            - ${isOverBudget ? '⚠️ ESTÁ SOBREGIRO (Pasó el límite)' : '✅ Aún dentro del presupuesto'}
+            
+            TU MISIÓN:
+            Genera una reacción CORTA (Máximo 140 caracteres) para enviarle una notificación push (Toast).
+            
+            REGLAS DE TONO:
+            - Si es un gasto innecesario (café, vicios, hormiga) → Sé sarcástico/gracioso. "Otro café? Tu cuenta bancaria llora ☕️"
+            - Si rompió el presupuesto → Regáñalo con cariño. "Te pasaste! Suelta la tarjeta 🛑"
+            - Si es un gasto alto → Alerta.
+            - Si es un gasto bien planeado o necesario → Felicita o da un dato curioso.
+            - Usa emojis.
+            - Habla en español latino, casual.
+            - NO saludes. Ve al grano.
+            
+            SALIDA ESPERADA:
+            Solo el texto de la notificación.
+        `;
+
+        try {
+            let text = "";
+            if (provider === 'openai') {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini", // Fast model
+                        messages: [{ role: "user", content: prompt }],
+                        max_tokens: 60,
+                        temperature: 0.8 // Creative
+                    })
+                });
+                const data = await response.json();
+                text = data.choices[0].message.content;
+            } else {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 60, temperature: 0.8 }
+                    })
+                });
+                const data = await response.json();
+                text = data.candidates[0].content.parts[0].text;
+            }
+            return text.replace(/"/g, '').trim(); // Clean quotes
+
+        } catch (error) {
+            console.error("Instant Insight Error:", error);
+            return null; // Fallback
+        }
+    }
 }
