@@ -237,12 +237,98 @@ REGLAS DE FORMATO:
         return data.choices?.[0]?.message?.content || '';
     }
 
+    async getConsultation(context) {
+        if (!this.hasApiKey()) {
+            return "⚠️ Configura tu API Key en Ajustes para recibir consejos personalizados.";
+        }
+
+        const apiKey = this.getApiKey();
+        const provider = this.getProvider();
+
+        // 1. Define Persona & Strategy based on Problem Type
+        let role = "Asesor Financiero Personal";
+        let strategy = "Analiza la situación y da consejos prácticos.";
+
+        if (context.problem && context.problem.includes('DEFICIT')) {
+            role = "Experto en Crisis y Reestructuración de Deudas";
+            strategy = "El usuario está en DÉFICIT. Su casa financiera está en llamas. Tu objetivo es apagar el fuego con medidas de choque inmediatas. Prioriza liquidez y supervivencia.";
+        } else if (context.problem === 'WARNING') {
+            role = "Coach de Hábitos y Ahorro";
+            strategy = "El usuario vive al día (paycheck to paycheck). Su riesgo es alto ante cualquier imprevisto. Tu objetivo es despertarlo y encontrar fugas de dinero para crear un colchón de seguridad.";
+        } else if (context.problem === 'SURPLUS') {
+            role = "Gestor de Patrimonio e Inversiones";
+            strategy = "El usuario tiene dinero extra (Superávit). Tu objetivo es que NO se lo gaste en tonterías. Sugiérele estrategias de crecimiento (Inversión, Fondo de Emergencia o Prepago de deuda inteligente).";
+        }
+
+        const prompt = `
+            ROL: ${role}
+            ESTRATEGIA: ${strategy}
+            
+            DIAGNÓSTICO DEL PACIENTE (DATOS REALES):
+            ${context.full_context}
+            
+            TU MISIÓN:
+            Genera un diagnóstico estratégico corto. NO repitas los números obvios que ya vio el usuario ("Gastaste X más").
+            En su lugar, enfócate en el SIGNIFICADO y la SOLUCIÓN.
+            
+            ESTRUCTURA DE RESPUESTA:
+            1. 🧠 EL INSIGHT: Una frase contundente sobre su comportamiento. (Ej: "Estás financiando tu estilo de vida con deuda, cuidado.")
+            2. 🛠️ LA ESTRATEGIA: Una recomendación de alto nivel.
+            3. 👉 ACCIÓN INMEDIATA: Algo que pueda hacer ya mismo.
+            
+            REGLAS DE ORO:
+            1. Sé quirúrgico. Ve a la yugular del problema.
+            2. Tono: Consultor Senior (Serio pero cercano).
+            3. Usa emojis con moderación.
+            4. Máximo 400 caracteres.
+            
+            FORMATO: Texto plano.
+        `;
+
+        try {
+            let text = "";
+            if (provider === 'openai') {
+                const response = await fetch(this.OPENAI_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini", // Use mini for speed/availability
+                        messages: [{ role: "user", content: prompt }],
+                        max_tokens: 300
+                    })
+                });
+
+                if (!response.ok) {
+                    const errErr = await response.json();
+                    throw new Error(`OpenAI Error: ${errErr.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                text = data.choices[0].message.content;
+            } else {
+                const url = `${this.GEMINI_URL}?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                text = data.candidates[0].content.parts[0].text;
+            }
+            return text;
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+
     /**
      * Cache response to avoid unnecessary API calls
      */
     cacheResponse(month, year, text) {
-        const key = `cc_ai_v59_${year}_${month}`; // Force fresh advice for v59
-        const data = { text, timestamp: Date.now(), provider: this.getProvider() };
+        const key = `cc_ai_v59_${year}_${month}_${this.getProvider()}`; // Provider-aware cache
+        const data = { text, timestamp: Date.now() };
         localStorage.setItem(key, JSON.stringify(data));
     }
 
@@ -250,7 +336,7 @@ REGLAS DE FORMATO:
      * Get cached response if less than 24 hours old
      */
     getCachedResponse(month, year) {
-        const key = `cc_ai_v59_${year}_${month}`; // Check specifically for v59 advice
+        const key = `cc_ai_v59_${year}_${month}_${this.getProvider()}`;
         const raw = localStorage.getItem(key);
         if (!raw) return null;
 
@@ -263,6 +349,7 @@ REGLAS DE FORMATO:
         } catch (e) { /* invalid cache */ }
         return null;
     }
+
     /**
      * Scan a receipt image/PDF using Multimodal AI
      * @param {string} base64Data - Raw base64 string
@@ -376,92 +463,6 @@ REGLAS DE FORMATO:
             throw new Error('No se pudo leer el recibo. Intenta con mejor luz o recorta la imagen.');
         }
     }
-
-    /**
-     * Get specific advice for ANY financial situation
-     */
-    async getConsultation(context) {
-        if (!this.hasApiKey()) {
-            return "⚠️ Configura tu API Key en Ajustes para recibir consejos personalizados.";
-        }
-
-        const apiKey = this.getApiKey();
-        const provider = this.getProvider();
-
-        // 1. Define Persona & Strategy based on Problem Type
-        let role = "Asesor Financiero Personal";
-        let strategy = "Analiza la situación y da consejos prácticos.";
-
-        if (context.problem && context.problem.includes('DEFICIT')) {
-            role = "Experto en Crisis y Reestructuración de Deudas";
-            strategy = "El usuario está en DÉFICIT. Su casa financiera está en llamas. Tu objetivo es apagar el fuego con medidas de choque inmediatas. Prioriza liquidez y supervivencia.";
-        } else if (context.problem === 'WARNING') {
-            role = "Coach de Hábitos y Ahorro";
-            strategy = "El usuario vive al día (paycheck to paycheck). Su riesgo es alto ante cualquier imprevisto. Tu objetivo es despertarlo y encontrar fugas de dinero para crear un colchón de seguridad.";
-        } else if (context.problem === 'SURPLUS') {
-            role = "Gestor de Patrimonio e Inversiones";
-            strategy = "El usuario tiene dinero extra (Superávit). Tu objetivo es que NO se lo gaste en tonterías. Sugiérele estrategias de crecimiento (Inversión, Fondo de Emergencia o Prepago de deuda inteligente).";
-        }
-
-        const prompt = `
-            ROL: ${role}
-            ESTRATEGIA: ${strategy}
-            
-            DIAGNÓSTICO DEL PACIENTE (DATOS REALES):
-            ${context.full_context}
-            
-            TU MISIÓN:
-            Genera un diagnóstico estratégico corto. NO repitas los números obvios que ya vio el usuario ("Gastaste X más").
-            En su lugar, enfócate en el SIGNIFICADO y la SOLUCIÓN.
-            
-            ESTRUCTURA DE RESPUESTA:
-            1. 🧠 EL INSIGHT: Una frase contundente sobre su comportamiento. (Ej: "Estás financiando tu estilo de vida con deuda, cuidado.")
-            2. 🛠️ LA ESTRATEGIA: Una recomendación de alto nivel.
-            3. 👉 ACCIÓN INMEDIATA: Algo que pueda hacer ya mismo.
-            
-            REGLAS DE ORO:
-            1. Sé quirúrgico. Ve a la yugular del problema.
-            2. Tono: Consultor Senior (Serio pero cercano).
-            3. Usa emojis con moderación.
-            4. Máximo 400 caracteres.
-            
-            FORMATO: Texto plano.
-        `;
-
-        try {
-            let text = "";
-            if (provider === 'openai') {
-                const response = await fetch(this.OPENAI_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify({
-                        model: "gpt-4o",
-                        messages: [{ role: "user", content: prompt }],
-                        max_tokens: 300 // Slightly reduced tokens for conciseness but high quality
-                    })
-                });
-                const data = await response.json();
-                text = data.choices[0].message.content;
-            } else {
-                const url = `${this.GEMINI_URL}?key=${apiKey}`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-                text = data.candidates[0].content.parts[0].text;
-            }
-            return text;
-
-        } catch (error) {
-            console.error(error);
-            // Throw so UI can show the error
-            throw error;
-        }
-    }
-
 
     /**
      * REACTIVE AI: Instant feedback on a new transaction
