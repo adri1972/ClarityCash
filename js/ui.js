@@ -683,8 +683,10 @@ class UIManager {
                 <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 16px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
                         <div>
-                            <span style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); opacity:0.7;">Diagnóstico IA</span>
-                            <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main);">${plan.priority}</h3>
+                            <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;' : 'background: #f5f5f5; color: #999;'}">
+                                ${hasApiKey ? '✨ IA Generativa (Real)' : '⚡ Diagnóstico Automático'}
+                            </span>
+                            <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
                         </div>
                         <div style="font-size:1.5rem;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
                     </div>
