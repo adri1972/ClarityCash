@@ -178,6 +178,7 @@ class UIManager {
                         else data.category_id = 'cat_10';
                     }
 
+                    const editId = formData.get('edit_tx_id');
                     if (editId) {
                         this.store.updateTransaction(editId, data);
                         alert('Movimiento actualizado correctamente.');
