@@ -32,21 +32,27 @@ class UIManager {
     }
 
     setSmartViewDate() {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
         const txs = this.store.transactions;
-        if (txs && txs.length > 0) {
-            // Sort to find latest (desc)
+
+        // CHECK: Are there transactions in the CURRENT month?
+        const hasCurrentMonthData = txs.some(t => {
+            const parts = t.date.split('-');
+            return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonth;
+        });
+
+        if (hasCurrentMonthData) {
+            this.viewDate = new Date(currentYear, currentMonth, 1);
+        } else if (txs && txs.length > 0) {
+            // If current month is empty, jump to latest month with data
             const sorted = [...txs].sort((a, b) => new Date(b.date) - new Date(a.date));
             const latest = sorted[0];
-
-            // Parse explicitly: "2026-01-31" -> year 2026, month 0 (Jan)
             const parts = latest.date.split('-');
-            const y = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10) - 1; // 0-indexed month
-
-            // Set viewDate to this month/year
-            this.viewDate = new Date(y, m, 1);
+            this.viewDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
         } else {
-            this.viewDate = new Date(); // Default safely to now
+            this.viewDate = new Date(currentYear, currentMonth, 1);
         }
     }
 

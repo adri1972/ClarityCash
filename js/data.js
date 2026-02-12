@@ -163,10 +163,13 @@ class Store {
                         corrected = true;
                     }
                 });
-                if (corrected) {
-                    // Save the correction
-                    try { localStorage.setItem('cc_data', JSON.stringify(merged)); } catch (e) { }
-                }
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
+                    // Ensure consistency in key naming across the app
+                    if (localStorage.getItem('cc_data')) {
+                        localStorage.removeItem('cc_data');
+                    }
+                } catch (e) { }
             }
 
             return merged;
