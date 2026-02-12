@@ -181,7 +181,7 @@ class Store {
         // Invalidate AI advice cache (so it re-analyzes with new data)
         try {
             Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('cc_ai_v41_')) localStorage.removeItem(key);
+                if (key.startsWith('cc_ai_v65_')) localStorage.removeItem(key);
             });
         } catch (e) { }
 

@@ -359,7 +359,7 @@ REGLAS DE FORMATO:
      * Cache response to avoid unnecessary API calls
      */
     cacheResponse(month, year, text) {
-        const key = `cc_ai_v59_${year}_${month}_${this.getProvider()}`; // Provider-aware cache
+        const key = `cc_ai_v65_${year}_${month}_${this.getProvider()}`; // Provider-aware cache
         const data = { text, timestamp: Date.now() };
         localStorage.setItem(key, JSON.stringify(data));
     }
@@ -368,7 +368,7 @@ REGLAS DE FORMATO:
      * Get cached response if less than 24 hours old
      */
     getCachedResponse(month, year) {
-        const key = `cc_ai_v59_${year}_${month}_${this.getProvider()}`;
+        const key = `cc_ai_v65_${year}_${month}_${this.getProvider()}`;
         const raw = localStorage.getItem(key);
         if (!raw) return null;
 
