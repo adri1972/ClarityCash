@@ -200,9 +200,12 @@ REGLAS DE FORMATO:
         });
 
         if (!response.ok) {
-            if (response.status === 400 || response.status === 403) throw new Error('INVALID_KEY');
+            const errorBody = await response.json().catch(() => ({}));
+            const errorMessage = errorBody.error?.message || response.statusText;
+
+            if (response.status === 400 || response.status === 403) throw new Error(`INVALID_KEY: ${errorMessage}`);
             if (response.status === 429) throw new Error('RATE_LIMIT');
-            throw new Error('API_ERROR');
+            throw new Error(`API_ERROR: ${errorMessage}`);
         }
 
         const data = await response.json();
