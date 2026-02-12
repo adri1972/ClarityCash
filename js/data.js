@@ -93,13 +93,11 @@ class Store {
 
             const data = JSON.parse(stored);
 
-            // Critical Fix: Ensure currency exists
-            if (!data.config || !data.config.currency) {
-                if (!data.config) data.config = {};
-                if (!data.config.user_name) data.config.user_name = 'Mi Espacio';
-
-                data.config.currency = 'COP';
-            }
+            // Critical Fix: Ensure config and user_name exist without overwriting
+            if (!data.config) data.config = {};
+            if (!data.config.user_name) data.config.user_name = 'Mi Espacio';
+            if (!data.config.currency) data.config.currency = 'COP';
+            if (!data.config.spending_profile) data.config.spending_profile = 'BALANCEADO';
 
             // --- DATA MIGRATION: Add new Utility Categories ---
             if (data.categories) {
@@ -184,7 +182,7 @@ class Store {
     _save() {
         this.data.config.updated_at = new Date().toISOString();
 
-        // Invalidate AI advice cache (so it re-analyzes with new data)
+        // Invalidate AI advice cache
         try {
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('cc_ai_v65_')) localStorage.removeItem(key);
@@ -192,14 +190,19 @@ class Store {
         } catch (e) { }
 
         if (this.usingMemory) {
-            this.memoryStore = JSON.parse(JSON.stringify(this.data)); // Deep copy to prevent direct reference issues
+            this.memoryStore = JSON.parse(JSON.stringify(this.data));
             window.dispatchEvent(new CustomEvent('c_store_updated'));
             return;
         }
         try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
-            // AUTO-BACKUP: Save a copy for recovery
-            localStorage.setItem(this.BACKUP_KEY, JSON.stringify(this.data));
+            const json = JSON.stringify(this.data);
+            localStorage.setItem(this.STORAGE_KEY, json);
+            // BACKUP
+            localStorage.setItem(this.BACKUP_KEY, json);
+            // Cleanup old keys
+            localStorage.removeItem('cc_data');
+
+            console.log('💾 Data saved to:', this.STORAGE_KEY);
             window.dispatchEvent(new CustomEvent('c_store_updated'));
         } catch (e) {
             console.error('Save failed:', e);

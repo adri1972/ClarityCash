@@ -33,27 +33,8 @@ class UIManager {
 
     setSmartViewDate() {
         const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        const txs = this.store.transactions;
-
-        // CHECK: Are there transactions in the CURRENT month?
-        const hasCurrentMonthData = txs.some(t => {
-            const parts = t.date.split('-');
-            return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonth;
-        });
-
-        if (hasCurrentMonthData) {
-            this.viewDate = new Date(currentYear, currentMonth, 1);
-        } else if (txs && txs.length > 0) {
-            // If current month is empty, jump to latest month with data
-            const sorted = [...txs].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const latest = sorted[0];
-            const parts = latest.date.split('-');
-            this.viewDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
-        } else {
-            this.viewDate = new Date(currentYear, currentMonth, 1);
-        }
+        this.viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        console.log('📅 Date Initialized to current month:', this.viewDate.toLocaleDateString());
     }
 
     changeMonth(delta) {
@@ -583,14 +564,22 @@ class UIManager {
     render() {
         if (!this.container) return;
         this.container.innerHTML = '';
-        switch (this.currentView) {
-            case 'dashboard': this.renderDashboard(); break;
-            case 'transactions': this.renderTransactions(); break;
-            case 'insights': this.renderInsightsPage(); break;
-            case 'goals': this.renderGoals(); break;
-            case 'settings': this.renderSettings(); break;
-            default: this.renderDashboard();
+        console.log('🎨 Rendering View:', this.currentView);
+
+        try {
+            switch (this.currentView) {
+                case 'dashboard': this.renderDashboard(); break;
+                case 'transactions': this.renderTransactions(); break;
+                case 'insights': this.renderInsightsPage(); break;
+                case 'goals': this.renderGoals(); break;
+                case 'settings': this.renderSettings(); break;
+                default: this.renderDashboard();
+            }
+        } catch (err) {
+            console.error('❌ Render Error:', err);
+            this.container.innerHTML = `<div style="padding:2rem; color:red;">Error al cargar la vista: ${err.message}</div>`;
         }
+
         this.updateUserProfileUI();
         if (window.feather) window.feather.replace();
     }
