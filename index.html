@@ -543,9 +543,9 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw-v63.js')
+                navigator.serviceWorker.register('sw-v64.js')
                     .then(registration => {
-                        console.log('SW Registered v63:', registration.scope);
+                        console.log('SW Registered v64:', registration.scope);
 
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
