@@ -141,14 +141,16 @@ class UIManager {
 
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
+                console.log('📝 Transaction Form Submitted');
                 try {
                     const formData = new FormData(form);
                     const data = Object.fromEntries(formData.entries());
 
                     // Clean amount (remove dots)
                     if (data.amount) {
-                        data.amount = parseFloat(data.amount.replace(/\./g, ''));
+                        data.amount = parseFloat(data.amount.toString().replace(/\./g, ''));
                     }
+                    console.log('Processed Data:', data);
 
                     if (isNaN(data.amount) || data.amount <= 0) {
                         alert('Por favor ingresa un monto válido.');
@@ -2969,16 +2971,20 @@ class UIManager {
                 }
                 if (btn) { btn.textContent = '✅ Listo'; }
             } catch (err) {
+                console.error('AI Request Error:', err);
                 const messages = {
                     'NO_KEY': '⚙️ Configura tu API Key en Configuración.',
-                    'INVALID_KEY': '❌ API Key inválida. Revísala en Configuración.',
-                    'RATE_LIMIT': '⏳ Muchas consultas. Espera unos minutos.',
+                    'INVALID_KEY': '❌ API Key inválida. revísala.',
+                    'RATE_LIMIT': '⏳ Muchas consultas seguidas. Por favor, espera 60 segundos antes de intentar de nuevo.',
                     'NETWORK_ERROR': '📡 Sin conexión a internet.',
                     'EMPTY_RESPONSE': '🤷 La IA no pudo generar una respuesta. Intenta de nuevo.',
-                    'API_ERROR': '⚠️ Error del servicio de IA. Intenta más tarde.'
+                    'API_ERROR': '⚠️ Error del servicio de IA (Google/OpenAI). Intenta más tarde.'
                 };
                 if (responseDiv) {
-                    responseDiv.innerHTML = `<p style="color: #F44336; text-align: center;">${messages[err.message] || 'Error desconocido'}</p>`;
+                    responseDiv.innerHTML = `<div style="background:#fff5f5; border:1px solid #feb2b2; padding:1.5rem; border-radius:8px; color: #c53030; text-align: center;">
+                        <p style="font-weight:bold; margin-bottom:0.5rem;">No pudimos consultar a la IA</p>
+                        <p style="font-size:0.9rem;">${messages[err.message] || 'Error inesperado: ' + err.message}</p>
+                    </div>`;
                 }
                 if (btn) { btn.disabled = false; btn.textContent = '🔄 Reintentar'; }
             }
@@ -3356,45 +3362,28 @@ class UIManager {
             
         `;
 
-        // Handle Force Update Logic
-        setTimeout(() => {
-            const forceBtn = document.getElementById('force-update-env-btn');
-            if (forceBtn) {
-                forceBtn.addEventListener('click', async () => {
-                    if (confirm('¿Actualizar a la última versión? Esto recargará la aplicación.')) {
-                        forceBtn.innerHTML = '⌛ Actualizando...';
-                        forceBtn.disabled = true;
+        // EVENT DELEGATION: Universal Form and Button Handler
+        this.container.onclick = (e) => {
+            const target = e.target;
 
-                        try {
-                            // 1. Unregister Service Workers
-                            if ('serviceWorker' in navigator) {
-                                const regs = await navigator.serviceWorker.getRegistrations();
-                                for (let r of regs) await r.unregister();
-                            }
-
-                            // 2. Clear Caches
-                            const keys = await caches.keys();
-                            for (let k of keys) await caches.delete(k);
-
-                            // 3. Force Network Reload with Timestamp (The Nuclear Option)
-                            // This guarantees we get the fresh index.html
-                            console.log('Forcing nuclear reload...');
-                            window.location.href = window.location.pathname + '?update=' + Date.now();
-
-                        } catch (e) {
-                            console.error(e);
-                            window.location.reload();
-                        }
-                    }
-                });
+            // Profile Guide Button
+            if (target.id === 'profile-info-btn' || target.closest('#profile-info-btn')) {
+                const modal = document.getElementById('profile-modal');
+                if (modal) modal.classList.remove('hidden');
             }
-        }, 1000);
 
-        // Handle Profile Form
-        const settingsForm = document.getElementById('settings-form');
-        if (settingsForm) {
-            settingsForm.addEventListener('submit', (e) => {
-                e.preventDefault();
+            // Force Update Button (The "Nuclear" button in Settings)
+            if (target.id === 'force-update-env-btn' || target.closest('#force-update-env-btn')) {
+                this.performNuclearUpdate();
+            }
+        };
+
+        this.container.onsubmit = (e) => {
+            const formId = e.target.id;
+            e.preventDefault();
+            console.log(`🚀 Form Submitted via Delegation: ${formId}`);
+
+            if (formId === 'settings-form') {
                 const formData = new FormData(e.target);
                 const rawIncome = formData.get('monthly_income_target').toString().replace(/\./g, '');
                 const rawDebt = formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\./g, '') : '0';
@@ -3407,17 +3396,80 @@ class UIManager {
                     has_debts: formData.get('has_debts') === 'on',
                     total_debt: parseFloat(rawDebt) || 0
                 });
-                alert('Perfil guardado correctamente.');
-                this.render(); // Re-render to update the "Auto" logic with new profile
-            });
+                alert('✅ Perfil guardado correctamente.');
+                this.render();
+            }
+
+            if (formId === 'budget-form') {
+                const formData = new FormData(e.target);
+                const newBudgets = {};
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('budget_')) {
+                        const catId = key.replace('budget_', '');
+                        const val = parseFloat(value.toString().replace(/\./g, '')) || 0;
+                        if (val > 0) newBudgets[catId] = val;
+                    }
+                }
+                this.store.updateConfig({ budgets: newBudgets });
+                alert('✅ Metas de presupuesto actualizadas.');
+                this.render();
+            }
+
+            if (formId === 'ai-config-form') {
+                const formData = new FormData(e.target);
+                this.store.updateConfig({
+                    ai_provider: formData.get('ai_provider') || 'gemini',
+                    gemini_api_key: formData.get('gemini_api_key') || '',
+                    openai_api_key: formData.get('openai_api_key') || ''
+                });
+                alert('✅ Configuración de IA guardada.');
+                this.render();
+            }
+            
+            if (formId === 'fixed-expense-form') {
+                const formData = new FormData(e.target);
+                this.store.addFixedExpense({
+                    name: formData.get('name'),
+                    amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
+                    category_id: formData.get('category_id'),
+                    day: parseInt(formData.get('day')) || 1
+                });
+                this.render();
+            }
+
+            if (formId === 'recurring-income-form') {
+                const formData = new FormData(e.target);
+                this.store.addRecurringIncome({
+                    name: formData.get('name'),
+                    amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
+                    day: parseInt(formData.get('day')) || 1
+                });
+                this.render();
+            }
+        };
+
+        // Feather icons replace
+        if (window.feather) window.feather.replace();
+    }
+
+    // New Nuclear Update Method for delegation
+    async performNuclearUpdate() {
+        if (!confirm('¿Actualizar a la última versión? Esto recargará la aplicación.')) return;
+        
+        try {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let r of regs) await r.unregister();
+            }
+            const keys = await caches.keys();
+            for (let k of keys) await caches.delete(k);
+            
+            console.log('Forcing nuclear reload...');
+            window.location.href = window.location.pathname + '?update=' + Date.now();
+        } catch (e) {
+            window.location.reload();
         }
-
-        // Handle Profile Guide Button
-        const guideBtn = document.getElementById('profile-info-btn');
-        if (guideBtn) {
-            guideBtn.addEventListener('click', () => {
-                alert(`📚 GUÍA DE PERFILES:
-
+    }
 🛡️ CONSERVADOR (Modo Guerra/Ahorro)
 - Prioridad: Ahorrar y Pagar Deudas.
 - Sacrificio: Ocio y Gastos Hormiga se reducen al mínimo.
