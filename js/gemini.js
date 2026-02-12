@@ -469,12 +469,12 @@ REGLAS DE FORMATO:
 
         const apiKey = this.getApiKey();
         const provider = this.getProvider();
-        const { catName, catTotal, budgetLimit, isOverBudget } = categoryParams;
+        const { catName, catTotal, budgetLimit, isOverBudget, triggerReason } = categoryParams;
 
         // Personality: "Pazion" (Witty, Direct, Colombian/Latam slang friendly)
         const prompt = `
             ACTÚA COMO: Un amigo financiero brutalmente honesto y con sentido del humor (estilo 'Pazion').
-            CONTEXTO: El usuario acaba de registrar un GASTO nuevo.
+            CONTEXTO: El usuario acaba de registrar un GASTO nuevo y ha activado una alerta: [${triggerReason || 'N/A'}].
             
             DATOS DEL GASTO:
             - Monto: $${tx.amount.toLocaleString()}
@@ -484,7 +484,7 @@ REGLAS DE FORMATO:
             ESTADO FINANCIERO ACTUAL DE ESA CATEGORÍA:
             - Total gastado este mes (incluyendo este): $${catTotal.toLocaleString()}
             - Límite Presupuesto: $${budgetLimit > 0 ? budgetLimit.toLocaleString() : 'No definido'}
-            - ${isOverBudget ? '⚠️ ESTÁ SOBREGIRO (Pasó el límite)' : '✅ Aún dentro del presupuesto'}
+            - ALERTA ACTIVADA: ${triggerReason ? triggerReason : (isOverBudget ? 'SOBREGIRO' : 'Ninguna grave')}
             
             TU MISIÓN:
             Genera una reacción CORTA (Máximo 140 caracteres) para enviarle una notificación push (Toast).
