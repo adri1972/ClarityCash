@@ -687,7 +687,10 @@ class UIManager {
                             <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;' : 'background: #f5f5f5; color: #999;'}">
                                 ${hasApiKey ? '✨ IA Generativa (Real)' : '⚡ Diagnóstico Automático'}
                             </span>
-                            <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
+                            <div id="ai-diagnosis-content">
+                                <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
+                            </div>
+                            ${hasApiKey ? `<small id="ai-loading-indicator" style="display:none; color:#E91E63; font-size:0.7rem; margin-top:4px;">🧠 Pensando estrategia...</small>` : ''}
                         </div>
                         <div style="font-size:1.5rem;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
                     </div>
@@ -880,6 +883,65 @@ class UIManager {
 
         // Trigger AI Insight if needed
         this.processAIAdvice(plan);
+
+        // EXTRA: If API Key exists, fetch REAL diagnosis asynchronously
+        if (hasApiKey) {
+            this.fetchRealAIDiagnosis(plan);
+        }
+    }
+
+    async fetchRealAIDiagnosis(plan) {
+        const loading = document.getElementById('ai-loading-indicator');
+        const contentDiv = document.getElementById('ai-diagnosis-content');
+
+        if (!loading || !contentDiv || !this.aiAdvisor) return;
+
+        // Check cache first to avoid API spam on every render
+        const currentMonth = this.viewDate.getMonth();
+        const currentYear = this.viewDate.getFullYear();
+        const cached = this.aiAdvisor.getCachedResponse(currentMonth, currentYear);
+
+        if (cached) {
+            // Use cached if fresh (< 24h)
+            contentDiv.innerHTML = `<p style="margin:4px 0 0; font-size:1rem; color:var(--text-main); white-space: pre-line;">${this.formatAIResponse(cached)}</p>`;
+            return;
+        }
+
+        loading.style.display = 'block';
+
+        try {
+            // Prepare context for AI
+            const context = {
+                priority: plan.priority,
+                status: plan.status,
+                problem: plan.status, // Uses 'CRITICAL', 'WARNING', 'OK'
+                full_context: `
+                    - Balance Neto: ${plan.diagnosis.replace(/<[^>]*>?/gm, '')}
+                    - Estado: ${plan.status}
+                    - Resumen IA Local: ${plan.priority}
+                `
+            };
+
+            const advice = await this.aiAdvisor.getConsultation(context);
+
+            // Format and display
+            if (advice) {
+                // Cache it
+                this.aiAdvisor.cacheResponse(currentMonth, currentYear, advice);
+                contentDiv.innerHTML = `<p style="margin:4px 0 0; font-size:1rem; color:var(--text-main); white-space: pre-line;">${this.formatAIResponse(advice)}</p>`;
+            }
+        } catch (error) {
+            console.error('AI Diagnosis failed:', error);
+            // Keep local diagnosis on error
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    formatAIResponse(text) {
+        // Simple formatter to bold key terms or clean up markdown
+        return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/- /g, '• ');
     }
 
     generateCoachingNudges(summary) {
