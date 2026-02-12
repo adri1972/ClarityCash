@@ -3381,6 +3381,73 @@ class UIManager {
                 this.performNuclearUpdate();
             }
 
+            // Auto-Suggest Budgets
+            if (target.id === 'auto-budget-btn' || target.closest('#auto-budget-btn')) {
+                const income = this.store.config.monthly_income_target || 0;
+                const profile = this.store.config.spending_profile || 'BALANCEADO';
+
+                if (income <= 0) {
+                    alert('⚠️ Primero define y guarda un "Ingreso Mensual Objetivo" mayor a 0 en la sección de Perfil.');
+                    return;
+                }
+
+                const distributions = {
+                    'CONSERVADOR': {
+                        'cat_1': 0.25, 'cat_2': 0.15, 'cat_3': 0.05, 'cat_gasolina': 0.05,
+                        'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.05, 'cat_personal': 0.05,
+                        'cat_10': 0.05, 'cat_5': 0.10, 'cat_6': 0.00, 'cat_7': 0.10,
+                        'cat_fin_4': 0.05, 'cat_fin_5': 0.05
+                    },
+                    'BALANCEADO': {
+                        'cat_1': 0.20, 'cat_2': 0.15, 'cat_3': 0.05, 'cat_gasolina': 0.05,
+                        'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.05, 'cat_deporte': 0.03,
+                        'cat_vicios': 0.02, 'cat_8': 0.05, 'cat_10': 0.08, 'cat_5': 0.05,
+                        'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.025, 'cat_fin_5': 0.025
+                    },
+                    'FLEXIBLE': {
+                        'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.05, 'cat_gasolina': 0.05,
+                        'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.10, 'cat_deporte': 0.05,
+                        'cat_vicios': 0.05, 'cat_8': 0.05, 'cat_10': 0.10, 'cat_5': 0.02,
+                        'cat_6': 0.00, 'cat_7': 0.04, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02
+                    }
+                };
+
+                const weights = distributions[profile] || distributions['BALANCEADO'];
+                let appliedCount = 0;
+
+                // Calculate floor from fixed expenses
+                const fixedFloor = {};
+                (this.store.config.fixed_expenses || []).forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+
+                this.store.categories.forEach(cat => {
+                    const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                    if (input) {
+                        const pct = weights[cat.id] || 0;
+                        let suggested = Math.floor(income * pct);
+                        const floor = fixedFloor[cat.id] || 0;
+                        if (floor > suggested) suggested = floor;
+
+                        // Round to nearest 5000
+                        suggested = Math.ceil(suggested / 5000) * 5000;
+
+                        if (suggested > 0) {
+                            input.value = suggested.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                            input.style.backgroundColor = '#e8f5e9';
+                            setTimeout(() => input.style.backgroundColor = '#fff', 1500);
+                            appliedCount++;
+                        }
+                    }
+                });
+
+                if (appliedCount > 0) {
+                    alert('✅ Sugerencias generadas. No olvides pulsar "Guardar Presupuestos" al final.');
+                }
+            }
+
             // Edit Fixed Expense
             if (target.classList.contains('edit-fixed-exp') || target.closest('.edit-fixed-exp')) {
                 const id = (target.dataset.id || target.closest('.edit-fixed-exp').dataset.id);
