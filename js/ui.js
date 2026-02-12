@@ -3155,10 +3155,13 @@ class UIManager {
                     <form id="ai-config-form">
                         <div class="form-group" style="margin-bottom: 1rem;">
                             <label>Proveedor de IA</label>
-                            <select name="ai_provider" id="ai-provider-select">
-                                <option value="gemini" ${(conf.ai_provider || 'gemini') === 'gemini' ? 'selected' : ''}>Google Gemini (Gratis ✨)</option>
-                                <option value="openai" ${conf.ai_provider === 'openai' ? 'selected' : ''}>ChatGPT (OpenAI)</option>
+                            <select name="ai_provider" id="ai-provider-select" onchange="window.ui.toggleAiProvider(this.value)">
+                                <option value="gemini" ${(conf.ai_provider || 'gemini') === 'gemini' ? 'selected' : ''}>Google Gemini (Recomendado - GRATIS 🎁)</option>
+                                <option value="openai" ${conf.ai_provider === 'openai' ? 'selected' : ''}>ChatGPT (Requiere Saldo/Pago 💳)</option>
                             </select>
+                            <small style="display:block; margin-top:4px; font-size:0.75rem; color:#666;">
+                                Nota: La API de OpenAI <b>NO</b> es gratis (aunque tengas ChatGPT Plus).
+                            </small>
                         </div>
 
                         <div id="gemini-key-group" style="display: ${(conf.ai_provider || 'gemini') === 'gemini' ? 'block' : 'none'};">
@@ -3169,9 +3172,14 @@ class UIManager {
                                        placeholder="AIzaSy..."
                                        style="font-family: monospace; font-size: 0.85rem;">
                             </div>
+                            <div style="background:#e3f2fd; padding:10px; border-radius:8px; margin-bottom:10px;">
+                                <p style="margin:0; font-size:0.8rem; color:#0d47a1;">
+                                    <b>💡 Tip:</b> Gemini es totalmente <b>gratis</b> para uso personal.
+                                </p>
+                            </div>
                             <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
-                               style="font-size: 0.8rem; color: #E91E63; text-decoration: underline;">
-                                🔑 Obtener API Key gratis (Google AI Studio)
+                               style="font-size: 0.85rem; color: #E91E63; text-decoration: underline; font-weight: 600;">
+                                🎁 Conseguir mi llave Gratis (Google AI)
                             </a>
                         </div>
 
@@ -3183,9 +3191,14 @@ class UIManager {
                                        placeholder="sk-..."
                                        style="font-family: monospace; font-size: 0.85rem;">
                             </div>
+                            <div style="background:#fff3e0; padding:10px; border-radius:8px; margin-bottom:10px;">
+                                <p style="margin:0; font-size:0.8rem; color:#e65100;">
+                                    <b>⚠️ Atención:</b> Para usar esta opción debes poner al menos $5 USD de crédito en tu cuenta de OpenAI (platform.openai.com).
+                                </p>
+                            </div>
                             <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener"
                                style="font-size: 0.8rem; color: #E91E63; text-decoration: underline;">
-                                🔑 Obtener API Key (OpenAI)
+                                💳 Gestionar llaves en OpenAI
                             </a>
                         </div>
 
