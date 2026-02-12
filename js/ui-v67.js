@@ -3383,32 +3383,43 @@ class UIManager {
 
             // Auto-Suggest Budgets
             if (target.id === 'auto-budget-btn' || target.closest('#auto-budget-btn')) {
-                const income = this.store.config.monthly_income_target || 0;
-                const profile = this.store.config.spending_profile || 'BALANCEADO';
+                // Read LIVE values from form to avoid requiring "Save Profile" first
+                const incomeInput = document.querySelector('input[name="monthly_income_target"]');
+                const profileSelect = document.querySelector('select[name="spending_profile"]');
+
+                const income = incomeInput ? parseFloat(incomeInput.value.replace(/\./g, '')) || 0 : 0;
+                const profile = profileSelect ? profileSelect.value : 'BALANCEADO';
 
                 if (income <= 0) {
-                    alert('⚠️ Primero define y guarda un "Ingreso Mensual Objetivo" mayor a 0 en la sección de Perfil.');
+                    alert('⚠️ Por favor ingresa un "Ingreso Mensual Objetivo" válido en la columna de Perfil (izquierda).');
+                    if (incomeInput) incomeInput.focus();
                     return;
                 }
 
+                // Comprehensive distributions
                 const distributions = {
                     'CONSERVADOR': {
-                        'cat_1': 0.25, 'cat_2': 0.15, 'cat_3': 0.05, 'cat_gasolina': 0.05,
-                        'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.05, 'cat_personal': 0.05,
-                        'cat_10': 0.05, 'cat_5': 0.10, 'cat_6': 0.00, 'cat_7': 0.10,
-                        'cat_fin_4': 0.05, 'cat_fin_5': 0.05
+                        'cat_1': 0.25, 'cat_2': 0.12, 'cat_3': 0.04, 'cat_gasolina': 0.04,
+                        'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.03, 'cat_personal': 0.03,
+                        'cat_10': 0.04, 'cat_5': 0.15, 'cat_6': 0.02, 'cat_7': 0.10,
+                        'cat_fin_4': 0.03, 'cat_fin_5': 0.02, 'cat_rest': 0.03,
+                        'cat_viv_luz': 0.015, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
+                        'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.02
                     },
                     'BALANCEADO': {
                         'cat_1': 0.20, 'cat_2': 0.15, 'cat_3': 0.05, 'cat_gasolina': 0.05,
-                        'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.05, 'cat_deporte': 0.03,
-                        'cat_vicios': 0.02, 'cat_8': 0.05, 'cat_10': 0.08, 'cat_5': 0.05,
-                        'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.025, 'cat_fin_5': 0.025
+                        'cat_4': 0.05, 'cat_9': 0.08, 'cat_personal': 0.05, 'cat_deporte': 0.03,
+                        'cat_vicios': 0.02, 'cat_8': 0.05, 'cat_10': 0.05, 'cat_5': 0.05,
+                        'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.02, 'cat_fin_5': 0.025,
+                        'cat_rest': 0.05, 'cat_viv_luz': 0.02, 'cat_viv_agua': 0.01,
+                        'cat_viv_net': 0.02, 'cat_viv_cel': 0.01
                     },
                     'FLEXIBLE': {
                         'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.05, 'cat_gasolina': 0.05,
-                        'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.10, 'cat_deporte': 0.05,
-                        'cat_vicios': 0.05, 'cat_8': 0.05, 'cat_10': 0.10, 'cat_5': 0.02,
-                        'cat_6': 0.00, 'cat_7': 0.04, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02
+                        'cat_4': 0.05, 'cat_9': 0.12, 'cat_personal': 0.08, 'cat_deporte': 0.05,
+                        'cat_vicios': 0.05, 'cat_8': 0.05, 'cat_10': 0.08, 'cat_5': 0.02,
+                        'cat_6': 0.01, 'cat_7': 0.02, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02,
+                        'cat_rest': 0.08, 'cat_viv_luz': 0.02, 'cat_viv_net': 0.02
                     }
                 };
 
@@ -3426,25 +3437,31 @@ class UIManager {
                 this.store.categories.forEach(cat => {
                     const input = document.querySelector(`input[name="budget_${cat.id}"]`);
                     if (input) {
-                        const pct = weights[cat.id] || 0;
+                        const pct = weights[cat.id] || 0.01; // Default 1% if not specified
                         let suggested = Math.floor(income * pct);
+
+                        // Use fixed expense as absolute floor
                         const floor = fixedFloor[cat.id] || 0;
                         if (floor > suggested) suggested = floor;
 
-                        // Round to nearest 5000
-                        suggested = Math.ceil(suggested / 5000) * 5000;
+                        // Round to nearest 1000 for nicer look in COP
+                        suggested = Math.ceil(suggested / 1000) * 1000;
 
                         if (suggested > 0) {
                             input.value = suggested.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
                             input.style.backgroundColor = '#e8f5e9';
-                            setTimeout(() => input.style.backgroundColor = '#fff', 1500);
+                            input.style.transition = 'background-color 0.5s';
+                            setTimeout(() => input.style.backgroundColor = '#fff', 2000);
                             appliedCount++;
                         }
                     }
                 });
 
                 if (appliedCount > 0) {
-                    alert('✅ Sugerencias generadas. No olvides pulsar "Guardar Presupuestos" al final.');
+                    // Small toast-like notification instead of alert if possible, but alert is safer for now
+                    alert('✨ Sugerencias generadas según tu perfil. ¡Recuerda GUARDAR cambios al final de la columna!');
+                } else {
+                    alert('⚠️ No se pudieron generar sugerencias. Asegúrate de tener un ingreso mayor a cero.');
                 }
             }
 
