@@ -1468,62 +1468,75 @@ class UIManager {
         const catTotal = catTxs.reduce((sum, t) => sum + t.amount, 0);
         const budgetLimit = this.store.config.budgets ? (this.store.config.budgets[tx.category_id] || 0) : 0;
 
-        // 2. TRY REAL AI FIRST (If Key Exists)
-        if (this.aiAdvisor && this.aiAdvisor.hasApiKey()) {
-            console.log('🤖 Asking AI for instant insight...');
-            // Show subtle "Thinking..." toast
-            this.showToast('🧠 Analizando gasto...', 'thinking', '💭');
-
-            const insight = await this.aiAdvisor.getInstantInsight(tx, {
-                catName,
-                catTotal,
-                budgetLimit,
-                isOverBudget: budgetLimit > 0 && catTotal > budgetLimit
-            });
-
-            if (insight) {
-                // Remove thinking toast and show real one
-                this.removeToast('thinking'); // Hypothetical helper or just overwrite
-                this.showToast(insight, 'ai-success', '✨');
-                return;
-            }
-        }
-
-        // 3. FALLBACK: Rule-Based Logic (Original)
-        // ... (Keep existing logic as fallback)
+        // 2. Rule-Based Triggers (The "Logic Defined")
         const totalExpense = monthlyTxs.reduce((sum, t) => sum + t.amount, 0);
         const catCount = catTxs.length;
 
-        let message = '';
+        let trigger = null;
+        let defaultMsg = '';
         let type = 'info';
         let icon = '💡';
 
         if (budgetLimit > 0 && catTotal > budgetLimit) {
-            const over = catTotal - budgetLimit;
-            message = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatMoney(over)}`;
+            trigger = 'OVER_BUDGET';
+            defaultMsg = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatMoney(catTotal - budgetLimit)}`;
             type = 'danger';
             icon = '🚨';
         } else if (budgetLimit > 0 && catTotal > (budgetLimit * 0.8)) {
-            message = `Cuidado, estás al 80% de tu límite para ${catName}`;
+            trigger = 'NEAR_BUDGET';
+            defaultMsg = `Cuidado, estás al 80% de tu límite para ${catName}`;
             type = 'warning';
             icon = '⚠️';
         } else if (catTotal > (totalExpense * 0.3) && totalExpense > 0) {
-            message = `${catName} se está llevando el 30% de tus gastos este mes.`;
+            trigger = 'HIGH_IMPACT';
+            defaultMsg = `${catName} se está llevando el 30% de tus gastos este mes.`;
             type = 'warning';
             icon = '📊';
-        } else if (category.id === 'cat_2' || category.id === 'cat_ant') {
+        } else if (category.id === 'cat_2' || category.id === 'cat_ant') { // Coffee or Antojo
             if (catCount > 10) {
-                message = `Vas ${catCount} veces en ${catName} este mes. ¿Cocinamos más?`;
+                trigger = 'HIGH_FREQUENCY';
+                defaultMsg = `Vas ${catCount} veces en ${catName} este mes. ¿Cocinamos más?`;
                 type = 'info';
                 icon = '🍳';
             }
-        } else if (tx.amount > 50000 && category.id === 'cat_ant') {
-            message = `Un antojo de ${this.formatMoney(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
+        }
+
+        // Special check for high single expense in Antojo
+        if (!trigger && tx.amount > 50000 && category.id === 'cat_ant') {
+            trigger = 'EXPENSIVE_IMPULSE';
+            defaultMsg = `Un antojo de ${this.formatMoney(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
             icon = '🍩';
         }
 
-        if (message) {
-            this.showToast(message, type, icon);
+        // 3. EXECUTE: AI or Default
+        if (trigger) {
+            // A. AI IS ENABLED -> Get "Real" Insight
+            if (this.aiAdvisor && this.aiAdvisor.hasApiKey()) {
+                console.log(`🤖 Triggered '${trigger}'. Asking AI...`);
+                this.showToast('🧠 Analizando...', 'thinking', '💭'); // Feedback
+
+                // Pass the specific trigger context to AI
+                const insight = await this.aiAdvisor.getInstantInsight(tx, {
+                    catName,
+                    catTotal,
+                    budgetLimit,
+                    isOverBudget: trigger === 'OVER_BUDGET',
+                    triggerReason: trigger // Tell AI exactly why we are calling
+                });
+
+                if (insight) {
+                    this.removeToast('thinking');
+                    this.showToast(insight, 'ai-success', '✨');
+                } else {
+                    // Fallback if AI fails net check
+                    this.removeToast('thinking');
+                    this.showToast(defaultMsg, type, icon);
+                }
+            }
+            // B. NO AI -> Use Default "Logic Defined" Message
+            else {
+                this.showToast(defaultMsg, type, icon);
+            }
         }
     }
 
