@@ -4065,7 +4065,7 @@ class UIManager {
         this.aiAdvisor = new AIAdvisor(this.store);
 
         try {
-            await this.aiAdvisor.checkConnection();
+            await this.aiAdvisor.checkConnection(apiKey);
 
             // Success! Save for real.
             this.store.saveSettings(this.store.config);

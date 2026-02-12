@@ -218,10 +218,14 @@ REGLAS DE FORMATO:
     /**
      * Test the API connection status
      */
-    async checkConnection() {
-        if (!this.hasApiKey()) throw new Error('No hay API Key configurada');
+    /**
+     * Test the API connection status
+     */
+    async checkConnection(explicitKey = null) {
+        const apiKey = explicitKey || this.getApiKey();
 
-        const apiKey = this.getApiKey();
+        if (!apiKey || apiKey.length < 10) throw new Error('No hay API Key configurada o es muy corta');
+
         const provider = this.getProvider();
 
         try {
