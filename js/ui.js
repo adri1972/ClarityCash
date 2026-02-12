@@ -4017,6 +4017,7 @@ class UIManager {
         statusEl.innerHTML = '<span style="color:#1976d2;">⏳ Probando conexión...</span>';
 
         // Save original config to restore if needed
+        if (!this.store.config) this.store.config = {};
         const originalConfig = { ...this.store.config };
 
         // 1. Temporarily update config in memory
