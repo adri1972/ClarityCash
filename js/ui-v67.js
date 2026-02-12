@@ -2246,16 +2246,12 @@ class UIManager {
 
         // Trigger updates for dynamic category select
         const typeSelect = form.querySelector('[name="type"]');
-        typeSelect.dispatchEvent(new Event('change'));
+        // We need to trigger change BUT ensure we set the category AFTER the select is populated
+        this.populateSelects(tx.type);
+        form.querySelector('[name="category_id"]').value = tx.category_id;
 
-        // Set Category
-        setTimeout(() => {
-            form.querySelector('[name="category_id"]').value = tx.category_id;
-        }, 50); // Small delay to let toggleTransactionType run
-
-        // Change submit text
-        const btn = form.querySelector('button[type="submit"]');
-        btn.innerHTML = '💾 Guardar Cambios';
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.innerHTML = 'Actualizar Movimiento';
     }
 
     async updateTransactionCategory(id, newCatId) {
@@ -3174,7 +3170,8 @@ class UIManager {
                         </div>
 
                         <form id="recurring-income-form" style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #dcfce7;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #166534;">Nuevo Ingreso</h4>
+                            <input type="hidden" name="edit_ri_id" value="">
+                            <h4 id="ri-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #166534;">Nuevo Ingreso</h4>
                             <div class="form-group" style="margin-bottom: 0.5rem;">
                                 <input type="text" name="name" placeholder="Nombre (ej. Nómina)" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
                             </div>
@@ -3182,10 +3179,16 @@ class UIManager {
                                 <input type="text" name="amount" placeholder="Monto ($)" required
                                        oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"
                                        style="padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <input type="number" name="day" placeholder="Día (1-31)" min="1" max="31" value="1" required 
-                                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                                <select name="category_id" required style="padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                                    <option value="" disabled selected>Categoría</option>
+                                    ${this.store.categories.filter(c => c.group === 'INGRESOS').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                                </select>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%; background: #2E7D32;">+ Agregar Ingreso</button>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" name="day" placeholder="Día (1-31)" min="1" max="31" value="1" required 
+                                       style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                                <button type="submit" id="ri-submit-btn" class="btn btn-primary" style="flex: 1; background: #2E7D32;">+ Agregar Ingreso</button>
+                            </div>
                         </form>
                     </div>
 
@@ -3201,7 +3204,8 @@ class UIManager {
                         </div>
 
                         <form id="fixed-expense-form" style="background: #f9fafb; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem;">Nuevo Gasto Fijo</h4>
+                            <input type="hidden" name="edit_fe_id" value="">
+                            <h4 id="fe-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem;">Nuevo Gasto Fijo</h4>
                             <div class="form-group" style="margin-bottom: 0.5rem;">
                                 <input type="text" name="name" placeholder="Nombre (ej. Arriendo)" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
                             </div>
@@ -3217,7 +3221,7 @@ class UIManager {
                             <div style="display: flex; gap: 0.5rem;">
                                 <input type="number" name="day" placeholder="Día (1-31)" min="1" max="31" value="1" required 
                                        style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <button type="submit" class="btn btn-primary" style="flex: 1;">+ Agregar</button>
+                                <button type="submit" id="fe-submit-btn" class="btn btn-primary" style="flex: 1;">+ Agregar</button>
                             </div>
                         </form>
                     </div>       
@@ -3376,6 +3380,58 @@ class UIManager {
             if (target.id === 'force-update-env-btn' || target.closest('#force-update-env-btn')) {
                 this.performNuclearUpdate();
             }
+
+            // Edit Fixed Expense
+            if (target.classList.contains('edit-fixed-exp') || target.closest('.edit-fixed-exp')) {
+                const id = (target.dataset.id || target.closest('.edit-fixed-exp').dataset.id);
+                const fe = this.store.config.fixed_expenses.find(e => e.id === id);
+                if (fe) {
+                    const form = document.getElementById('fixed-expense-form');
+                    form.querySelector('[name="edit_fe_id"]').value = fe.id;
+                    form.querySelector('[name="name"]').value = fe.name;
+                    form.querySelector('[name="amount"]').value = fe.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                    form.querySelector('[name="category_id"]').value = fe.category_id;
+                    form.querySelector('[name="day"]').value = fe.day;
+                    document.getElementById('fe-form-title').textContent = 'Editar Gasto Fijo ✏️';
+                    document.getElementById('fe-submit-btn').textContent = 'Guardar Cambios';
+                    form.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+
+            // Delete Fixed Expense
+            if (target.classList.contains('delete-fixed-exp') || target.closest('.delete-fixed-exp')) {
+                const id = (target.dataset.id || target.closest('.delete-fixed-exp').dataset.id);
+                if (confirm('¿Borrar este gasto fijo?')) {
+                    this.store.deleteFixedExpense(id);
+                    this.render();
+                }
+            }
+
+            // Edit Recurring Income
+            if (target.classList.contains('edit-rec-inc') || target.closest('.edit-rec-inc')) {
+                const id = (target.dataset.id || target.closest('.edit-rec-inc').dataset.id);
+                const ri = this.store.config.recurring_incomes.find(i => i.id === id);
+                if (ri) {
+                    const form = document.getElementById('recurring-income-form');
+                    form.querySelector('[name="edit_ri_id"]').value = ri.id;
+                    form.querySelector('[name="name"]').value = ri.name;
+                    form.querySelector('[name="amount"]').value = ri.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                    form.querySelector('[name="category_id"]').value = ri.category_id || 'cat_inc_1';
+                    form.querySelector('[name="day"]').value = ri.day;
+                    document.getElementById('ri-form-title').textContent = 'Editar Ingreso ✏️';
+                    document.getElementById('ri-submit-btn').textContent = 'Guardar Cambios';
+                    form.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+
+            // Delete Recurring Income
+            if (target.classList.contains('delete-rec-inc') || target.closest('.delete-rec-inc')) {
+                const id = (target.dataset.id || target.closest('.delete-rec-inc').dataset.id);
+                if (confirm('¿Borrar este ingreso recurrente?')) {
+                    this.store.deleteRecurringIncome(id);
+                    this.render();
+                }
+            }
         };
 
         this.container.onsubmit = (e) => {
@@ -3428,22 +3484,37 @@ class UIManager {
 
             if (formId === 'fixed-expense-form') {
                 const formData = new FormData(e.target);
-                this.store.addFixedExpense({
+                const editId = formData.get('edit_fe_id');
+                const data = {
                     name: formData.get('name'),
                     amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
                     category_id: formData.get('category_id'),
                     day: parseInt(formData.get('day')) || 1
-                });
+                };
+
+                if (editId) {
+                    this.store.updateFixedExpense(editId, data);
+                } else {
+                    this.store.addFixedExpense(data);
+                }
                 this.render();
             }
 
             if (formId === 'recurring-income-form') {
                 const formData = new FormData(e.target);
-                this.store.addRecurringIncome({
+                const editId = formData.get('edit_ri_id');
+                const data = {
                     name: formData.get('name'),
                     amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
+                    category_id: formData.get('category_id'),
                     day: parseInt(formData.get('day')) || 1
-                });
+                };
+
+                if (editId) {
+                    this.store.updateRecurringIncome(editId, data);
+                } else {
+                    this.store.addRecurringIncome(data);
+                }
                 this.render();
             }
         };
@@ -3503,12 +3574,13 @@ class UIManager {
         if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes ingresos recurrentes configurados.</p>';
 
         return list.map(ri => {
+            const cat = this.store.categories.find(c => c.id === ri.category_id) || { name: 'Ingreso' };
             return `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
                     <div>
                         <div style="font-weight: 600; font-size: 0.95rem;">${ri.name}</div>
                         <div style="font-size: 0.85rem; color: #666;">
-                           Día ${ri.day} • Ingreso • ${this.formatCurrency(ri.amount)}
+                           Día ${ri.day} • ${cat.name} • ${this.formatCurrency(ri.amount)}
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">

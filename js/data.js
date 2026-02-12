@@ -506,7 +506,7 @@ class Store {
                         type: 'INGRESO',
                         amount: ri.amount,
                         date: dateStr,
-                        category_id: 'cat_salario', // Default or specific
+                        category_id: 'cat_inc_1', // Fixed: Use cat_inc_1 instead of non-existent cat_salario
                         account_id: 'acc_2',
                         note: ri.name,
                         generated_from: ri.id
