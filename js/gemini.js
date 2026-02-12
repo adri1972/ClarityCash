@@ -11,15 +11,18 @@ class AIAdvisor {
     }
 
     getProvider() {
-        return this.store.config.ai_provider || 'gemini'; // 'gemini' or 'openai'
+        const conf = this.store && this.store.config ? this.store.config : {};
+        return conf.ai_provider || 'gemini'; // 'gemini' or 'openai'
     }
 
     getApiKey() {
         const provider = this.getProvider();
+        const conf = this.store && this.store.config ? this.store.config : {};
+
         if (provider === 'openai') {
-            return this.store.config.openai_api_key || '';
+            return conf.openai_api_key || '';
         }
-        return this.store.config.gemini_api_key || '';
+        return conf.gemini_api_key || '';
     }
 
     hasApiKey() {
