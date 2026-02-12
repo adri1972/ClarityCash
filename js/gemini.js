@@ -209,6 +209,28 @@ REGLAS DE FORMATO:
         return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
+    /**
+     * Test the API connection status
+     */
+    async checkConnection() {
+        if (!this.hasApiKey()) throw new Error('No hay API Key configurada');
+
+        const apiKey = this.getApiKey();
+        const provider = this.getProvider();
+
+        try {
+            if (provider === 'openai') {
+                await this._callOpenAI(apiKey, 'Hola, responde con un OK.');
+            } else {
+                await this._callGemini(apiKey, 'Hola, responde con un OK.');
+            }
+            return true;
+        } catch (error) {
+            console.error("Connection Check Failed:", error);
+            throw error;
+        }
+    }
+
     async _callOpenAI(apiKey, prompt) {
         const response = await fetch(this.OPENAI_URL, {
             method: 'POST',

@@ -3201,10 +3201,16 @@ class UIManager {
                                 💳 Gestionar llaves en OpenAI
                             </a>
                         </div>
-
-                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                            💾 Guardar Configuración IA
-                        </button>
+                        
+                        <div style="display:flex; gap:10px; margin-top:1rem;">
+                           <button type="submit" class="btn btn-primary" style="flex:1;">
+                                💾 Guardar Todo
+                           </button>
+                           <button type="button" class="btn btn-secondary" onclick="window.ui.testAiConnection()" style="flex:1;">
+                                📡 Probar Conexión
+                           </button>
+                        </div>
+                        <p id="connection-result" style="margin-top:10px; font-size:0.85rem; text-align:center; min-height:1.2em;"></p>
                     </form>
                     ${(conf.gemini_api_key || conf.openai_api_key) ? '<p style="margin-top: 0.5rem; font-size: 0.8rem; color: #2E7D32; text-align: center;">✅ API Key configurada</p>' : ''}
                 </div>
@@ -3982,5 +3988,68 @@ class UIManager {
 
         html += `</div></div>`;
         return html;
+    }
+    toggleAiProvider(val) {
+        document.getElementById('gemini-key-group').style.display = (val === 'gemini') ? 'block' : 'none';
+        document.getElementById('openai-key-group').style.display = (val === 'openai') ? 'block' : 'none';
+
+        const res = document.getElementById('connection-result');
+        if (res) res.innerHTML = ''; // Clear status
+    }
+
+    async testAiConnection() {
+        // Find inputs directly based on active provider
+        const providerSelect = document.getElementById('ai-provider-select');
+        const provider = providerSelect ? providerSelect.value : 'gemini';
+        let apiKeyInput;
+
+        if (provider === 'gemini') apiKeyInput = document.querySelector('input[name="gemini_api_key"]');
+        else apiKeyInput = document.querySelector('input[name="openai_api_key"]');
+
+        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+        const statusEl = document.getElementById('connection-result');
+
+        if (!apiKey) {
+            statusEl.innerHTML = '<span style="color:#d32f2f;">❌ Falta la API Key</span>';
+            return;
+        }
+
+        statusEl.innerHTML = '<span style="color:#1976d2;">⏳ Probando conexión...</span>';
+
+        // Save original config to restore if needed
+        const originalConfig = { ...this.store.config };
+
+        // 1. Temporarily update config in memory
+        this.store.config.ai_provider = provider;
+        if (provider === 'gemini') this.store.config.gemini_api_key = apiKey;
+        else this.store.config.openai_api_key = apiKey;
+
+        // 2. Re-init Advisor with this new temporary config
+        // Pass the key directly to bypass internal getters if needed
+        this.aiAdvisor = new AIAdvisor(this.store.config);
+
+        try {
+            await this.aiAdvisor.checkConnection();
+
+            // Success! Save for real.
+            this.store.saveSettings(this.store.config);
+            statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! Guardado.</span>';
+            setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32;">✅ Configuración lista</span>'; }, 2000);
+
+        } catch (error) {
+            console.error(error);
+            let msg = 'Error de conexión';
+
+            if (error.message.includes('429')) msg = '❌ Cuota o Velocidad excedida (Espera un momento)';
+            else if (error.message.includes('401') || error.message.includes('403') || error.message.includes('INVALID_KEY')) msg = '❌ API Key inválida o rechazada';
+            else if (error.message.includes('RATE_LIMIT')) msg = '❌ Demasiadas peticiones (429)';
+            else msg = `❌ Error: ${error.message}`;
+
+            if (statusEl) statusEl.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">${msg}</span>`;
+
+            // Revert config on error to avoid breaking app state with bad key
+            this.store.config = originalConfig;
+            this.aiAdvisor = new AIAdvisor(this.store.config);
+        }
     }
 }
