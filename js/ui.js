@@ -931,11 +931,46 @@ class UIManager {
                 contentDiv.innerHTML = `<p style="margin:4px 0 0; font-size:1rem; color:var(--text-main); white-space: pre-line;">${this.formatAIResponse(advice)}</p>`;
             }
         } catch (error) {
-            console.error('AI Diagnosis failed:', error);
-            // Keep local diagnosis on error
+            console.error('AI Diagnosis failed - Switching to Local Fallback:', error);
+            // FALLBACK TO LOCAL SMART ENGINE
+            this.showFallbackDiagnosis(plan, contentDiv);
         } finally {
             loading.style.display = 'none';
         }
+    }
+
+    showFallbackDiagnosis(plan, container) {
+        if (!container) return;
+
+        // Local "Fake AI" Logic
+        let insight = "Tu flujo de caja está equilibrado.";
+        let strategy = "Mantén el ritmo actual.";
+        let action = "Revisa tus metas de ahorro.";
+
+        if (plan.status === 'CRITICAL') {
+            insight = "⚠️ Estás gastando más de lo que ingresas. Esto es insostenible.";
+            strategy = "Corte drástico de gastos no esenciales (hormiga).";
+            action = "Audita tus suscripciones y cancela lo que no uses hoy.";
+        } else if (plan.status === 'WARNING') {
+            insight = "⚠️ Estás al límite. Cualquier imprevisto te endeudará.";
+            strategy = "Prioriza crear un fondo de emergencia pequeño.";
+            action = "Intenta ahorrar el 1% de todo lo que entre esta semana.";
+        } else if (plan.status === 'SURPLUS') {
+            insight = "✅ Tienes superávit. El dinero quieto pierde valor.";
+            strategy = "No subas tu nivel de vida, sube tu inversión.";
+            action = "Abre un CDT o cuenta de alto rendimiento con el excedente.";
+        }
+
+        const fallbackHTML = `
+            <div style="border-left: 3px solid #ccc; padding-left: 10px; margin-top: 10px; color: #555;">
+                <p style="margin:0 0 5px; font-weight:bold;">🤖 Modo Respaldo (Sin Conexión):</p>
+                <p style="margin:0 0 5px;">• ${insight}</p>
+                <p style="margin:0 0 5px;">• 💡 Estrategia: ${strategy}</p>
+                <p style="margin:0;">• 👉 Acción: ${action}</p>
+            </div>
+        `;
+
+        container.innerHTML = fallbackHTML;
     }
 
     formatAIResponse(text) {
