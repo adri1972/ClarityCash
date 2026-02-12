@@ -411,18 +411,21 @@ REGLAS DE FORMATO:
             ${context.full_context}
             
             TU MISIÓN:
-            Dame 2 (DOS) acciones tácticas, específicas y ejecutables HOY MISMO.
+            Genera un diagnóstico estratégico corto. NO repitas los números obvios que ya vio el usuario ("Gastaste X más").
+            En su lugar, enfócate en el SIGNIFICADO y la SOLUCIÓN.
+            
+            ESTRUCTURA DE RESPUESTA:
+            1. 🧠 EL INSIGHT: Una frase contundente sobre su comportamiento. (Ej: "Estás financiando tu estilo de vida con deuda, cuidado.")
+            2. 🛠️ LA ESTRATEGIA: Una recomendación de alto nivel.
+            3. 👉 ACCIÓN INMEDIATA: Algo que pueda hacer ya mismo.
             
             REGLAS DE ORO:
-            1. No seas genérico ("ahorra más"). Sé quirúrgico ("Cancela X", "Vende Y", "Llama a Z").
-            2. Usa un tono directo, profesional y empático. Habla de "Tú".
-            3. Si la fuga es DEUDA, sugiere renegociar o pagar mínimos.
-            4. Si la fuga es OCIO, sugiere "Ayuno de Gasto" o cancelar suscripciones.
-            5. Usa emojis para resaltar.
-            6. Sé breve (máximo 400 caracteres en total).
+            1. Sé quirúrgico. Ve a la yugular del problema.
+            2. Tono: Consultor Senior (Serio pero cercano).
+            3. Usa emojis con moderación.
+            4. Máximo 400 caracteres.
             
-            FORMATO DE RESPUESTA:
-            Texto plano, separar ideas con bullets o saltos de línea.
+            FORMATO: Texto plano.
         `;
 
         try {
@@ -434,7 +437,7 @@ REGLAS DE FORMATO:
                     body: JSON.stringify({
                         model: "gpt-4o",
                         messages: [{ role: "user", content: prompt }],
-                        max_tokens: 400
+                        max_tokens: 300 // Slightly reduced tokens for conciseness but high quality
                     })
                 });
                 const data = await response.json();
