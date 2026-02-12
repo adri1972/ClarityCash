@@ -34,6 +34,21 @@
 </head>
 
 <body>
+    <!-- SUPER VISIBLE UPDATE BANNER FOR MOBILE CACHE ISSUES -->
+    <div id="nuclear-update-banner"
+        style="position: fixed; top: 0; left: 0; width: 100%; background: #FF5252; color: white; padding: 15px; z-index: 10000; text-align: center; font-weight: bold; border-bottom: 3px solid #b71c1c; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <div style="font-size: 1.1rem;">🚨 ¿Ves esto? Toca el botón para actualizar de verdad 🚨</div>
+        <div style="font-size: 0.8rem; font-weight: 400; opacity: 0.9;">Tu celular está atrapado en una versión vieja.
+            Esto lo arreglará.</div>
+        <button onclick="window.location.href='reset_app.html'"
+            style="background: white; color: #FF5252; border: none; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 1rem; text-transform: uppercase;">
+            🔥 ACTUALIZAR AHORA (BORRAR CACHÉ)
+        </button>
+        <button onclick="this.parentElement.style.display='none'"
+            style="background: transparent; color: white; border: 1px solid white; padding: 5px; border-radius: 4px; font-size: 0.7rem; width: fit-content; align-self: center; margin-top: 5px; opacity: 0.7;">
+            Ocultar temporalmente (No recomendado)
+        </button>
+    </div>
     <script>
         window.onerror = function (msg, url, line) {
             if (msg.includes('ResizeObserver')) return;
@@ -76,7 +91,7 @@
                 <div class="avatar">YO</div>
                 <div class="info">
                     <span class="name">Mi Espacio</span>
-                    <span class="status">Offline Mode</span>
+                    <span class="status">Modo Seguro 🛡️</span>
                 </div>
             </div>
         </aside>
@@ -533,33 +548,55 @@
     <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
     <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
     <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
-    <script src="js/data.js?v=64"></script>
-    <script src="js/advisor.js?v=64"></script>
-    <script src="js/gemini.js?v=64"></script>
-    <script src="js/ui.js?v=64"></script>
-    <script src="js/app.js?v=64"></script>
-
-    <!-- Standard Service Worker Registration -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw-v64.js')
-                    .then(registration => {
-                        console.log('SW Registered v64:', registration.scope);
+        // Force Reload Logic if Version Mismatch
+        (function () {
+            var currentVersion = '66.B';
+            var storedVersion = localStorage.getItem('cc_app_version');
+            if (storedVersion !== currentVersion) {
+                localStorage.setItem('cc_app_version', currentVersion);
 
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                                    window.location.reload();
-                                }
-                            });
+                try {
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                            for (let registration of registrations) { registration.unregister(); }
                         });
+                    }
+                } catch (e) { }
+
+                try {
+                    if ('caches' in window) {
+                        caches.keys().then(function (names) {
+                            for (let name of names) caches.delete(name);
+                        });
+                    }
+                } catch (e) { }
+
+                window.location.reload(true);
+            }
+        })();
+    </script>
+    <script src="js/data.js?v=66.1"></script>
+    <script src="js/advisor.js?v=66.1"></script>
+    <script src="js/gemini.js?v=66.1"></script>
+    <script src="js/ui-v66.js?v=66.1"></script>
+    <script src="js/app.js?v=66.1"></script>
+
+    <!-- Standard Service Worker Registration (Safe) -->
+    <script>
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw-v66.js')
+                    .then(registration => {
+                        console.log('SW Registered:', registration.scope);
                     })
                     .catch(e => console.log('SW Registration Failed:', e));
             });
         }
     </script>
+    <!-- Visible Version Marker for User -->
+    <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
+        v66.B-FORCED</div>
 </body>
 
 </html>

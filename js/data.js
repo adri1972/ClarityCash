@@ -4,6 +4,7 @@ const DEFAULT_DATA = {
     // A) Usuario (configuración)
     config: {
         currency: 'COP',
+        user_name: 'Mi Espacio',
         monthly_income_target: 0,
         savings_goal_type: 'PERCENT', // PERCENT, AMOUNT
         savings_goal_value: 20,       // 20% default
@@ -95,6 +96,8 @@ class Store {
             // Critical Fix: Ensure currency exists
             if (!data.config || !data.config.currency) {
                 if (!data.config) data.config = {};
+                if (!data.config.user_name) data.config.user_name = 'Mi Espacio';
+
                 data.config.currency = 'COP';
             }
 

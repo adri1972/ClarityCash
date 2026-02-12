@@ -57,36 +57,47 @@
     <script>
         async function nuclearReset() {
             const status = document.getElementById('status');
+            const log = (msg) => console.log(msg);
 
             try {
-                // 1. Unregister Service Workers
-                if ('serviceWorker' in navigator) {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for (const registration of registrations) {
-                        await registration.unregister();
-                        console.log('SW Unregistered');
+                // 1. Unregister Service Workers (Safely)
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (const registration of registrations) {
+                            await registration.unregister();
+                            log('SW Unregistered');
+                        }
                     }
+                } catch (e) {
+                    log('SW Unregister failed (expected on file://): ' + e.message);
                 }
 
-                // 2. Clear All Caches
-                if ('caches' in window) {
-                    const keys = await caches.keys();
-                    for (const key of keys) {
-                        await caches.delete(key);
-                        console.log('Cache Deleted:', key);
+                // 2. Clear All Caches (Safely)
+                try {
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        for (const key of keys) {
+                            await caches.delete(key);
+                            log('Cache Deleted: ' + key);
+                        }
                     }
+                } catch (e) {
+                    log('Cache clear failed: ' + e.message);
                 }
 
                 status.textContent = "✅ ¡Listo! Redirigiendo a la nueva versión...";
+                status.style.color = "#4CAF50";
 
                 // 3. Redirect back to index.html with a timestamp to force fresh load
                 setTimeout(() => {
+                    // Force a new URL to bypass browser cache
                     window.location.href = 'index.html?t=' + Date.now();
                 }, 1000);
 
             } catch (error) {
                 console.error(error);
-                status.textContent = "❌ Error: " + error.message + ". Intenta el botón manual.";
+                status.textContent = "❌ Error inesperado: " + error.message;
             }
         }
 
