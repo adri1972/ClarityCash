@@ -657,7 +657,11 @@ class UIManager {
                 actionBtns = `
                     <button type="button" onclick="window.ui.smartRebalance('cat_5', ${diff})" 
                             style="background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
-                        📥 Mover a Ahorro
+                        📥 Ahorro
+                    </button>
+                    <button type="button" onclick="window.ui.openRebalancePicker(${diff})" 
+                            style="background: #0ea5e9; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
+                        🎯 Elegir Destino
                     </button>
                     <button type="button" onclick="document.getElementById('auto-budget-btn').click()"
                             style="background: #6c5dd3; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
@@ -703,8 +707,38 @@ class UIManager {
             input.style.backgroundColor = '#dcfce7';
             setTimeout(() => input.style.backgroundColor = '#fff', 1000);
             this.updateBudgetTotal();
-            alert(`✅ Se han movido $${this.formatNumberWithDots(amount)} a tu presupuesto de Ahorro.`);
+            // Confirm to user
+            const cat = this.store.categories.find(c => c.id === catId);
+            alert(`✅ Se han asignado $${this.formatNumberWithDots(amount)} a "${cat ? cat.name : catId}".`);
         }
+    }
+
+    openRebalancePicker(amount) {
+        const summary = document.getElementById('budget-summary-pill');
+        if (!summary) return;
+
+        const categories = this.store.categories.filter(c =>
+            ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group)
+        );
+
+        let optionsHtml = categories.map(c => `
+            <button type="button" onclick="window.ui.smartRebalance('${c.id}', ${amount})" 
+                    style="background: white; border: 1px solid #ddd; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; text-align: left;">
+                ${c.name}
+            </button>
+        `).join('');
+
+        summary.innerHTML = `
+            <div style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <b style="font-size: 0.85rem; color: #be185d;">🎯 ¿Dónde ponemos los $${this.formatNumberWithDots(amount)} que faltan?</b>
+                    <button type="button" onclick="window.ui.updateBudgetTotal()" style="background:none; border:none; color:#666; cursor:pointer;">✖</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    ${optionsHtml}
+                </div>
+            </div>
+        `;
     }
 
     getDistributions() {
@@ -3493,7 +3527,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.G • Actualizar App 🔄
+                        Versión v67.H • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -3578,12 +3612,15 @@ class UIManager {
                     }
                 });
 
-                // 2. Identify active categories (those with inputs AND NOT manually set to 0)
+                // 2. Identify active categories (ONLY those with inputs AND NOT manually set to 0 or empty)
                 const activeCats = this.store.categories.filter(cat => {
                     const input = document.querySelector(`input[name="budget_${cat.id}"]`);
                     if (!input) return false;
-                    // If user explicitly typed 0, we treat it as "Disabled" for suggestion
-                    if (input.value === '0') return false;
+
+                    const valClean = input.value.replace(/\D/g, '');
+                    // Exclude if explicitly 0 OR if the field is empty (user cleared it)
+                    if (valClean === '0' || valClean === '') return false;
+
                     return true;
                 });
 

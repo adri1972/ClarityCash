@@ -533,7 +533,7 @@
     <script>
         // Force Reload Logic if Version Mismatch
         (function () {
-            var currentVersion = '67.F';
+            var currentVersion = '67.H';
             var storedVersion = localStorage.getItem('cc_app_version');
             if (storedVersion !== currentVersion) {
                 localStorage.setItem('cc_app_version', currentVersion);
@@ -558,17 +558,17 @@
             }
         })();
     </script>
-    <script src="js/data.js?v=67.F"></script>
-    <script src="js/advisor.js?v=67.F"></script>
-    <script src="js/gemini.js?v=67.F"></script>
-    <script src="js/ui-v67.js?v=67.F"></script>
-    <script src="js/app.js?v=67.F"></script>
+    <script src="js/data.js?v=67.H"></script>
+    <script src="js/advisor.js?v=67.H"></script>
+    <script src="js/gemini.js?v=67.H"></script>
+    <script src="js/ui-v67.js?v=67.H"></script>
+    <script src="js/app.js?v=67.H"></script>
 
     <!-- Standard Service Worker Registration (Safe) -->
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw-v67.js?v=67.F')
+                navigator.serviceWorker.register('sw-v67.js?v=67.H')
                     .then(registration => {
                         console.log('SW Registered:', registration.scope);
                     })
@@ -578,7 +578,7 @@
     </script>
     <!-- Visible Version Marker for User -->
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v67.F-BUDGET-DYNAMIC</div>
+        v67.H-WIZARD-ACTIVE</div>
 </body>
 
 </html>
