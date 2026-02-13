@@ -533,7 +533,7 @@
     <script>
         // Force Reload Logic if Version Mismatch
         (function () {
-            var currentVersion = '67.P';
+            var currentVersion = '68.A';
             var storedVersion = localStorage.getItem('cc_app_version');
             if (storedVersion !== currentVersion) {
                 localStorage.setItem('cc_app_version', currentVersion);
@@ -554,23 +554,24 @@
                     }
                 } catch (e) { }
 
-                // Force hard reload by appending timestamp
-                window.location.href = window.location.pathname + "?v=" + Date.now();
+                // Force hard reload using a unique query param
+                window.location.href = window.location.pathname + "?update=" + Date.now();
             }
         })();
     </script>
-    <script src="js/data.js?v=67.P"></script>
-    <script src="js/advisor.js?v=67.P"></script>
-    <script src="js/gemini.js?v=67.P"></script>
-    <script src="js/ui-v67.js?v=67.P"></script>
-    <script src="js/app.js?v=67.P"></script>
+    <!-- Mega Cache Buster for Scripts -->
+    <script src="js/data.js?v=68A-reset"></script>
+    <script src="js/advisor.js?v=68A-reset"></script>
+    <script src="js/gemini.js?v=68A-reset"></script>
+    <script src="js/ui-v67.js?v=68A-reset"></script>
+    <script src="js/app.js?v=68A-reset"></script>
 
     <!-- Standard Service Worker Registration (Safe) -->
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                // ADDED TIMESTAMP to force browser to see a new worker file
-                navigator.serviceWorker.register('sw-v67.js?v=' + Date.now())
+                // Changing SW filename is the most reliable way to force a new registration
+                navigator.serviceWorker.register('sw-v68.js?v=' + Date.now())
                     .then(registration => {
                         console.log('SW Registered:', registration.scope);
                     })
@@ -579,7 +580,7 @@
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v67.P-FORCE-UPDATE</div>
+        v68.A-MEGA-UPDATE</div>
 </body>
 
 </html>
