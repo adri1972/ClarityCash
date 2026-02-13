@@ -3251,6 +3251,7 @@ class UIManager {
         );
 
         // 1. Calculate floors per category
+        const budgets = conf.budgets || {};
         const fixedFloor = {};
         (conf.fixed_expenses || []).forEach(fe => {
             if (fe.category_id && fe.amount) {
@@ -3589,7 +3590,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.J • Actualizar App 🔄
+                        Versión v67.K • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
