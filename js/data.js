@@ -137,18 +137,34 @@ class Store {
                 data.config.spending_profile = 'BALANCEADO';
             }
 
-            // --- DATA MIGRATION: Fix Historical Transaction Types ---
+            // --- DATA MIGRATION: Fix Historical Transaction Types & Specific 6M Issue ---
             if (data.transactions) {
                 data.transactions.forEach(t => {
                     const cat = data.categories.find(c => c.id === t.category_id);
                     if (cat) {
+                        // Heuristic fix for the 6M credit/loan issue:
+                        // If it's Feb 2026, amount is large (>1M), and it's marked as debt payment, 
+                        // it's likely a received loan (INGRESO) misclassified as PAGO_DEUDA.
+                        const isFeb2026 = t.date && t.date.startsWith('2026-02');
+                        if (isFeb2026 && t.amount >= 1000000 && (cat.id === 'cat_7' || cat.id === 'cat_fin_4')) {
+                            // Only flip if it was incorrectly caught by the auto-correction before
+                            // or if the note suggests it's a credit
+                            const note = (t.note || '').toLowerCase();
+                            if (note.includes('credito') || note.includes('prestamo') || note.includes('desembolso') || t.amount === 6000000) {
+                                t.type = 'INGRESO';
+                            }
+                        }
+
                         if (cat.group === 'INGRESOS') {
                             t.type = 'INGRESO';
                         } else if (t.type !== 'INGRESO') {
                             // Only migrate non-income transactions to special debt/savings types
                             if (cat.id === 'cat_5' && t.type !== 'AHORRO') t.type = 'AHORRO';
                             else if (cat.id === 'cat_6' && t.type !== 'INVERSION') t.type = 'INVERSION';
-                            else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && t.type !== 'PAGO_DEUDA') t.type = 'PAGO_DEUDA';
+                            else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && t.type !== 'PAGO_DEUDA') {
+                                // If we already flipped it to INGRESO above, don't flip it back!
+                                if (t.type !== 'INGRESO') t.type = 'PAGO_DEUDA';
+                            }
                         }
                     }
                 });

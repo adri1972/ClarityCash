@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.B ---
+        // --- STABLE UPDATE ENGINE v68.C ---
         (function () {
-            var REQUIRED = '68.B';
+            var REQUIRED = '68.C';
             var current = localStorage.getItem('cc_app_version');
             if (current !== REQUIRED) {
                 if ('serviceWorker' in navigator) {
@@ -34,7 +34,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=68B">
+    <link rel="stylesheet" href="css/styles.css?v=68C">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -149,20 +149,20 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <script src="js/data.js?v=68B"></script>
-    <script src="js/advisor.js?v=68B"></script>
-    <script src="js/gemini.js?v=68B"></script>
-    <script src="js/ui-v67.js?v=68B"></script>
-    <script src="js/app.js?v=68B"></script>
+    <script src="js/data.js?v=68C"></script>
+    <script src="js/advisor.js?v=68C"></script>
+    <script src="js/gemini.js?v=68C"></script>
+    <script src="js/ui-v67.js?v=68C"></script>
+    <script src="js/app.js?v=68C"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=68B').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=68C').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.B-STABLE-RECOVERY</div>
+        v68.C-STABLE</div>
 </body>
 
 </html>
