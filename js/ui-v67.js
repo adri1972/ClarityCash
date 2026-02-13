@@ -637,7 +637,8 @@ class UIManager {
 
     updateBudgetTotal() {
         const incomeInput = document.querySelector('input[name="monthly_income_target"]');
-        const income = parseFloat(incomeInput ? incomeInput.value.replace(/\D/g, '') : '0') || 0;
+        const incomeVal = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
+        const income = parseFloat(incomeVal) || 0;
 
         const inputs = document.querySelectorAll('input[name^="budget_"]');
         let total = 0;
@@ -648,15 +649,120 @@ class UIManager {
         const summary = document.getElementById('budget-summary-pill');
         if (summary) {
             const diff = income - total;
+            let helperText = '';
+            let actionBtns = '';
+
+            if (diff > 10) {
+                helperText = `Faltan $${this.formatNumberWithDots(diff)}`;
+                actionBtns = `
+                    <button type="button" onclick="window.ui.smartRebalance('cat_5', ${diff})" 
+                            style="background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
+                        📥 Mover a Ahorro
+                    </button>
+                    <button type="button" onclick="document.getElementById('auto-budget-btn').click()"
+                            style="background: #6c5dd3; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
+                        ⚖️ Repartir Todo
+                    </button>
+                `;
+            } else if (diff < -10) {
+                helperText = `Excedido $${this.formatNumberWithDots(Math.abs(diff))}`;
+                actionBtns = `
+                    <button type="button" onclick="document.getElementById('auto-budget-btn').click()"
+                            style="background: #dc2626; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
+                        ⚖️ Ajustar Perfil
+                    </button>
+                `;
+            } else {
+                helperText = `✓ Coherente`;
+            }
+
             summary.innerHTML = `
-                <div style="display: flex; gap: 15px; font-size: 0.85rem; font-weight: 700; align-items: center; flex-wrap: wrap; margin-top: 10px;">
-                    <span style="color: #666; background: #eee; padding: 4px 10px; border-radius: 8px;">Presupuesto: $${this.formatNumberWithDots(total)}</span>
-                    <span style="color: #666; background: #eee; padding: 4px 10px; border-radius: 8px;">Nómina: $${this.formatNumberWithDots(income)}</span>
-                    <span style="background: ${diff === 0 ? '#dcfce7' : (diff > 0 ? '#e0f2fe' : '#fee2e2')}; 
-                                color: ${diff === 0 ? '#166534' : (diff > 0 ? '#0288d1' : '#dc2626')}; 
-                                padding: 4px 10px; border-radius: 8px; border: 1px solid currentColor;">
-                        ${diff === 0 ? '✓ Coherente' : (diff > 0 ? 'Faltan $' + this.formatNumberWithDots(diff) : 'Excedido $' + this.formatNumberWithDots(Math.abs(diff)))}
-                    </span>
+                <div style="display: flex; gap: 10px; font-size: 0.85rem; align-items: center; flex-wrap: wrap; width: 100%; margin-top: 10px;">
+                    <div style="flex: 1; min-width: 200px; display: flex; gap: 10px;">
+                        <span style="color: #666; background: #fff; border: 1px solid #ddd; padding: 4px 10px; border-radius: 8px;"><b>Suma:</b> $${this.formatNumberWithDots(total)}</span>
+                        <span style="background: ${diff === 0 ? '#dcfce7' : (diff > 0 ? '#e0f2fe' : '#fee2e2')}; 
+                                    color: ${diff === 0 ? '#166534' : (diff > 0 ? '#0288d1' : '#dc2626')}; 
+                                    padding: 4px 10px; border-radius: 8px; border: 1px solid currentColor; font-weight: 700;">
+                            ${helperText}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        ${actionBtns}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    smartRebalance(catId, amount) {
+        const input = document.querySelector(`input[name="budget_${catId}"]`);
+        if (input) {
+            const current = parseFloat(input.value.replace(/\D/g, '') || '0');
+            const newVal = current + amount;
+            input.value = this.formatNumberWithDots(newVal);
+            input.style.backgroundColor = '#dcfce7';
+            setTimeout(() => input.style.backgroundColor = '#fff', 1000);
+            this.updateBudgetTotal();
+            alert(`✅ Se han movido $${this.formatNumberWithDots(amount)} a tu presupuesto de Ahorro.`);
+        }
+    }
+
+    getDistributions() {
+        return {
+            'CONSERVADOR': {
+                'cat_1': 0.20, 'cat_2': 0.10, 'cat_3': 0.04, 'cat_gasolina': 0.03,
+                'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.02, 'cat_personal': 0.02,
+                'cat_10': 0.03, 'cat_5': 0.20, 'cat_6': 0.05, 'cat_7': 0.10,
+                'cat_fin_4': 0.02, 'cat_fin_5': 0.01, 'cat_rest': 0.02,
+                'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
+                'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.01
+            },
+            'BALANCEADO': {
+                'cat_1': 0.20, 'cat_2': 0.12, 'cat_3': 0.05, 'cat_gasolina': 0.04,
+                'cat_4': 0.05, 'cat_9': 0.05, 'cat_personal': 0.04, 'cat_deporte': 0.03,
+                'cat_vicios': 0.01, 'cat_8': 0.05, 'cat_10': 0.04, 'cat_5': 0.08,
+                'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02,
+                'cat_rest': 0.04, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01,
+                'cat_viv_net': 0.02, 'cat_viv_cel': 0.01, 'cat_viv_man': 0.01
+            },
+            'FLEXIBLE': {
+                'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.05, 'cat_gasolina': 0.05,
+                'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.06, 'cat_deporte': 0.05,
+                'cat_vicios': 0.04, 'cat_8': 0.05, 'cat_10': 0.05, 'cat_5': 0.02,
+                'cat_6': 0.01, 'cat_7': 0.02, 'cat_fin_4': 0.01, 'cat_fin_5': 0.01,
+                'cat_rest': 0.06, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01
+            }
+        };
+    }
+
+    updateProfileInfo(profileName) {
+        const dists = this.getDistributions();
+        const weights = dists[profileName];
+        if (!weights) return;
+
+        // Group weights
+        const groups = {
+            'Ahorro/Inv.': (weights['cat_5'] || 0) + (weights['cat_6'] || 0),
+            'Vivienda/Serv.': (weights['cat_1'] || 0) + (weights['cat_viv_luz'] || 0) + (weights['cat_viv_agua'] || 0) + (weights['cat_viv_net'] || 0) + (weights['cat_viv_cel'] || 0),
+            'Necesidades': (weights['cat_2'] || 0) + (weights['cat_3'] || 0) + (weights['cat_gasolina'] || 0) + (weights['cat_4'] || 0) + (weights['cat_8'] || 0),
+            'Deudas/Financ.': (weights['cat_7'] || 0) + (weights['cat_fin_4'] || 0),
+            'Estilo de Vida': (weights['cat_9'] || 0) + (weights['cat_rest'] || 0) + (weights['cat_personal'] || 0),
+            'Otros': (weights['cat_10'] || 0)
+        };
+
+        const infoEl = document.getElementById('profile-specs');
+        if (infoEl) {
+            infoEl.innerHTML = `
+                <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; padding: 12px; margin-top: 10px;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #be185d;">Distribución Ideal (${profileName}):</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.72rem;">
+                        ${Object.entries(groups).map(([name, val]) => `
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 2px;">
+                                <span style="color: #666;">${name}:</span>
+                                <b style="color: #333;">${Math.round(val * 100)}%</b>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `;
         }
@@ -3157,11 +3263,12 @@ class UIManager {
                                     <i data-feather="help-circle"></i> Ver Guía
                                 </button>
                             </label>
-                            <select name="spending_profile">
+                            <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
                                 <option value="CONSERVADOR" ${conf.spending_profile === 'CONSERVADOR' ? 'selected' : ''}>Conservador (Estricto)</option>
                                 <option value="BALANCEADO" ${conf.spending_profile === 'BALANCEADO' ? 'selected' : ''}>Balanceado</option>
                                 <option value="FLEXIBLE" ${conf.spending_profile === 'FLEXIBLE' ? 'selected' : ''}>Flexible</option>
                             </select>
+                            <div id="profile-specs"></div>
                         </div>
 
                         <div class="form-group">
@@ -3270,7 +3377,7 @@ class UIManager {
                      <div class="card">
                          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <h3 style="margin: 0;">Metas Mensuales 🎯</h3>
-                            <button type="button" id="auto-budget-btn" class="btn-text" 
+                            <button type="button" id="auto-budget-btn" class="btn-text" id="auto-suggest-link"
                                     style="font-size: 0.8rem; color: var(--primary-color); font-weight: 600; background: #fce4ec; padding: 4px 10px; border-radius: 15px;">
                                 ✨ Sugerir
                             </button>
@@ -3386,7 +3493,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.F • Actualizar App 🔄
+                        Versión v67.G • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -3407,7 +3514,10 @@ class UIManager {
         `;
 
         // Direct trigger for first sum update
-        setTimeout(() => this.updateBudgetTotal(), 500);
+        setTimeout(() => {
+            this.updateBudgetTotal();
+            this.updateProfileInfo(conf.spending_profile || 'BALANCEADO');
+        }, 500);
 
         // EVENT DELEGATION: Universal Form and Button Handler
         this.container.onclick = (e) => {
@@ -3455,31 +3565,7 @@ class UIManager {
                 }
 
                 // Balanced distributions (Summing to ~100%)
-                const distributions = {
-                    'CONSERVADOR': {
-                        'cat_1': 0.20, 'cat_2': 0.10, 'cat_3': 0.04, 'cat_gasolina': 0.03,
-                        'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.02, 'cat_personal': 0.02,
-                        'cat_10': 0.03, 'cat_5': 0.20, 'cat_6': 0.05, 'cat_7': 0.10,
-                        'cat_fin_4': 0.02, 'cat_fin_5': 0.01, 'cat_rest': 0.02,
-                        'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
-                        'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.01
-                    },
-                    'BALANCEADO': {
-                        'cat_1': 0.20, 'cat_2': 0.12, 'cat_3': 0.05, 'cat_gasolina': 0.04,
-                        'cat_4': 0.05, 'cat_9': 0.05, 'cat_personal': 0.04, 'cat_deporte': 0.03,
-                        'cat_vicios': 0.01, 'cat_8': 0.05, 'cat_10': 0.04, 'cat_5': 0.08,
-                        'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02,
-                        'cat_rest': 0.04, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01,
-                        'cat_viv_net': 0.02, 'cat_viv_cel': 0.01, 'cat_viv_man': 0.01
-                    },
-                    'FLEXIBLE': {
-                        'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.05, 'cat_gasolina': 0.05,
-                        'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.06, 'cat_deporte': 0.05,
-                        'cat_vicios': 0.04, 'cat_8': 0.05, 'cat_10': 0.05, 'cat_5': 0.02,
-                        'cat_6': 0.01, 'cat_7': 0.02, 'cat_fin_4': 0.01, 'cat_fin_5': 0.01,
-                        'cat_rest': 0.06, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01
-                    }
-                };
+                const distributions = this.getDistributions();
 
                 const weights = distributions[profile] || distributions['BALANCEADO'];
                 let appliedCount = 0;
