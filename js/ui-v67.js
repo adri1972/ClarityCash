@@ -3250,25 +3250,87 @@ class UIManager {
             ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group)
         );
 
-        const budgets = conf.budgets || {};
+        // 1. Calculate floors per category
+        const fixedFloor = {};
+        (conf.fixed_expenses || []).forEach(fe => {
+            if (fe.category_id && fe.amount) {
+                fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+            }
+        });
 
-        let budgetInputs = '';
-        categories.forEach(c => {
+        // Sorting & Grouping Logic
+        const fixedCats = categories.filter(c => (fixedFloor[c.id] || 0) > 0);
+        const savingCat = categories.find(c => c.id === 'cat_5');
+        const groups = {
+            'VIVIENDA': 'Vivienda y Servicios 🏠',
+            'NECESIDADES': 'Necesidades y Transporte 🛒',
+            'ESTILO_DE_VIDA': 'Estilo de Vida y Ocio 🍿',
+            'FINANCIERO': 'Finanzas y Deuda 💳',
+            'CRECIMIENTO': 'Crecimiento y Educación 📚',
+            'OTROS': 'Otros Gastos 🌀'
+        };
+
+        const renderRow = (c, isFixed = false, isSaving = false) => {
             const limit = budgets[c.id] || 0;
-            budgetInputs += `
-                <div class="form-group" style="margin-bottom: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-                    <label style="margin: 0; flex: 1;">${c.name} <span class="text-secondary" style="font-size: 0.8rem;">(${c.group})</span></label>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="color: #666;">$</span>
+            const floor = fixedFloor[c.id] || 0;
+            // For fixed, we strictly show the floor if it's not set or if we want to lock it
+            const displayVal = isFixed ? this.formatNumberWithDots(Math.max(limit, floor)) : (limit > 0 ? this.formatNumberWithDots(limit) : '');
+
+            let extraStyle = 'background: white; border: 1px solid #edf2f7;';
+            let labelExtra = '';
+            let inputAttrs = '';
+
+            if (isFixed) {
+                extraStyle = 'background: #f1f5f9; border-left: 5px solid #3b82f6;';
+                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO 🔒</span>';
+                inputAttrs = `readonly title="Gasto fijo no modificable"`;
+            } else if (isSaving) {
+                extraStyle = 'background: #f0fdf4; border-left: 5px solid #10b981;';
+                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META ⭐</span>';
+            }
+
+            return `
+                <div class="form-group" style="margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; transition: all 0.2s; ${extraStyle}">
+                    <label style="margin: 0; flex: 1; font-weight: ${isFixed || isSaving ? '700' : '500'}; color: #334155; font-size: 0.9rem;">
+                        ${c.name} ${labelExtra}
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">$</span>
                         <input type="text" inputmode="numeric" name="budget_${c.id}" 
-                               value="${limit > 0 ? this.formatNumberWithDots(limit) : ''}" 
+                               value="${displayVal}" 
                                placeholder="0"
-                               style="width: 120px; text-align: right;"
+                               ${inputAttrs}
+                               style="width: 110px; text-align: right; border: ${isFixed ? 'none' : '1px solid #cbd5e1'}; background: ${isFixed ? 'transparent' : '#fff'}; border-radius: 8px; padding: 6px 10px; color: ${isFixed ? '#1e40af' : '#1e293b'}; font-weight: 700;"
                                onfocus="if(this.value==='0')this.value=''"
                                oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
                     </div>
                 </div>
             `;
+        };
+
+        let budgetInputs = `
+            <div style="margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">📌 Gastos Fijos (Compromisos)</h4>
+                ${fixedCats.map(c => renderRow(c, true)).join('')}
+            </div>
+            ${savingCat && (fixedFloor[savingCat.id] || 0) === 0 ? `
+            <div style="margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">💰 Prioridad de Ahorro</h4>
+                ${renderRow(savingCat, false, true)}
+            </div>
+            ` : ''}
+        `;
+
+        Object.keys(groups).forEach(gKey => {
+            const groupCats = categories.filter(c => c.group === gKey && (fixedFloor[c.id] || 0) === 0 && c.id !== 'cat_5');
+            if (groupCats.length > 0) {
+                budgetInputs += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${groups[gKey]}</h4>
+                        ${groupCats.map(c => renderRow(c)).join('')}
+                    </div>
+                `;
+            }
         });
 
         this.container.innerHTML = `
@@ -3282,7 +3344,7 @@ class UIManager {
                             <input type="text" name="user_name" value="${conf.user_name || 'Mi Espacio'}">
                         </div>
                         <div class="form-group">
-                            <label>Ingreso Mensual Objetivo</label>
+                            <label>Ingreso Mensual</label>
                             <input type="text" inputmode="numeric" name="monthly_income_target" 
                                    value="${conf.monthly_income_target ? this.formatNumberWithDots(conf.monthly_income_target) : ''}"
                                    placeholder="0"
@@ -3527,7 +3589,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.I • Actualizar App 🔄
+                        Versión v67.J • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
