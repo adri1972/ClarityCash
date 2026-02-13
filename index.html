@@ -2,6 +2,38 @@
 <html lang="es">
 
 <head>
+    <script>
+        // --- STABLE UPDATE ENGINE v68.B ---
+        // This runs BEFORE everything else to kill persistent caches
+        (function () {
+            var REQUIRED = '68.B';
+            var current = localStorage.getItem('cc_app_version');
+
+            if (current !== REQUIRED) {
+                console.log('🚀 SYSTEM UPDATE DETECTED: ' + (current || 'NONE') + ' -> ' + REQUIRED);
+
+                // 1. Kill all Service Workers IMMEDIATELY
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                        for (let r of registrations) { r.unregister(); }
+                    });
+                }
+
+                // 2. Wipe Caches
+                if ('caches' in window) {
+                    caches.keys().then(function (names) {
+                        for (let name of names) caches.delete(name);
+                    });
+                }
+
+                // 3. Mark as updated
+                localStorage.setItem('cc_app_version', REQUIRED);
+
+                // 4. Force hard reload from server
+                window.location.href = window.location.pathname + "?v=" + REQUIRED + "&ts=" + Date.now();
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -11,10 +43,13 @@
     <meta name="theme-color" content="#2E7D32">
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link rel="manifest" href="manifest.json">
+
+    <!-- Disable caching via Meta headers for the HTML shell -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=62">
+
+    <link rel="stylesheet" href="css/styles.css?v=68B">
 
     <!-- Fonts: Inter for modern clean look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,7 +128,7 @@
                     <button onclick="localStorage.removeItem('cc_app_version'); window.location.reload(true);"
                         class="btn-text"
                         style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px; border-radius: 12px;">
-                        🔄 Refrescar App
+                        🔄 Forzar Reset
                     </button>
                     <button id="add-transaction-btn" class="btn btn-primary">
                         <i data-feather="plus"></i> Nuevo Movimiento
@@ -101,11 +136,8 @@
                 </div>
             </header>
 
-            <div id="content-area" class="content-container">
-                <!-- Views will be injected here via JS -->
-                <div class="empty-state">
-                    <h3>Cargando tu información financiera...</h3>
-                </div>
+            <div id="main-container">
+                <!-- Content will be injected here -->
             </div>
         </main>
     </div>
@@ -126,51 +158,10 @@
     <div id="transaction-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Registrar Movimiento</h3>
-                <button class="close-modal"><i data-feather="x"></i></button>
+                <h3>Nuevo Movimiento</h3>
+                <button class="close-modal">&times;</button>
             </div>
             <form id="transaction-form">
-                <div class="form-group type-selector" style="flex-wrap: wrap;">
-                    <label>
-                        <input type="radio" name="type" value="GASTO" checked>
-                        <span class="badge expense">Gasto</span>
-                    </label>
-                    <label>
-                        <input type="radio" name="type" value="INGRESO">
-                        <span class="badge income">Ingreso</span>
-                    </label>
-                    <label>
-                        <input type="radio" name="type" value="AHORRO">
-                        <span class="badge savings">Ahorro</span>
-                    </label>
-                    <label>
-                        <input type="radio" name="type" value="INVERSION">
-                        <span class="badge investment">Inversión</span>
-                    </label>
-                    <label>
-                        <input type="radio" name="type" value="PAGO_DEUDA">
-                        <span class="badge debt" style="background: #FF5722; color: white;">Pago Deuda</span>
-                    </label>
-                </div>
-
-                <div class="form-group">
-                    <label style="display: flex; justify-content: space-between; align-items: center;">
-                        Monto
-                        <button type="button" id="scan-btn" class="btn-text"
-                            style="font-size: 0.8rem; color: var(--primary-color); display: flex; align-items: center; gap: 4px;">
-                            <i data-feather="camera" style="width: 14px; height: 14px;"></i> Escanear Recibo
-                        </button>
-                    </label>
-                    <input type="file" id="receipt-upload" capture="environment" accept="image/*"
-                        style="display: none;">
-                    <div id="scan-loading"
-                        style="display: none; font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">
-                        <span class="spinner"
-                            style="display: inline-block; width: 12px; height: 12px; border: 2px solid #ccc; border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 5px;"></span>
-                        Leyendo recibo...
-                    </div>
-                    <input type="number" name="amount" placeholder="0" required Step="0.01">
-                </div>
 
                 <div class="form-row">
                     <div class="form-group">
@@ -522,65 +513,25 @@
         });
     </script>
 
-    <!-- Scripts -->
-    <!-- OCR Library (Tesseract.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <!-- Scripts with Cache Busting -->
+    <script src="js/data.js?v=68B"></script>
+    <script src="js/advisor.js?v=68B"></script>
+    <script src="js/gemini.js?v=68B"></script>
+    <script src="js/ui-v67.js?v=68B"></script>
+    <script src="js/app.js?v=68B"></script>
 
-    <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
-    <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
-    <!-- Scripts: Loaded sequentially for file:// protocol compatibility -->
-    <script>
-        // Force Reload Logic if Version Mismatch
-        (function () {
-            var currentVersion = '68.A';
-            var storedVersion = localStorage.getItem('cc_app_version');
-            if (storedVersion !== currentVersion) {
-                localStorage.setItem('cc_app_version', currentVersion);
-
-                try {
-                    if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                            for (let registration of registrations) { registration.unregister(); }
-                        });
-                    }
-                } catch (e) { }
-
-                try {
-                    if ('caches' in window) {
-                        caches.keys().then(function (names) {
-                            for (let name of names) caches.delete(name);
-                        });
-                    }
-                } catch (e) { }
-
-                // Force hard reload using a unique query param
-                window.location.href = window.location.pathname + "?update=" + Date.now();
-            }
-        })();
-    </script>
-    <!-- Mega Cache Buster for Scripts -->
-    <script src="js/data.js?v=68A-reset"></script>
-    <script src="js/advisor.js?v=68A-reset"></script>
-    <script src="js/gemini.js?v=68A-reset"></script>
-    <script src="js/ui-v67.js?v=68A-reset"></script>
-    <script src="js/app.js?v=68A-reset"></script>
-
-    <!-- Standard Service Worker Registration (Safe) -->
+    <!-- Unified Service Worker -->
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                // Changing SW filename is the most reliable way to force a new registration
-                navigator.serviceWorker.register('sw-v68.js?v=' + Date.now())
-                    .then(registration => {
-                        console.log('SW Registered:', registration.scope);
-                    })
-                    .catch(e => console.log('SW Registration Failed:', e));
+                navigator.serviceWorker.register('service-worker.js?v=68B')
+                    .then(reg => console.log('✅ SW Stable Active'))
+                    .catch(e => console.error('❌ SW Failed', e));
             });
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.A-MEGA-UPDATE</div>
+        v68.B-STABLE</div>
 </body>
 
 </html>

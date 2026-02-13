@@ -1,5 +1,5 @@
-// ClarityCash Service Worker v67 - ULTRA AGGRESSIVE CACHE BUSTER
-const CACHE_NAME = 'cc-v67-p-nuke';
+// ClarityCash Stable Service Worker v68.B
+const CACHE_NAME = 'cc-stable-v68b';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -10,7 +10,9 @@ self.addEventListener('activate', (event) => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    return caches.delete(cacheName);
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
                 })
             );
         }).then(() => {
@@ -19,7 +21,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Strategy: Bypass cache for everything during this update
+// STABLE STRATEGY: Network First, then Cache
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request).catch(() => caches.match(event.request))
