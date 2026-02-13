@@ -748,7 +748,7 @@ class UIManager {
                 'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.02, 'cat_personal': 0.02,
                 'cat_10': 0.03, 'cat_5': 0.20, 'cat_6': 0.05, 'cat_7': 0.10,
                 'cat_fin_4': 0.02, 'cat_fin_5': 0.01, 'cat_rest': 0.02,
-                'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
+                'cat_viv_servicios': 0.02, 'cat_viv_gas': 0.005,
                 'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.01
             },
             'BALANCEADO': {
@@ -756,7 +756,7 @@ class UIManager {
                 'cat_4': 0.05, 'cat_9': 0.05, 'cat_personal': 0.04, 'cat_deporte': 0.03,
                 'cat_vicios': 0.01, 'cat_8': 0.05, 'cat_10': 0.04, 'cat_5': 0.08,
                 'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02,
-                'cat_rest': 0.04, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01,
+                'cat_rest': 0.04, 'cat_viv_servicios': 0.02,
                 'cat_viv_net': 0.02, 'cat_viv_cel': 0.01, 'cat_viv_man': 0.01
             },
             'FLEXIBLE': {
@@ -764,7 +764,7 @@ class UIManager {
                 'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.06, 'cat_deporte': 0.05,
                 'cat_vicios': 0.04, 'cat_8': 0.05, 'cat_10': 0.05, 'cat_5': 0.02,
                 'cat_6': 0.01, 'cat_7': 0.02, 'cat_fin_4': 0.01, 'cat_fin_5': 0.01,
-                'cat_rest': 0.06, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01
+                'cat_rest': 0.06, 'cat_viv_servicios': 0.02
             }
         };
     }
@@ -777,7 +777,7 @@ class UIManager {
         // Group weights
         const groups = {
             'Ahorro/Inv.': (weights['cat_5'] || 0) + (weights['cat_6'] || 0),
-            'Vivienda/Serv.': (weights['cat_1'] || 0) + (weights['cat_viv_luz'] || 0) + (weights['cat_viv_agua'] || 0) + (weights['cat_viv_net'] || 0) + (weights['cat_viv_cel'] || 0),
+            'Vivienda/Serv.': (weights['cat_1'] || 0) + (weights['cat_viv_servicios'] || 0) + (weights['cat_viv_gas'] || 0) + (weights['cat_viv_net'] || 0) + (weights['cat_viv_cel'] || 0),
             'Necesidades': (weights['cat_2'] || 0) + (weights['cat_3'] || 0) + (weights['cat_gasolina'] || 0) + (weights['cat_4'] || 0) + (weights['cat_8'] || 0),
             'Deudas/Financ.': (weights['cat_7'] || 0) + (weights['cat_fin_4'] || 0),
             'Estilo de Vida': (weights['cat_9'] || 0) + (weights['cat_rest'] || 0) + (weights['cat_personal'] || 0),
@@ -2961,7 +2961,10 @@ class UIManager {
         if (d.includes('uber') || d.includes('didi') || d.includes('cabify') || d.includes('taxi') || d.includes('peaje') || d.includes('gasolina') || d.includes('terpel') || d.includes('primax') || d.includes('parqueadero')) return 'cat_3';
 
         // 4. Servicios / Vivienda
-        if (d.includes('codensa') || d.includes('enel') || d.includes('acueducto') || d.includes('gas') || d.includes('administracion') || d.includes('arriendo') || d.includes('claro') || d.includes('movistar') || d.includes('tigo') || d.includes('etb')) return 'cat_1';
+        if (d.includes('codensa') || d.includes('enel') || d.includes('acueducto') || d.includes('luz') || d.includes('agua') || d.includes('publicos')) return 'cat_viv_servicios';
+        if (d.includes('gas') || d.includes('alcantarillado')) return 'cat_viv_servicios';
+        if (d.includes('administracion') || d.includes('arriendo')) return 'cat_1';
+        if (d.includes('claro') || d.includes('movistar') || d.includes('tigo') || d.includes('etb')) return 'cat_viv_net';
 
         // 5. Salud
         if (d.includes('farma') || d.includes('cruz verde') || d.includes('medicina') || d.includes('doctor') || d.includes('eps') || d.includes('colsanitas')) return 'cat_4';
@@ -3590,7 +3593,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.K • Actualizar App 🔄
+                        Versión v67.L • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">

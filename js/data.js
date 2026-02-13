@@ -36,8 +36,7 @@ const DEFAULT_DATA = {
 
         // VIVIENDA & SERVICIOS (New Group)
         { id: 'cat_1', name: 'Alquiler / Hipoteca', group: 'VIVIENDA', is_default: true },
-        { id: 'cat_viv_luz', name: 'Energía / Luz', group: 'VIVIENDA', is_default: true },
-        { id: 'cat_viv_agua', name: 'Acueducto / Agua', group: 'VIVIENDA', is_default: true },
+        { id: 'cat_viv_servicios', name: 'Servicios Públicos', group: 'VIVIENDA', is_default: true },
         { id: 'cat_viv_gas', name: 'Gas Natural', group: 'VIVIENDA', is_default: true },
         { id: 'cat_viv_net', name: 'Internet / TV', group: 'VIVIENDA', is_default: true },
         { id: 'cat_viv_cel', name: 'Plan Celular', group: 'VIVIENDA', is_default: true },
