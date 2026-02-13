@@ -2960,6 +2960,10 @@ class UIManager {
         // 3. Transporte
         if (d.includes('uber') || d.includes('didi') || d.includes('cabify') || d.includes('taxi') || d.includes('peaje') || d.includes('gasolina') || d.includes('terpel') || d.includes('primax') || d.includes('parqueadero')) return 'cat_3';
 
+        // 3.5 Deuda (Specific keywords to avoid capturing generic "Credito" in income names)
+        if (d.includes('pago credito') || d.includes('cuota credito') || d.includes('abono credito') || d.includes('cobro credito')) return 'cat_7';
+        if (d.includes('tarjeta') || d.includes('visa') || d.includes('mastercard') || d.includes('credisit') || d.includes('pago t.c')) return 'cat_fin_4';
+
         // 4. Servicios / Vivienda
         if (d.includes('codensa') || d.includes('enel') || d.includes('acueducto') || d.includes('luz') || d.includes('agua') || d.includes('publicos')) return 'cat_viv_servicios';
         if (d.includes('gas') || d.includes('alcantarillado')) return 'cat_viv_servicios';

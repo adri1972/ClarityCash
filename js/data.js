@@ -142,10 +142,14 @@ class Store {
                 data.transactions.forEach(t => {
                     const cat = data.categories.find(c => c.id === t.category_id);
                     if (cat) {
-                        if (cat.group === 'INGRESOS') t.type = 'INGRESO';
-                        else if (cat.id === 'cat_5' && t.type !== 'AHORRO') t.type = 'AHORRO';
-                        else if (cat.id === 'cat_6' && t.type !== 'INVERSION') t.type = 'INVERSION';
-                        else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && t.type !== 'PAGO_DEUDA') t.type = 'PAGO_DEUDA';
+                        if (cat.group === 'INGRESOS') {
+                            t.type = 'INGRESO';
+                        } else if (t.type !== 'INGRESO') {
+                            // Only migrate non-income transactions to special debt/savings types
+                            if (cat.id === 'cat_5' && t.type !== 'AHORRO') t.type = 'AHORRO';
+                            else if (cat.id === 'cat_6' && t.type !== 'INVERSION') t.type = 'INVERSION';
+                            else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && t.type !== 'PAGO_DEUDA') t.type = 'PAGO_DEUDA';
+                        }
                     }
                 });
             }
@@ -241,13 +245,13 @@ class Store {
         // transaction: { type, amount, date, category_id, account_id, note, goal_id, generated_from, etc }
 
         let txType = transaction.type;
-        // Auto-correct type based on category if it belongs to special tracking groups
+        // Auto-correct type based on category IF it's not an income
         const cat = this.data.categories.find(c => c.id === transaction.category_id);
-        if (cat) {
-            if (cat.group === 'INGRESOS' && txType !== 'INGRESO') txType = 'INGRESO';
-            else if (cat.id === 'cat_5' && txType !== 'AHORRO') txType = 'AHORRO';
-            else if (cat.id === 'cat_6' && txType !== 'INVERSION') txType = 'INVERSION';
-            else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && txType !== 'PAGO_DEUDA') txType = 'PAGO_DEUDA';
+        if (cat && txType !== 'INGRESO') {
+            if (cat.group === 'INGRESOS') txType = 'INGRESO';
+            else if (cat.id === 'cat_5') txType = 'AHORRO';
+            else if (cat.id === 'cat_6') txType = 'INVERSION';
+            else if (cat.id === 'cat_7' || cat.id === 'cat_fin_4') txType = 'PAGO_DEUDA';
         }
 
         const newTx = {
@@ -291,9 +295,9 @@ class Store {
 
         const mergedTx = { ...oldTx, ...updates };
 
-        // Auto-correct type based on category
+        // Auto-correct type based on category IF it's not an income
         const cat = this.data.categories.find(c => c.id === mergedTx.category_id);
-        if (cat) {
+        if (cat && mergedTx.type !== 'INGRESO') {
             if (cat.group === 'INGRESOS') mergedTx.type = 'INGRESO';
             else if (cat.id === 'cat_5') mergedTx.type = 'AHORRO';
             else if (cat.id === 'cat_6') mergedTx.type = 'INVERSION';
