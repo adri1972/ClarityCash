@@ -137,6 +137,19 @@ class Store {
                 data.config.spending_profile = 'BALANCEADO';
             }
 
+            // --- DATA MIGRATION: Fix Historical Transaction Types ---
+            if (data.transactions) {
+                data.transactions.forEach(t => {
+                    const cat = data.categories.find(c => c.id === t.category_id);
+                    if (cat) {
+                        if (cat.group === 'INGRESOS') t.type = 'INGRESO';
+                        else if (cat.id === 'cat_5' && t.type !== 'AHORRO') t.type = 'AHORRO';
+                        else if (cat.id === 'cat_6' && t.type !== 'INVERSION') t.type = 'INVERSION';
+                        else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && t.type !== 'PAGO_DEUDA') t.type = 'PAGO_DEUDA';
+                    }
+                });
+            }
+
             // Migration: Ensure new default categories exist in stored data (general migration)
             const currentCatIds = new Set((data.categories || []).map(c => c.id));
             DEFAULT_DATA.categories.forEach(defCat => {
@@ -226,8 +239,20 @@ class Store {
 
     addTransaction(transaction) {
         // transaction: { type, amount, date, category_id, account_id, note, goal_id, generated_from, etc }
+
+        let txType = transaction.type;
+        // Auto-correct type based on category if it belongs to special tracking groups
+        const cat = this.data.categories.find(c => c.id === transaction.category_id);
+        if (cat) {
+            if (cat.group === 'INGRESOS' && txType !== 'INGRESO') txType = 'INGRESO';
+            else if (cat.id === 'cat_5' && txType !== 'AHORRO') txType = 'AHORRO';
+            else if (cat.id === 'cat_6' && txType !== 'INVERSION') txType = 'INVERSION';
+            else if ((cat.id === 'cat_7' || cat.id === 'cat_fin_4') && txType !== 'PAGO_DEUDA') txType = 'PAGO_DEUDA';
+        }
+
         const newTx = {
             ...transaction,
+            type: txType,
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Unique ID to prevent loop collisions
             amount: parseFloat(transaction.amount),
             created_at: new Date().toISOString()
@@ -264,15 +289,24 @@ class Store {
             this._updateAccountBalance(oldTx.account_id, oldTx.amount, 'INGRESO');
         }
 
-        // Apply updates
-        const newTx = { ...oldTx, ...updates };
-        // Ensure amount is float
-        if (updates.amount) newTx.amount = parseFloat(updates.amount);
+        const mergedTx = { ...oldTx, ...updates };
 
-        this.data.transactions[index] = newTx;
+        // Auto-correct type based on category
+        const cat = this.data.categories.find(c => c.id === mergedTx.category_id);
+        if (cat) {
+            if (cat.group === 'INGRESOS') mergedTx.type = 'INGRESO';
+            else if (cat.id === 'cat_5') mergedTx.type = 'AHORRO';
+            else if (cat.id === 'cat_6') mergedTx.type = 'INVERSION';
+            else if (cat.id === 'cat_7' || cat.id === 'cat_fin_4') mergedTx.type = 'PAGO_DEUDA';
+        }
+
+        // Ensure amount is float
+        if (updates.amount) mergedTx.amount = parseFloat(updates.amount);
+
+        this.data.transactions[index] = { ...mergedTx, id: id }; // Ensure ID stays same
 
         // Apply new balance impact
-        this._updateAccountBalance(newTx.account_id, newTx.amount, newTx.type);
+        this._updateAccountBalance(mergedTx.account_id, mergedTx.amount, mergedTx.type);
 
         this._save();
     }
