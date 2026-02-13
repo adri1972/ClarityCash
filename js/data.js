@@ -98,12 +98,20 @@ class Store {
             if (!data.config.currency) data.config.currency = 'COP';
             if (!data.config.spending_profile) data.config.spending_profile = 'BALANCEADO';
 
-            // --- DATA MIGRATION: Add new Utility Categories ---
+            // --- DATA MIGRATION: Consolidate Utilities ---
             if (data.categories) {
+                // 1. Remove old split utility categories if they exist
+                data.categories = data.categories.filter(c => c.id !== 'cat_viv_luz' && c.id !== 'cat_viv_agua');
+
+                // 2. Add the new consolidated category if missing
+                const hasServicios = data.categories.some(c => c.id === 'cat_viv_servicios');
+                if (!hasServicios) {
+                    data.categories.push({ id: 'cat_viv_servicios', name: 'Servicios Públicos', group: 'VIVIENDA', is_default: true });
+                }
+
+                // 3. Ensure other utilities are present
                 const existingIds = new Set(data.categories.map(c => c.id));
                 const newCats = [
-                    { id: 'cat_viv_luz', name: 'Energía / Luz', group: 'VIVIENDA', is_default: true },
-                    { id: 'cat_viv_agua', name: 'Acueducto / Agua', group: 'VIVIENDA', is_default: true },
                     { id: 'cat_viv_gas', name: 'Gas Natural', group: 'VIVIENDA', is_default: true },
                     { id: 'cat_viv_net', name: 'Internet / TV', group: 'VIVIENDA', is_default: true },
                     { id: 'cat_viv_cel', name: 'Plan Celular', group: 'VIVIENDA', is_default: true },
