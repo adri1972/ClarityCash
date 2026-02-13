@@ -1,5 +1,5 @@
 // ClarityCash Service Worker v67 - ULTRA AGGRESSIVE CACHE BUSTER
-const CACHE_NAME = 'cc-v67-o-refine';
+const CACHE_NAME = 'cc-v67-p-nuke';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
