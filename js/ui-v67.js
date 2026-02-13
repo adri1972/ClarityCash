@@ -3527,7 +3527,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.H • Actualizar App 🔄
+                        Versión v67.I • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -3612,14 +3612,15 @@ class UIManager {
                     }
                 });
 
-                // 2. Identify active categories (ONLY those with inputs AND NOT manually set to 0 or empty)
+                // 2. Identify active categories (those with inputs. Exclude ONLY if explicitly set to 0)
                 const activeCats = this.store.categories.filter(cat => {
                     const input = document.querySelector(`input[name="budget_${cat.id}"]`);
                     if (!input) return false;
 
                     const valClean = input.value.replace(/\D/g, '');
-                    // Exclude if explicitly 0 OR if the field is empty (user cleared it)
-                    if (valClean === '0' || valClean === '') return false;
+                    // Exclude ONLY if it's explicitly "0". 
+                    // Empty fields (valClean === "") MUST be included for new users.
+                    if (valClean === '0' && input.value !== '') return false;
 
                     return true;
                 });
