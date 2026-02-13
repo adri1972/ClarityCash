@@ -42,14 +42,26 @@ class UIManager {
         this.render(); // Re-render current view (Dashboard)
     }
 
-    formatCurrency(amount) {
-        const currency = this.store.config.currency;
-        const localeMap = { 'COP': 'es-CO', 'USD': 'en-US', 'EUR': 'es-ES' };
+    formatNumberWithDots(amount) {
+        if (amount === undefined || amount === null) return '0';
+        // Handle both numbers and strings (stripping non-digits if string)
+        const num = typeof amount === 'number' ? amount : parseFloat(amount.toString().replace(/\D/g, '')) || 0;
+        return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
 
+    formatCurrency(amount) {
+        const currency = this.store.config.currency || 'COP';
+
+        // For COP, we force dots as group separator as requested by USER
+        if (currency === 'COP') {
+            return '$' + this.formatNumberWithDots(amount);
+        }
+
+        const localeMap = { 'USD': 'en-US', 'EUR': 'es-ES' };
         return new Intl.NumberFormat(localeMap[currency] || 'en-US', {
             style: 'currency',
             currency: currency,
-            minimumFractionDigits: currency === 'COP' ? 0 : 2,
+            minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(amount);
     }
@@ -484,7 +496,7 @@ class UIManager {
 
         if (amountFound > 0) {
             const amountInput = form.querySelector('input[name="amount"]');
-            msg += `✓ Monto detectado: $${amountFound.toLocaleString('es-CO')}\n`;
+            msg += `✓ Monto detectado: $${this.formatNumberWithDots(amountFound)}\\n`;
             amountInput.value = amountFound.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             amountInput.dispatchEvent(new Event('input'));
         } else {
@@ -602,41 +614,51 @@ class UIManager {
     }
 
     async performHardReset() {
-        if (!confirm('⚠️ ¿Estás seguro?\n\nEsto borrará todos los datos temporales y recargará la aplicación. Tus transacciones NO se perderán (se guardan en otra base de datos), pero tendrás que volver a cargar el sitio.')) {
+        if (!confirm('⚠️ ¿Estás seguro?\n\nEsto borrará todos los datos temporales y recargará la aplicación. Tus transacciones NO se perderán, pero forzarás una descarga limpia del código.')) {
             return;
         }
 
-        const btn = document.getElementById('danger-reset-btn');
-        if (btn) {
-            btn.innerHTML = '⏳ Borrando...';
-            btn.disabled = true;
-        }
-
         try {
-            // 1. Unregister Service Workers
             if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let registration of registrations) {
-                    await registration.unregister();
-                }
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let r of regs) await r.unregister();
             }
-
-            // 2. Clear Caches
             if ('caches' in window) {
                 const names = await caches.keys();
-                for (let name of names) {
-                    await caches.delete(name);
-                }
+                for (let n of names) await caches.delete(n);
             }
+            localStorage.removeItem('cc_app_version');
+            window.location.reload(true);
+        } catch (e) {
+            console.error('Reset failed:', e);
+            window.location.reload(true);
+        }
+    }
 
-            // 3. Force Reload
-            // Use a timestamp to bust browser cache
-            window.location.href = window.location.pathname + '?reset=' + Date.now();
+    updateBudgetTotal() {
+        const incomeInput = document.querySelector('input[name="monthly_income_target"]');
+        const income = parseFloat(incomeInput ? incomeInput.value.replace(/\D/g, '') : '0') || 0;
 
-        } catch (error) {
-            console.error('Reset failed:', error);
-            alert('Error al reiniciar: ' + error.message);
-            window.location.reload();
+        const inputs = document.querySelectorAll('input[name^="budget_"]');
+        let total = 0;
+        inputs.forEach(input => {
+            total += parseFloat(input.value.replace(/\D/g, '') || '0');
+        });
+
+        const summary = document.getElementById('budget-summary-pill');
+        if (summary) {
+            const diff = income - total;
+            summary.innerHTML = `
+                <div style="display: flex; gap: 15px; font-size: 0.85rem; font-weight: 700; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+                    <span style="color: #666; background: #eee; padding: 4px 10px; border-radius: 8px;">Presupuesto: $${this.formatNumberWithDots(total)}</span>
+                    <span style="color: #666; background: #eee; padding: 4px 10px; border-radius: 8px;">Nómina: $${this.formatNumberWithDots(income)}</span>
+                    <span style="background: ${diff === 0 ? '#dcfce7' : (diff > 0 ? '#e0f2fe' : '#fee2e2')}; 
+                                color: ${diff === 0 ? '#166534' : (diff > 0 ? '#0288d1' : '#dc2626')}; 
+                                padding: 4px 10px; border-radius: 8px; border: 1px solid currentColor;">
+                        ${diff === 0 ? '✓ Coherente' : (diff > 0 ? 'Faltan $' + this.formatNumberWithDots(diff) : 'Excedido $' + this.formatNumberWithDots(Math.abs(diff)))}
+                    </span>
+                </div>
+            `;
         }
     }
 
@@ -1243,8 +1265,9 @@ class UIManager {
                 
                 <div style="position:relative; margin-bottom: 24px;">
                     <span style="position:absolute; left:20px; top:50%; transform:translateY(-50%); font-size:1.5rem; color: #E91E63; font-weight:700;">$</span>
-                    <input id="quick-amount" type="number" inputmode="decimal" placeholder="0" 
+                    <input id="quick-amount" type="text" inputmode="numeric" placeholder="0" 
                         style="width:100%; padding:20px 20px 20px 40px; font-size:2.5rem; font-weight:800; border:none; background:rgba(233, 30, 99, 0.05); border-radius:18px; text-align:center; box-sizing:border-box; outline:none; color:#E91E63;"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"
                         autofocus />
                 </div>
                 
@@ -1327,7 +1350,8 @@ class UIManager {
 
         // Save Logic
         saveBtn.addEventListener('click', () => {
-            const amount = parseFloat(amountInput.value);
+            const amountStr = amountInput.value.replace(/\./g, '');
+            const amount = parseFloat(amountStr);
             const catId = selectedCatId;
             const catName = this.store.categories.find(c => c.id === catId)?.name || '';
 
@@ -1630,7 +1654,7 @@ class UIManager {
 
         if (budgetLimit > 0 && catTotal > budgetLimit) {
             trigger = 'OVER_BUDGET';
-            defaultMsg = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatMoney(catTotal - budgetLimit)}`;
+            defaultMsg = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatCurrency(catTotal - budgetLimit)}`;
             type = 'danger';
             icon = '🚨';
         } else if (budgetLimit > 0 && catTotal > (budgetLimit * 0.8)) {
@@ -1655,7 +1679,7 @@ class UIManager {
         // Special check for high single expense in Antojo
         if (!trigger && tx.amount > 50000 && category.id === 'cat_ant') {
             trigger = 'EXPENSIVE_IMPULSE';
-            defaultMsg = `Un antojo de ${this.formatMoney(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
+            defaultMsg = `Un antojo de ${this.formatCurrency(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
             icon = '🍩';
         }
 
@@ -2055,7 +2079,7 @@ class UIManager {
                                 label: (context) => {
                                     const value = context.raw;
                                     const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-                                    return ` $${value.toLocaleString('es-CO')} (${pct}%)`;
+                                    return ` ${this.formatCurrency(value)} (${pct}%)`;
                                 }
                             }
                         }
@@ -2324,7 +2348,7 @@ class UIManager {
         if (data.amount) {
             // SANITY CHECK: If amount > 5.000.000, probably a barcode or NIT
             if (data.amount > 5000000) {
-                alert(`⚠️ ATENCIÓN: Detecté un monto inusualmente alto ($${new Intl.NumberFormat('es-CO').format(data.amount)}).\n\nProbablemente leí un código de barras, teléfono o NIT por error. Por favor verifica antes de guardar.`);
+                alert(`⚠️ ATENCIÓN: Detecté un monto inusualmente alto ($${this.formatNumberWithDots(data.amount)}).\\n\\nProbablemente leí un código de barras, teléfono o NIT por error. Por favor verifica antes de guardar.`);
                 // Don't autofill insane amount to prevent accidental saving
                 form.querySelector('input[name="amount"]').value = '';
                 form.querySelector('input[name="amount"]').placeholder = 'Ingresa el valor real';
@@ -2332,7 +2356,7 @@ class UIManager {
                 setTimeout(() => form.querySelector('input[name="amount"]').focus(), 500);
             } else {
                 // Normal Format (COP style: 1.000)
-                const fmt = new Intl.NumberFormat('es-CO').format(data.amount);
+                const fmt = this.formatNumberWithDots(data.amount);
                 form.querySelector('input[name="amount"]').value = fmt;
             }
         }
@@ -3048,12 +3072,26 @@ class UIManager {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom' }
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return ` ${context.dataset.label}: ${this.formatCurrency(context.raw)}`;
+                            }
+                        }
+                    }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { color: '#f0f0f0' }
+                        grid: { color: '#f0f0f0' },
+                        ticks: {
+                            callback: (value) => {
+                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
+                                return value;
+                            }
+                        }
                     },
                     x: {
                         grid: { display: false }
@@ -3083,11 +3121,11 @@ class UIManager {
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span style="color: #666;">$</span>
                         <input type="text" inputmode="numeric" name="budget_${c.id}" 
-                               value="${limit > 0 ? new Intl.NumberFormat('es-CO').format(limit) : ''}" 
+                               value="${limit > 0 ? this.formatNumberWithDots(limit) : ''}" 
                                placeholder="0"
                                style="width: 120px; text-align: right;"
                                onfocus="if(this.value==='0')this.value=''"
-                               onblur="var n=parseInt(this.value.replace(/\\D/g,''))||0; this.value=n>0?new Intl.NumberFormat('es-CO').format(n):''">
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
                     </div>
                 </div>
             `;
@@ -3106,10 +3144,10 @@ class UIManager {
                         <div class="form-group">
                             <label>Ingreso Mensual Objetivo</label>
                             <input type="text" inputmode="numeric" name="monthly_income_target" 
-                                   value="${conf.monthly_income_target ? new Intl.NumberFormat('es-CO').format(conf.monthly_income_target) : ''}"
+                                   value="${conf.monthly_income_target ? this.formatNumberWithDots(conf.monthly_income_target) : ''}"
                                    placeholder="0"
                                    onfocus="if(this.value==='0')this.value=''"
-                                   onblur="var n=parseInt(this.value.replace(/\\D/g,''))||0; this.value=n>0?new Intl.NumberFormat('es-CO').format(n):''">
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
                         </div>
 
                         <div class="form-group">
@@ -3146,7 +3184,7 @@ class UIManager {
                         <div class="form-group" id="debt-amount-group" style="display: ${conf.has_debts ? 'block' : 'none'}; margin-left: 1.5rem;">
                             <label>Monto Total de Deuda</label>
                             <input type="text" name="total_debt" 
-                                   value="${new Intl.NumberFormat('es-CO').format(conf.total_debt || 0)}"
+                                   value="${this.formatNumberWithDots(conf.total_debt || 0)}"
                                    oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
                         </div>
 
@@ -3241,6 +3279,9 @@ class UIManager {
                         Define cuánto quieres gastar máximo por categoría. Usa "Sugerir" para calcularlo basado en tu ingreso y perfil.
                      </p>
                      <form id="budget-form">
+                        <div id="budget-summary-pill" style="margin-bottom: 1.5rem; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                            <!-- Resumen dinámico aquí -->
+                        </div>
                         ${budgetInputs}
                         <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">Guardar Presupuestos</button>
                      </form>
@@ -3344,8 +3385,8 @@ class UIManager {
 
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
-                    <button id="force-update-env-btn" class="btn-text" style="color: #666; font-size: 0.85rem;">
-                        Versión v67.A • Buscar Actualizaciones
+                    <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
+                        Versión v67.E • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -3363,8 +3404,10 @@ class UIManager {
             
             <!-- End of Grid Layout -->
             </div>
-            
         `;
+
+        // Direct trigger for first sum update
+        setTimeout(() => this.updateBudgetTotal(), 500);
 
         // EVENT DELEGATION: Universal Form and Button Handler
         this.container.onclick = (e) => {
@@ -3387,7 +3430,9 @@ class UIManager {
                 const incomeInput = document.querySelector('input[name="monthly_income_target"]');
                 const profileSelect = document.querySelector('select[name="spending_profile"]');
 
-                const income = incomeInput ? parseFloat(incomeInput.value.replace(/\./g, '')) || 0 : 0;
+                // Robust parsing: remove anything that is not a digit
+                const incomeStr = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
+                const income = parseFloat(incomeStr) || 0;
                 const profile = profileSelect ? profileSelect.value : 'BALANCEADO';
 
                 if (income <= 0) {
@@ -3396,37 +3441,50 @@ class UIManager {
                     return;
                 }
 
-                // Comprehensive distributions
+                // DEBUGGING / CONFIRMATION FOR USER
+                const fixedFloorDebug = {};
+                (this.store.config.fixed_expenses || []).forEach(fe => {
+                    if (fe.category_id && fe.amount) {
+                        fixedFloorDebug[fe.category_id] = (fixedFloorDebug[fe.category_id] || 0) + fe.amount;
+                    }
+                });
+                const totalFixedDebug = Object.values(fixedFloorDebug).reduce((a, b) => a + b, 0);
+
+                if (!confirm(`🤖 INICIO DE CÁLCULO:\n\n• Ingreso detectado: $${this.formatNumberWithDots(income)}\n• Gastos Fijos detectados: $${this.formatNumberWithDots(totalFixedDebug)}\n• Perfil: ${profile}\n\n¿Proceder con la sugerencia exacta?`)) {
+                    return;
+                }
+
+                // Balanced distributions (Summing to ~100%)
                 const distributions = {
                     'CONSERVADOR': {
-                        'cat_1': 0.25, 'cat_2': 0.12, 'cat_3': 0.04, 'cat_gasolina': 0.04,
-                        'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.03, 'cat_personal': 0.03,
-                        'cat_10': 0.04, 'cat_5': 0.15, 'cat_6': 0.02, 'cat_7': 0.10,
-                        'cat_fin_4': 0.03, 'cat_fin_5': 0.02, 'cat_rest': 0.03,
-                        'cat_viv_luz': 0.015, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
-                        'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.02
+                        'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.04, 'cat_gasolina': 0.04,
+                        'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.02, 'cat_personal': 0.02,
+                        'cat_10': 0.03, 'cat_5': 0.15, 'cat_6': 0.05, 'cat_7': 0.10,
+                        'cat_fin_4': 0.02, 'cat_fin_5': 0.01, 'cat_rest': 0.02,
+                        'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
+                        'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.01
                     },
                     'BALANCEADO': {
-                        'cat_1': 0.20, 'cat_2': 0.15, 'cat_3': 0.05, 'cat_gasolina': 0.05,
-                        'cat_4': 0.05, 'cat_9': 0.08, 'cat_personal': 0.05, 'cat_deporte': 0.03,
-                        'cat_vicios': 0.02, 'cat_8': 0.05, 'cat_10': 0.05, 'cat_5': 0.05,
-                        'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.02, 'cat_fin_5': 0.025,
-                        'cat_rest': 0.05, 'cat_viv_luz': 0.02, 'cat_viv_agua': 0.01,
-                        'cat_viv_net': 0.02, 'cat_viv_cel': 0.01
+                        'cat_1': 0.20, 'cat_2': 0.12, 'cat_3': 0.05, 'cat_gasolina': 0.04,
+                        'cat_4': 0.05, 'cat_9': 0.05, 'cat_personal': 0.04, 'cat_deporte': 0.03,
+                        'cat_vicios': 0.01, 'cat_8': 0.05, 'cat_10': 0.04, 'cat_5': 0.08,
+                        'cat_6': 0.05, 'cat_7': 0.05, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02,
+                        'cat_rest': 0.04, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01,
+                        'cat_viv_net': 0.02, 'cat_viv_cel': 0.01, 'cat_viv_man': 0.01
                     },
                     'FLEXIBLE': {
                         'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.05, 'cat_gasolina': 0.05,
-                        'cat_4': 0.05, 'cat_9': 0.12, 'cat_personal': 0.08, 'cat_deporte': 0.05,
-                        'cat_vicios': 0.05, 'cat_8': 0.05, 'cat_10': 0.08, 'cat_5': 0.02,
-                        'cat_6': 0.01, 'cat_7': 0.02, 'cat_fin_4': 0.02, 'cat_fin_5': 0.02,
-                        'cat_rest': 0.08, 'cat_viv_luz': 0.02, 'cat_viv_net': 0.02
+                        'cat_4': 0.05, 'cat_9': 0.10, 'cat_personal': 0.06, 'cat_deporte': 0.05,
+                        'cat_vicios': 0.04, 'cat_8': 0.05, 'cat_10': 0.05, 'cat_5': 0.02,
+                        'cat_6': 0.01, 'cat_7': 0.02, 'cat_fin_4': 0.01, 'cat_fin_5': 0.01,
+                        'cat_rest': 0.06, 'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01
                     }
                 };
 
                 const weights = distributions[profile] || distributions['BALANCEADO'];
                 let appliedCount = 0;
 
-                // Calculate floor from fixed expenses
+                // 1. Calculate floors per category
                 const fixedFloor = {};
                 (this.store.config.fixed_expenses || []).forEach(fe => {
                     if (fe.category_id && fe.amount) {
@@ -3434,34 +3492,92 @@ class UIManager {
                     }
                 });
 
-                this.store.categories.forEach(cat => {
-                    const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                    if (input) {
-                        const pct = weights[cat.id] || 0.01; // Default 1% if not specified
-                        let suggested = Math.floor(income * pct);
+                // 2. Identify active categories (those with inputs)
+                const activeCats = this.store.categories.filter(cat =>
+                    document.querySelector(`input[name="budget_${cat.id}"]`)
+                );
 
-                        // Use fixed expense as absolute floor
-                        const floor = fixedFloor[cat.id] || 0;
-                        if (floor > suggested) suggested = floor;
+                // 3. Sum total fixed obligations for these categories
+                const totalFixed = activeCats.reduce((sum, cat) => sum + (fixedFloor[cat.id] || 0), 0);
+                const surplus = income - totalFixed;
 
-                        // Round to nearest 1000 for nicer look in COP
-                        suggested = Math.ceil(suggested / 1000) * 1000;
-
-                        if (suggested > 0) {
-                            input.value = suggested.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
-                            input.style.backgroundColor = '#e8f5e9';
-                            input.style.transition = 'background-color 0.5s';
+                if (surplus < 0) {
+                    // Scenario A: Deficit - Fixed expenses already exceed income
+                    activeCats.forEach(cat => {
+                        const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                        if (input) {
+                            const val = fixedFloor[cat.id] || 0;
+                            input.value = this.formatNumberWithDots(val);
+                            input.style.backgroundColor = '#ffebee'; // Light red for warning
                             setTimeout(() => input.style.backgroundColor = '#fff', 2000);
                             appliedCount++;
                         }
-                    }
-                });
-
-                if (appliedCount > 0) {
-                    // Small toast-like notification instead of alert if possible, but alert is safer for now
-                    alert('✨ Sugerencias generadas según tu perfil. ¡Recuerda GUARDAR cambios al final de la columna!');
+                    });
+                    alert(`⚠️ ¡ATENCIÓN COHERENCIA!\nTus gastos fijos ($${this.formatNumberWithDots(totalFixed)}) ya superan tus ingresos ($${this.formatNumberWithDots(income)}).\n\nEl presupuesto se llenó con tus compromisos mínimos para cubrir tus gastos fijos registrados, pero el total excedería tu nómina.`);
                 } else {
-                    alert('⚠️ No se pudieron generar sugerencias. Asegúrate de tener un ingreso mayor a cero.');
+                    // Scenario B: Coherent Distribution
+                    // 1. Calculate weighted target for the surplus
+                    const rawSuggestions = {};
+                    let currentSum = totalFixed;
+
+                    activeCats.forEach(cat => {
+                        const floor = fixedFloor[cat.id] || 0;
+                        const weight = weights[cat.id] || 0.005;
+                        const ideal = income * weight;
+                        const gap = Math.max(0, ideal - floor);
+                        rawSuggestions[cat.id] = { floor, gap };
+                    });
+
+                    // Calculate sum of gaps to distribute surplus
+                    const totalGap = activeCats.reduce((s, c) => s + rawSuggestions[c.id].gap, 0);
+
+                    const finalValues = {};
+                    let totalRounded = 0;
+
+                    activeCats.forEach((cat, index) => {
+                        const { floor, gap } = rawSuggestions[cat.id];
+                        let extra = 0;
+                        if (totalGap > 0) {
+                            extra = surplus * (gap / totalGap);
+                        } else {
+                            const sumWeights = activeCats.reduce((s, c) => s + (weights[c.id] || 0.005), 0);
+                            extra = surplus * ((weights[cat.id] || 0.005) / sumWeights);
+                        }
+
+                        let val = floor + extra;
+
+                        // Round everything to nearest 1000 except the last active category
+                        if (index < activeCats.length - 1) {
+                            val = Math.round(val / 1000) * 1000;
+                            totalRounded += val;
+                        }
+                        finalValues[cat.id] = val;
+                    });
+
+                    // Adjust last category (Residual match)
+                    const lastCat = activeCats[activeCats.length - 1];
+                    const remainingForLast = income - totalRounded;
+                    // In Scenario B (income >= totalFixed), remainingForLast will naturally be >= floor
+                    finalValues[lastCat.id] = Math.max(0, remainingForLast);
+
+                    // Final pass to set values and feedback
+                    activeCats.forEach(cat => {
+                        const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                        if (input) {
+                            const suggested = finalValues[cat.id];
+                            input.value = this.formatNumberWithDots(suggested);
+                            input.style.backgroundColor = '#e8f5e9';
+                            setTimeout(() => input.style.backgroundColor = '#fff', 2000);
+                            appliedCount++;
+                        }
+                    });
+
+                    // Update the live summary pill
+                    this.updateBudgetTotal();
+
+                    const totalActual = Object.values(finalValues).reduce((s, v) => s + v, 0);
+
+                    alert(`✨ Sugerencias coherentes generadas.\n\nLOGICA APLICADA:\n1. Se cubrieron tus $${this.formatNumberWithDots(totalFixed)} en gastos fijos.\n2. Se distribuyó el excedente según tu perfil ${profile}.\n3. El total ($${this.formatNumberWithDots(totalActual)}) suma exactamente tus ingresos ($${this.formatNumberWithDots(income)}).`);
                 }
             }
 
@@ -3525,8 +3641,8 @@ class UIManager {
 
             if (formId === 'settings-form') {
                 const formData = new FormData(e.target);
-                const rawIncome = formData.get('monthly_income_target').toString().replace(/\./g, '');
-                const rawDebt = formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\./g, '') : '0';
+                const rawIncome = formData.get('monthly_income_target').toString().replace(/\D/g, '');
+                const rawDebt = formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0';
 
                 this.store.updateConfig({
                     monthly_income_target: parseFloat(rawIncome) || 0,
@@ -3546,7 +3662,7 @@ class UIManager {
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('budget_')) {
                         const catId = key.replace('budget_', '');
-                        const val = parseFloat(value.toString().replace(/\./g, '')) || 0;
+                        const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
                         if (val > 0) newBudgets[catId] = val;
                     }
                 }

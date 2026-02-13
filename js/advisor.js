@@ -3,6 +3,14 @@ class FinancialAdvisor {
         this.store = store;
     }
 
+    formatMoney(amount) {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: this.store.config.currency || 'COP',
+            minimumFractionDigits: 0
+        }).format(amount);
+    }
+
     /**
      * Main Analysis Engine
      * Generates a list of "Insights" (Cards) for the UI.
@@ -20,7 +28,7 @@ class FinancialAdvisor {
             insights.push({
                 type: 'critical',
                 title: '⛔ Fuga de Capital',
-                message: `Estás en números rojos (-$${Math.abs(summary.balance_net).toLocaleString()}). Estás usando deuda o ahorros previos para vivir.`,
+                message: `Estás en números rojos (-${this.formatMoney(Math.abs(summary.balance_net))}). Estás usando deuda o ahorros previos para vivir.`,
                 impact: Math.abs(summary.balance_net)
             });
         }
@@ -40,7 +48,7 @@ class FinancialAdvisor {
                     insights.push({
                         type: 'warning',
                         title: `🐢 Meta Lejana: ${topGoal.name}`,
-                        message: `Al ritmo actual ($${monthlySavings.toLocaleString()}/mes), tardarás ${monthsToGo} meses (${(monthsToGo / 12).toFixed(1)} años). Aumenta tu ahorro un 10% para llegar antes.`,
+                        message: `Al ritmo actual (${this.formatMoney(monthlySavings)}/mes), tardarás ${monthsToGo} meses (${(monthsToGo / 12).toFixed(1)} años). Aumenta tu ahorro un 10% para llegar antes.`,
                         impact: 50
                     });
                 } else {
@@ -99,7 +107,7 @@ class FinancialAdvisor {
             insights.push({
                 type: 'warning',
                 title: '🍔 Exceso en Domicilios',
-                message: `Gastas $${foodTotal.toLocaleString()} en comer fuera. Si cocinas más, podrías ahorrar fácilmente $${(foodTotal * 0.4).toLocaleString()} este mes.`,
+                message: `Gastas ${this.formatMoney(foodTotal)} en comer fuera. Si cocinas más, podrías ahorrar fácilmente ${this.formatMoney(foodTotal * 0.4)} este mes.`,
                 savingsPotential: foodTotal * 0.4,
                 impact: foodTotal
             });
@@ -111,7 +119,7 @@ class FinancialAdvisor {
             insights.push({
                 type: 'info',
                 title: '📺 Revisión de Streaming',
-                message: `Pagas $${subs.toLocaleString()} en suscripciones. ¿Realmente usas todas las plataformas este mes? Cancela una y ahorra.`,
+                message: `Pagas ${this.formatMoney(subs)} en suscripciones. ¿Realmente usas todas las plataformas este mes? Cancela una y ahorra.`,
                 savingsPotential: 30000,
                 impact: subs
             });
@@ -306,6 +314,10 @@ class FinancialAdvisor {
     }
 
     formatMoney(amount) {
-        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount);
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: this.store.config.currency || 'COP',
+            maximumFractionDigits: 0
+        }).format(amount);
     }
 }

@@ -451,17 +451,18 @@ class Store {
         }
     }
 
-    // Called when viewing a month to ensure fixed items exist
+    // Called when viewing a month to ensure fixed items exist and are up to date
     processFixedExpenses(month, year) {
         const mStr = (month + 1).toString().padStart(2, '0');
         const yStr = year.toString();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let addedCount = 0;
+        let updatedCount = 0;
 
         // 1. Fixed Expenses
         if (this.data.config.fixed_expenses && this.data.config.fixed_expenses.length > 0) {
             this.data.config.fixed_expenses.forEach(fe => {
-                const alreadyExists = this.data.transactions.some(t => {
+                const existingIndex = this.data.transactions.findIndex(t => {
                     if (t.generated_from === fe.id) {
                         const parts = t.date.split('-'); // YYYY-MM-DD
                         return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month;
@@ -469,7 +470,7 @@ class Store {
                     return false;
                 });
 
-                if (!alreadyExists) {
+                if (existingIndex === -1) {
                     const day = Math.min(fe.day, daysInMonth);
                     const dateStr = `${yStr}-${mStr}-${day.toString().padStart(2, '0')}`;
 
@@ -483,6 +484,17 @@ class Store {
                         generated_from: fe.id
                     });
                     addedCount++;
+                } else {
+                    // Update existing if config changed
+                    const t = this.data.transactions[existingIndex];
+                    if (t.amount !== fe.amount || t.note !== fe.name || t.category_id !== fe.category_id) {
+                        this.updateTransaction(t.id, {
+                            amount: fe.amount,
+                            note: fe.name,
+                            category_id: fe.category_id
+                        });
+                        updatedCount++;
+                    }
                 }
             });
         }
@@ -490,7 +502,7 @@ class Store {
         // 2. Recurring Incomes
         if (this.data.config.recurring_incomes && this.data.config.recurring_incomes.length > 0) {
             this.data.config.recurring_incomes.forEach(ri => {
-                const alreadyExists = this.data.transactions.some(t => {
+                const existingIndex = this.data.transactions.findIndex(t => {
                     if (t.generated_from === ri.id) {
                         const parts = t.date.split('-');
                         return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month;
@@ -498,7 +510,7 @@ class Store {
                     return false;
                 });
 
-                if (!alreadyExists) {
+                if (existingIndex === -1) {
                     const day = Math.min(ri.day, daysInMonth);
                     const dateStr = `${yStr}-${mStr}-${day.toString().padStart(2, '0')}`;
 
@@ -506,18 +518,30 @@ class Store {
                         type: 'INGRESO',
                         amount: ri.amount,
                         date: dateStr,
-                        category_id: 'cat_inc_1', // Fixed: Use cat_inc_1 instead of non-existent cat_salario
+                        category_id: ri.category_id || 'cat_inc_1',
                         account_id: 'acc_2',
                         note: ri.name,
                         generated_from: ri.id
                     });
                     addedCount++;
+                } else {
+                    // Update existing if config changed
+                    const t = this.data.transactions[existingIndex];
+                    if (t.amount !== ri.amount || t.note !== ri.name || t.category_id !== ri.category_id) {
+                        this.updateTransaction(t.id, {
+                            amount: ri.amount,
+                            note: ri.name,
+                            category_id: ri.category_id || 'cat_inc_1'
+                        });
+                        updatedCount++;
+                    }
                 }
             });
         }
 
-        if (addedCount > 0) {
-            console.log(`Generated ${addedCount} recurring transactions for ${yStr}-${mStr}`);
+        if (addedCount > 0 || updatedCount > 0) {
+            console.log(`Synced recurring items for ${yStr}-${mStr}: ${addedCount} added, ${updatedCount} updated.`);
+            // _save() is called inside add/updateTransaction
         }
     }
 
