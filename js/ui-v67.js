@@ -3386,7 +3386,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v67.E • Actualizar App 🔄
+                        Versión v67.F • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -3450,16 +3450,16 @@ class UIManager {
                 });
                 const totalFixedDebug = Object.values(fixedFloorDebug).reduce((a, b) => a + b, 0);
 
-                if (!confirm(`🤖 INICIO DE CÁLCULO:\n\n• Ingreso detectado: $${this.formatNumberWithDots(income)}\n• Gastos Fijos detectados: $${this.formatNumberWithDots(totalFixedDebug)}\n• Perfil: ${profile}\n\n¿Proceder con la sugerencia exacta?`)) {
+                if (!confirm(`🤖 INICIO DE CÁLCULO:\n\n• Ingreso detectado: $${this.formatNumberWithDots(income)}\n• Gastos Fijos detectados: $${this.formatNumberWithDots(totalFixedDebug)}\n• Perfil: ${profile}\n\n💡 TIP: Si pones $0 en una categoría, la IA no le sugerirá presupuesto y repartirá ese dinero en las demás.\n\n¿Proceder con la sugerencia exacta?`)) {
                     return;
                 }
 
                 // Balanced distributions (Summing to ~100%)
                 const distributions = {
                     'CONSERVADOR': {
-                        'cat_1': 0.25, 'cat_2': 0.10, 'cat_3': 0.04, 'cat_gasolina': 0.04,
+                        'cat_1': 0.20, 'cat_2': 0.10, 'cat_3': 0.04, 'cat_gasolina': 0.03,
                         'cat_4': 0.05, 'cat_8': 0.05, 'cat_9': 0.02, 'cat_personal': 0.02,
-                        'cat_10': 0.03, 'cat_5': 0.15, 'cat_6': 0.05, 'cat_7': 0.10,
+                        'cat_10': 0.03, 'cat_5': 0.20, 'cat_6': 0.05, 'cat_7': 0.10,
                         'cat_fin_4': 0.02, 'cat_fin_5': 0.01, 'cat_rest': 0.02,
                         'cat_viv_luz': 0.01, 'cat_viv_agua': 0.01, 'cat_viv_gas': 0.005,
                         'cat_viv_net': 0.01, 'cat_viv_cel': 0.005, 'cat_viv_man': 0.01
@@ -3492,10 +3492,14 @@ class UIManager {
                     }
                 });
 
-                // 2. Identify active categories (those with inputs)
-                const activeCats = this.store.categories.filter(cat =>
-                    document.querySelector(`input[name="budget_${cat.id}"]`)
-                );
+                // 2. Identify active categories (those with inputs AND NOT manually set to 0)
+                const activeCats = this.store.categories.filter(cat => {
+                    const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                    if (!input) return false;
+                    // If user explicitly typed 0, we treat it as "Disabled" for suggestion
+                    if (input.value === '0') return false;
+                    return true;
+                });
 
                 // 3. Sum total fixed obligations for these categories
                 const totalFixed = activeCats.reduce((sum, cat) => sum + (fixedFloor[cat.id] || 0), 0);
@@ -3577,7 +3581,7 @@ class UIManager {
 
                     const totalActual = Object.values(finalValues).reduce((s, v) => s + v, 0);
 
-                    alert(`✨ Sugerencias coherentes generadas.\n\nLOGICA APLICADA:\n1. Se cubrieron tus $${this.formatNumberWithDots(totalFixed)} en gastos fijos.\n2. Se distribuyó el excedente según tu perfil ${profile}.\n3. El total ($${this.formatNumberWithDots(totalActual)}) suma exactamente tus ingresos ($${this.formatNumberWithDots(income)}).`);
+                    alert(`✨ Sugerencias coherentes generadas.\n\nLOGICA APLICADA:\n1. Se cubrieron tus $${this.formatNumberWithDots(totalFixed)} en gastos fijos.\n2. Se distribuyó el excedente según tu perfil ${profile}.\n3. Si marcaste categorías con $0, ese dinero se repartió proporcionalmente.\n4. El total ($${this.formatNumberWithDots(totalActual)}) suma exactamente tus ingresos ($${this.formatNumberWithDots(income)}).`);
                 }
             }
 
