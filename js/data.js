@@ -20,7 +20,8 @@ const DEFAULT_DATA = {
     // B) Cuentas
     accounts: [
         { id: 'acc_1', name: 'Billetera', type: 'EFECTIVO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
-        { id: 'acc_2', name: 'Cuenta Principal', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
+        { id: 'acc_2', name: 'Cuenta Principal', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
+        { id: 'acc_tc_1', name: 'Tarjeta de Crédito', type: 'CREDITO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
     ],
     // C) Categorías
     categories: [
@@ -170,6 +171,15 @@ class Store {
                 });
             }
 
+            // Migration: Ensure default accounts exist
+            const currentAccIds = new Set((data.accounts || []).map(a => a.id));
+            DEFAULT_DATA.accounts.forEach(defAcc => {
+                if (!currentAccIds.has(defAcc.id)) {
+                    if (!data.accounts) data.accounts = [];
+                    data.accounts.push(defAcc);
+                }
+            });
+
             // Migration: Ensure new default categories exist in stored data (general migration)
             const currentCatIds = new Set((data.categories || []).map(c => c.id));
             DEFAULT_DATA.categories.forEach(defCat => {
@@ -261,9 +271,9 @@ class Store {
         // transaction: { type, amount, date, category_id, account_id, note, goal_id, generated_from, etc }
 
         let txType = transaction.type;
-        // Auto-correct type based on category IF it's not an income
+        // Auto-correct type based on category IF it's not an income OR a CC payment
         const cat = this.data.categories.find(c => c.id === transaction.category_id);
-        if (cat && txType !== 'INGRESO') {
+        if (cat && txType !== 'INGRESO' && txType !== 'TARJETA_CREDITO') {
             if (cat.group === 'INGRESOS') txType = 'INGRESO';
             else if (cat.id === 'cat_5') txType = 'AHORRO';
             else if (cat.id === 'cat_6') txType = 'INVERSION';
@@ -273,7 +283,7 @@ class Store {
         const newTx = {
             ...transaction,
             type: txType,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Unique ID to prevent loop collisions
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             amount: parseFloat(transaction.amount),
             created_at: new Date().toISOString()
         };
@@ -281,6 +291,12 @@ class Store {
 
         // Update Account Balance
         this._updateAccountBalance(newTx.account_id, newTx.amount, newTx.type);
+
+        // Target Account (Transfer/Debt Abono)
+        if (newTx.target_account_id) {
+            // Money arrives at target. We treat it as an INGRESO for that account's balance update.
+            this._updateAccountBalance(newTx.target_account_id, newTx.amount, 'INGRESO');
+        }
 
         this._save();
         return newTx;
@@ -291,22 +307,15 @@ class Store {
         if (index === -1) return;
 
         const oldTx = this.data.transactions[index];
-
         // Revert old balance impact
-        this._updateAccountBalance(oldTx.account_id, -oldTx.amount, oldTx.type); // Negative amount to reverse? No.
-        // Reversal Logic:
-        // If INGRESO, we added amount. To reverse, we subtract.
-        // If GASTO, we subtracted. To reverse, we add.
-
-        // Let's use a smarter helper or manual logic here.
-        // updateAccountBalance adds on INGRESO, subtracts on others.
-        // To reverse INGRESO, we treat as GASTO (subtract). 
-        // To reverse GASTO, we treat as INGRESO (add).
-
         if (oldTx.type === 'INGRESO') {
             this._updateAccountBalance(oldTx.account_id, oldTx.amount, 'GASTO');
         } else {
             this._updateAccountBalance(oldTx.account_id, oldTx.amount, 'INGRESO');
+        }
+
+        if (oldTx.target_account_id) {
+            this._updateAccountBalance(oldTx.target_account_id, oldTx.amount, 'GASTO');
         }
 
         const mergedTx = { ...oldTx, ...updates };
@@ -320,17 +329,20 @@ class Store {
             else if (cat.id === 'cat_7' || cat.id === 'cat_fin_4') mergedTx.type = 'PAGO_DEUDA';
         }
 
-        // Ensure amount is float
-        if (updates.amount) mergedTx.amount = parseFloat(updates.amount);
+        mergedTx.amount = parseFloat(mergedTx.amount);
+        mergedTx.updated_at = new Date().toISOString();
 
-        this.data.transactions[index] = { ...mergedTx, id: id }; // Ensure ID stays same
+        this.data.transactions[index] = mergedTx;
 
         // Apply new balance impact
         this._updateAccountBalance(mergedTx.account_id, mergedTx.amount, mergedTx.type);
+        if (mergedTx.target_account_id) {
+            this._updateAccountBalance(mergedTx.target_account_id, mergedTx.amount, 'INGRESO');
+        }
 
         this._save();
+        return mergedTx;
     }
-
     deleteTransaction(id) {
         const index = this.data.transactions.findIndex(t => t.id === id);
         if (index === -1) return;
@@ -404,17 +416,14 @@ class Store {
         const account = this.data.accounts.find(a => a.id === accountId);
         if (!account) return;
 
-        // Reglas:
-        // GASTO -> reduce
-        // INGRESO -> aumenta
-        // AHORRO -> reduce (sale de la cuenta operativa)
-        // INVERSION -> reduce (sale de la cuenta operativa)
-        // PAGO_DEUDA -> reduce
+        // Reglas Simplificadas:
+        // INGRESO -> aumenta balance
+        // GASTO/TARJETA_CREDITO/AHORRO/INVERSION/PAGO_DEUDA -> reduce balance
+        // (Nota: Si es TARJETA_CREDITO, el usuario quiere registrarlo pero que no afecte el presupuesto mensual)
 
         if (type === 'INGRESO') {
             account.current_balance += amount;
         } else {
-            // All others reduce the account balance in this simple model
             account.current_balance -= amount;
         }
     }
@@ -649,11 +658,10 @@ class Store {
             if (t.type === 'AHORRO') summary.savings += t.amount;
             if (t.type === 'INVERSION') summary.investment += t.amount;
             if (t.type === 'PAGO_DEUDA') summary.debt_payment += t.amount;
+            // Note: TARJETA_CREDITO type is NOT added to expenses here to keep it out of the monthly budget summary
         });
 
-        // Balance neto = Ingresos - (Gastos + Ahorro + Inversión + Deuda)
-        // Note: Savings/Investment are treated as outflows from "cash flow" perspective in this specific net balance formula requested?
-        // "Balance neto del mes = ingresos - (gastos + ahorro + inversión + pago_deuda)" -> As per prompt.
+        // Balance neto = Ingresos - (Gastos Líquidos + Ahorro + Inversión + Pago Deuda)
         summary.balance_net = summary.income - (summary.expenses + summary.savings + summary.investment + summary.debt_payment);
 
         return summary;
@@ -664,13 +672,18 @@ class Store {
         const m = month !== undefined ? month : now.getMonth();
         const y = year !== undefined ? year : now.getFullYear();
 
-        // Include GASTO and PAGO_DEUDA in the spending breakdown
+        // Include only LIQUID spending: GASTO or PAGO_DEUDA
+        // Exclude TARJETA_CREDITO (purchases) because they don't affect the monthly quota budget
         const monthlyTx = this.data.transactions.filter(t => {
             if (!t.date) return false;
             const parts = t.date.split('-');
             const txYear = parseInt(parts[0], 10);
             const txMonth = parseInt(parts[1], 10) - 1;
-            return txMonth === m && txYear === y && (t.type === 'GASTO' || t.type === 'PAGO_DEUDA');
+
+            // Spending for budget purposes: (Standard GASTO) OR (Any PAGO_DEUDA)
+            const isLiquidOutflow = (t.type === 'GASTO' || t.type === 'PAGO_DEUDA');
+
+            return txMonth === m && txYear === y && isLiquidOutflow;
         });
 
         const breakdown = {};

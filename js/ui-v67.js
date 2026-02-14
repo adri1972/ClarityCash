@@ -528,13 +528,13 @@ class UIManager {
             if (typeFilter === 'INGRESO') {
                 filteredCats = categories.filter(c => c.group === 'INGRESOS');
             } else if (typeFilter === 'AHORRO') {
-                filteredCats = categories.filter(c => c.id === 'cat_5'); // Only Ahorro
+                filteredCats = categories.filter(c => c.id === 'cat_5');
             } else if (typeFilter === 'INVERSION') {
-                filteredCats = categories.filter(c => c.id === 'cat_6'); // Only Inversion
+                filteredCats = categories.filter(c => c.id === 'cat_6');
             } else if (typeFilter === 'PAGO_DEUDA') {
-                filteredCats = categories.filter(c => c.id === 'cat_7' || c.id === 'cat_fin_4'); // Debt + Credit Card
-            } else { // GASTO
-                // Show everything EXCEPT strict special types (Income, Savings, Inv, Debt)
+                filteredCats = categories.filter(c => c.id === 'cat_7' || c.id === 'cat_fin_4');
+            } else {
+                // GASTO or TARJETA_CREDITO
                 filteredCats = categories.filter(c =>
                     c.group !== 'INGRESOS' &&
                     c.id !== 'cat_5' &&
@@ -545,7 +545,6 @@ class UIManager {
         }
 
         const groups = [...new Set(filteredCats.map(c => c.group))];
-
         let catHtml = '<option value="" disabled selected>Selecciona una categoría</option>';
         groups.forEach(group => {
             catHtml += `<optgroup label="${this.groupLabels[group] || group}">`;
@@ -556,12 +555,11 @@ class UIManager {
         });
         catSelect.innerHTML = catHtml;
 
-        // Auto-select if only 1 option (e.g. Ahorro)
         if (filteredCats.length === 1) {
             catSelect.value = filteredCats[0].id;
         }
 
-        // Accounts
+        // Accounts Population
         accSelect.innerHTML = this.store.accounts.map(a =>
             `<option value="${a.id}">${a.name} (${a.type})</option>`
         ).join('');
@@ -1642,6 +1640,8 @@ class UIManager {
 
         // 1. Map Data
         let items = categories.map(c => {
+            if (c.id === 'cat_fin_4') return null; // Quitar Tarjeta de Crédito del presupuesto
+
             const spent = breakdown[c.name] || 0;
             const limit = budgets[c.id] || 0;
             if (spent === 0 && limit === 0) return null; // Skip irrelevant
@@ -2408,11 +2408,13 @@ class UIManager {
         form.querySelector('[name="account_id"]').value = tx.account_id;
         form.querySelector('[name="note"]').value = tx.note || '';
 
-        // Trigger updates for dynamic category select
-        const typeSelect = form.querySelector('[name="type"]');
-        // We need to trigger change BUT ensure we set the category AFTER the select is populated
+        // Trigger updates for dynamic category/target select
         this.populateSelects(tx.type);
         form.querySelector('[name="category_id"]').value = tx.category_id;
+
+        if (tx.target_account_id && form.querySelector('[name="target_account_id"]')) {
+            form.querySelector('[name="target_account_id"]').value = tx.target_account_id;
+        }
 
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.innerHTML = 'Actualizar Movimiento';
@@ -3254,7 +3256,8 @@ class UIManager {
 
         // Filter categories for Budget
         const categories = this.store.categories.filter(c =>
-            ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group)
+            ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group) &&
+            c.id !== 'cat_fin_4' // Quitar Tarjeta de Crédito del presupuesto (Settings)
         );
 
         // 1. Calculate floors per category

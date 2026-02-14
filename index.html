@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.C ---
+        // --- STABLE UPDATE ENGINE v68.G ---
         (function () {
-            var REQUIRED = '68.C';
+            var REQUIRED = '68.G';
             var current = localStorage.getItem('cc_app_version');
             if (current !== REQUIRED) {
                 if ('serviceWorker' in navigator) {
@@ -86,11 +86,19 @@
                         class="btn-text"
                         style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px; border-radius: 12px;">🔄
                         Forzar Reset</button>
+                    <button type="button" id="scan-btn" class="btn-text"
+                        style="background: #E3F2FD; color: #1565C0; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                        <i data-feather="camera" style="width: 18px; height: 18px;"></i> Escanear Recibo
+                    </button>
                     <button id="add-transaction-btn" class="btn btn-primary"><i data-feather="plus"></i> Nuevo
                         Movimiento</button>
                 </div>
             </header>
             <div id="content-area" class="content-container">
+                <div id="scan-loading"
+                    style="display:none; text-align:center; padding:20px; background:#E3F2FD; color:#1565C0; margin-bottom:15px; border-radius:8px;">
+                    <i data-feather="loader" class="spin"></i> Procesando recibo con IA... espera un momento
+                </div>
                 <div class="empty-state">
                     <h3>Cargando tu información financiera...</h3>
                 </div>
@@ -134,9 +142,13 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Fecha</label><input type="date" name="date" required></div>
-                    <div class="form-group"><label>Categoría</label><select name="category_id" required></select></div>
+                    <div id="category-group" class="form-group"><label>Categoría</label><select
+                            name="category_id"></select></div>
                 </div>
-                <div class="form-group"><label>Cuenta</label><select name="account_id" required></select></div>
+                <div class="form-group">
+                    <label id="account-label">Cuenta</label>
+                    <select name="account_id" required></select>
+                </div>
                 <div class="form-group"><label>Nota</label><textarea name="note" rows="2"></textarea></div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-text close-modal">Cancelar</button>
@@ -149,20 +161,20 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <script src="js/data.js?v=68C"></script>
-    <script src="js/advisor.js?v=68C"></script>
-    <script src="js/gemini.js?v=68C"></script>
-    <script src="js/ui-v67.js?v=68C"></script>
-    <script src="js/app.js?v=68C"></script>
+    <script src="js/data.js?v=68G"></script>
+    <script src="js/advisor.js?v=68G"></script>
+    <script src="js/gemini.js?v=68G"></script>
+    <script src="js/ui-v67.js?v=68G"></script>
+    <script src="js/app.js?v=68G"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=68C').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=68G').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.C-STABLE</div>
+        v68.G-SCAN-RESTORED</div>
 </body>
 
 </html>
