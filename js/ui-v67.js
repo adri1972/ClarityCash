@@ -4300,10 +4300,18 @@ class UIManager {
             console.error(error);
             let msg = 'Error de conexión';
 
-            if (error.message.includes('429')) msg = '❌ Cuota o Velocidad excedida (Espera un momento)';
-            else if (error.message.includes('401') || error.message.includes('403') || error.message.includes('INVALID_KEY')) msg = '❌ API Key inválida o rechazada';
-            else if (error.message.includes('RATE_LIMIT')) msg = '❌ Demasiadas peticiones (429)';
-            else msg = `❌ Error: ${error.message}`;
+            // Friendly Error Messages (v68.K)
+            if (error.message.includes('400') || error.message.includes('INVALID_KEY') || error.message.includes('API_KEY_INVALID')) {
+                msg = '❌ Llave incorrecta. Revisa que no le falten letras.';
+            } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
+                msg = '⏳ El sistema está ocupado. Intenta en 1 minuto.';
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                msg = '📡 Sin internet. Revisa tu conexión.';
+            } else if (error.message.includes('QUOTA_EXCEEDED')) {
+                msg = '🛑 Se acabó el saldo gratuito de tu llave hoy.';
+            } else {
+                msg = `❌ Error: ${error.message}`;
+            }
 
             if (statusEl) statusEl.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">${msg}</span>`;
 

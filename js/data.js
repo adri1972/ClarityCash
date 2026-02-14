@@ -99,6 +99,9 @@ class Store {
             if (!data.config.currency) data.config.currency = 'COP';
             if (!data.config.spending_profile) data.config.spending_profile = 'BALANCEADO';
 
+            // Fix v68.K: Force AI Provider to Gemini if missing (Fixes missing UI buttons)
+            if (!data.config.ai_provider) data.config.ai_provider = 'gemini';
+
             // --- DATA MIGRATION: Consolidate Utilities ---
             if (data.categories) {
                 // 1. Remove old split utility categories if they exist
