@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.L (JSON Based) ---
+        // --- STABLE UPDATE ENGINE v68.M (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '68.L';
+            const CURRENT_VERSION = '68.M';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -48,7 +48,7 @@
                     if ('caches' in window) {
                         caches.keys().then(names => {
                             for (let name of names) caches.delete(name);
-                            localStorage.setItem('cc_app_version', newVer);
+                            localStorage.setItem('cc_version', '68.M');
                             window.location.reload(true);
                         });
                     } else {
@@ -201,20 +201,20 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <script src="js/data.js?v=68L"></script>
-    <script src="js/advisor.js?v=68L"></script>
-    <script src="js/gemini.js?v=68L"></script>
-    <script src="js/ui-v67.js?v=68L"></script>
-    <script src="js/app.js?v=68L"></script>
+    <script src="js/data.js?v=68M"></script>
+    <script src="js/advisor.js?v=68M"></script>
+    <script src="js/gemini.js?v=68M"></script>
+    <script src="js/ui-v67.js?v=68M"></script>
+    <script src="js/app.js?v=68M"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=68L').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=68M').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.L-RESTORATION</div>
+        v68.M-HOTFIX</div>
 </body>
 
 </html>
