@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.G ---
+        // --- STABLE UPDATE ENGINE v68.H ---
         (function () {
-            var REQUIRED = '68.G';
+            var REQUIRED = '68.H';
             var current = localStorage.getItem('cc_app_version');
             if (current !== REQUIRED) {
                 if ('serviceWorker' in navigator) {
@@ -86,19 +86,11 @@
                         class="btn-text"
                         style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px; border-radius: 12px;">🔄
                         Forzar Reset</button>
-                    <button type="button" id="scan-btn" class="btn-text"
-                        style="background: #E3F2FD; color: #1565C0; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-                        <i data-feather="camera" style="width: 18px; height: 18px;"></i> Escanear Recibo
-                    </button>
                     <button id="add-transaction-btn" class="btn btn-primary"><i data-feather="plus"></i> Nuevo
                         Movimiento</button>
                 </div>
             </header>
             <div id="content-area" class="content-container">
-                <div id="scan-loading"
-                    style="display:none; text-align:center; padding:20px; background:#E3F2FD; color:#1565C0; margin-bottom:15px; border-radius:8px;">
-                    <i data-feather="loader" class="spin"></i> Procesando recibo con IA... espera un momento
-                </div>
                 <div class="empty-state">
                     <h3>Cargando tu información financiera...</h3>
                 </div>
@@ -115,7 +107,17 @@
     <div id="transaction-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Registrar Movimiento</h3><button class="close-modal"><i data-feather="x"></i></button>
+                <h3>Registrar Movimiento</h3>
+                <button type="button" id="scan-btn" class="btn-text"
+                    style="background: #E3F2FD; color: #1565C0; padding: 0.4rem 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.85rem; margin-left: auto; margin-right: 10px;">
+                    <i data-feather="camera" style="width: 16px; height: 16px;"></i> Escanear
+                </button>
+                <button class="close-modal"><i data-feather="x"></i></button>
+            </div>
+            <input type="file" id="receipt-upload" accept="image/*,.heic" style="display: none;">
+            <div id="scan-loading"
+                style="display:none; text-align:center; padding:15px; background:#E3F2FD; color:#1565C0; margin-top:5px; margin-bottom:15px; border-radius:8px; font-size:0.9rem;">
+                <i data-feather="loader" class="spin"></i> Analizando recibo...
             </div>
             <form id="transaction-form">
                 <div class="form-group type-selector" style="flex-wrap: wrap;">
@@ -161,20 +163,20 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <script src="js/data.js?v=68G"></script>
-    <script src="js/advisor.js?v=68G"></script>
-    <script src="js/gemini.js?v=68G"></script>
-    <script src="js/ui-v67.js?v=68G"></script>
-    <script src="js/app.js?v=68G"></script>
+    <script src="js/data.js?v=68H"></script>
+    <script src="js/advisor.js?v=68H"></script>
+    <script src="js/gemini.js?v=68H"></script>
+    <script src="js/ui-v67.js?v=68H"></script>
+    <script src="js/app.js?v=68H"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=68G').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=68H').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.G-SCAN-RESTORED</div>
+        v68.H-SCAN-MODAL-FIX</div>
 </body>
 
 </html>
