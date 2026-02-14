@@ -3,23 +3,59 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.H ---
+        // --- STABLE UPDATE ENGINE v68.I (JSON Based) ---
         (function () {
-            var REQUIRED = '68.H';
-            var current = localStorage.getItem('cc_app_version');
-            if (current !== REQUIRED) {
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then(function (regs) {
-                        for (let r of regs) { r.unregister(); }
-                    });
-                }
-                if ('caches' in window) {
-                    caches.keys().then(function (names) {
-                        for (let name of names) caches.delete(name);
-                    });
-                }
-                localStorage.setItem('cc_app_version', REQUIRED);
-                window.location.href = window.location.pathname + "?v=" + REQUIRED + "&ts=" + Date.now();
+            const CURRENT_VERSION = '68.I';
+
+            // 1. Check version.json (Bypass Cache)
+            fetch('version.json?t=' + Date.now())
+                .then(res => res.json())
+                .then(data => {
+                    const localVer = localStorage.getItem('cc_app_version');
+
+                    // Force refresh if version mismatch
+                    if (data.version !== localVer) {
+                        console.log('🚀 New Version Detected:', data.version);
+                        showUpdateToast(data.version);
+                    }
+                })
+                .catch(err => console.log('Version Check Skipped in Offline Mode'));
+
+            function showUpdateToast(newVer) {
+                // UI for forced update
+                const toast = document.createElement('div');
+                toast.id = 'update-toast';
+                toast.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#212121; color:white; padding:15px 20px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:10000; display:flex; align-items:center; gap:15px; font-family:sans-serif; min-width:300px;';
+
+                toast.innerHTML = `
+                    <div style="flex:1">
+                        <div style="font-weight:bold; font-size:1.1rem; margin-bottom:4px;">¡Actualización Lista! 🎉</div>
+                        <div style="font-size:0.9rem; opacity:0.8;">Versión ${newVer} disponible.</div>
+                    </div>
+                    <button id="update-btn" style="background:#00E676; color:#000; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer;">ACTUALIZAR</button>
+                `;
+
+                document.body.appendChild(toast);
+
+                document.getElementById('update-btn').onclick = () => {
+                    toast.innerHTML = 'Limpiando sistema... 🧹';
+                    // Nuke Cache
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(regs => {
+                            for (let r of regs) r.unregister();
+                        });
+                    }
+                    if ('caches' in window) {
+                        caches.keys().then(names => {
+                            for (let name of names) caches.delete(name);
+                            localStorage.setItem('cc_app_version', newVer);
+                            window.location.reload(true);
+                        });
+                    } else {
+                        localStorage.setItem('cc_app_version', newVer);
+                        window.location.reload(true);
+                    }
+                };
             }
         })();
     </script>
@@ -34,7 +70,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=68C">
+    <link rel="stylesheet" href="css/styles.css?v=68I">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -171,12 +207,14 @@
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=68H').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=68I').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.H-SCAN-MODAL-FIX</div>
+        <div
+            style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
+            v68.I-STABLE</div>
 </body>
 
 </html>

@@ -501,7 +501,15 @@ REGLAS DE FORMATO:
      * Called immediately after user adds an expense/income
      */
     async getInstantInsight(tx, categoryParams) {
-        if (!this.hasApiKey()) return null; // Fallback to local logic
+        if (!this.hasApiKey()) return null;
+
+        // --- RATE LIMITING (Stabilization v68.I) ---
+        const now = Date.now();
+        if (this.lastInsightTime && (now - this.lastInsightTime < 12000)) {
+            console.log('⏳ AI Cooling down...');
+            return null; // Skip if called within 12 seconds
+        }
+        this.lastInsightTime = now;
 
         const apiKey = this.getApiKey();
         const provider = this.getProvider();
@@ -551,6 +559,10 @@ REGLAS DE FORMATO:
                         temperature: 0.8 // Creative
                     })
                 });
+
+                if (response.status === 429) return "🧠 Cerebro ocupado... dame un segundo.";
+                if (!response.ok) return null;
+
                 const data = await response.json();
                 text = data.choices[0].message.content;
             } else {
@@ -563,6 +575,10 @@ REGLAS DE FORMATO:
                         generationConfig: { maxOutputTokens: 60, temperature: 0.8 }
                     })
                 });
+
+                if (response.status === 429) return "🧠 Cerebro ocupado... dame un segundo.";
+                if (!response.ok) return null;
+
                 const data = await response.json();
                 text = data.candidates[0].content.parts[0].text;
             }
@@ -570,7 +586,7 @@ REGLAS DE FORMATO:
 
         } catch (error) {
             console.error("Instant Insight Error:", error);
-            return null; // Fallback
+            return null; // Silent fail
         }
     }
 }
