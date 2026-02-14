@@ -1345,6 +1345,37 @@ class UIManager {
         return streak;
     }
 
+
+
+    calculateStreak() {
+        const txDates = new Set(
+            this.store.transactions.map(t => {
+                const d = new Date(t.date);
+                return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+            })
+        );
+
+        let streak = 0;
+        const today = new Date();
+
+        // Check backwards from today
+        for (let i = 0; i < 365; i++) {
+            const checkDate = new Date(today);
+            checkDate.setDate(today.getDate() - i);
+            const key = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+
+            if (txDates.has(key)) {
+                streak++;
+            } else if (i === 0) {
+                // Today has no transactions yet - that's OK, don't break streak
+                continue;
+            } else {
+                break;
+            }
+        }
+        return streak;
+    }
+
     openQuickExpense() {
         // --- 1. Get Top Categories + Force Priority (Coffee/Food) ---
         const txs = this.store.transactions.filter(t => t.type === 'GASTO');
@@ -1397,9 +1428,14 @@ class UIManager {
         const overlayContent = `
             <div style="background:var(--bg-surface); border-radius: 32px 32px 0 0; padding: 32px 24px; width:100%; max-width:500px; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding-bottom: max(32px, env(safe-area-inset-bottom));">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-                    <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-main);">⚡ Gasto Rápido</h3>
+                <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-main);">⚡ Gasto Rápido</h3>
+                <div style="display:flex; gap:10px;">
+                    <button id="open-guide-btn" style="background:#E3F2FD; color:#1565C0; border:none; padding:6px 12px; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        📘 Guía
+                    </button>
                     <button id="close-quick-btn" style="background:rgba(0,0,0,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); font-size: 1.2rem;">&times;</button>
                 </div>
+            </div>
                 
                 <div style="position:relative; margin-bottom: 24px;">
                     <span style="position:absolute; left:20px; top:50%; transform:translateY(-50%); font-size:1.5rem; color: #E91E63; font-weight:700;">$</span>
@@ -1440,14 +1476,19 @@ class UIManager {
         // Auto-focus input
         setTimeout(() => amountInput.focus(), 100);
 
-        // Close Logic
+        // Close logic
         const closeOverlay = () => {
             overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 200);
+            setTimeout(() => document.body.removeChild(overlay), 200);
         };
         closeBtn.addEventListener('click', closeOverlay);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
 
+        // Guide logic
+        const guideBtn = overlay.querySelector('#open-guide-btn');
+        guideBtn.addEventListener('click', () => {
+            this.openUserGuide();
+        });
         // Category Selection Logic
         catContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.quick-cat-btn');
@@ -2465,525 +2506,591 @@ class UIManager {
             setTimeout(() => toast.remove(), 2000);
         } else {
             console.error(`Transaction ${id} not found! Likely duplicate ID issue from old import.`);
-            alert('Error: No se encontró la transacción. Por favor borra los datos y vuelve a importar el extracto para corregir los IDs.');
-        }
+            alert('Error:    saveBtn.onclick = () => {
+        const amount = parseFloat(amountInput.value.replace(/\./g, ''));
+            if (!amount || amount <= 0) return; // Silent fail or shake
+
+            // Open full modal with pre-filled data
+            this.populateSelects('GASTO');
+            const modal = document.getElementById('transaction-modal');
+            const form = document.getElementById('transaction-form');
+
+            if (modal && form) {
+                form.querySelector('input[name="amount"]').value = amountInput.value; // Keep format
+                modal.classList.remove('hidden');
+                document.body.removeChild(overlay);
+            }
+        };
     }
 
-    openScanConfirmation(data) {
-        // Open Modal
-        const txModal = document.getElementById('transaction-modal');
-        const form = document.getElementById('transaction-form');
-        this.populateSelects('GASTO'); // Assume Gasto for receipt
-        txModal.classList.remove('hidden');
+    openUserGuide() {
+        // Create Guide Modal Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'guide-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:11000; display:flex; align-items:center; justify-content:center; padding:20px; animation: fadeIn 0.2s;';
 
-        // Reset previous form data
-        form.reset();
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:var(--bg-surface); width:100%; max-width:600px; max-height:85vh; border-radius:24px; overflow-y:auto; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.5); animation: slideUp 0.3s;';
 
-        // 1. DATE
-        if (data.date) {
-            form.querySelector('input[name="date"]').value = data.date;
-        } else {
-            form.querySelector('input[name="date"]').value = new Date().toISOString().split('T')[0];
-        }
+        modal.innerHTML = `
+        <div style="padding:24px 24px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0; font-size:1.5rem;">📘 Guía Rápida</h2>
+                <button id="close-guide" style="font-size:1.5rem; background:none; border:none; cursor:pointer; color:var(--text-secondary);">&times;</button>
+            </div>
+            <p style="color:var(--text-secondary); margin-top:5px;">Domina ClarityCash en 3 minutos.</p>
+        </div>
+        
+        <div style="padding:20px 24px;">
+            <div style="margin-bottom:25px;">
+                <h3 style="font-size:1.1rem; color:#E91E63; margin-bottom:10px;">🤖 1. Inteligencia Artificial</h3>
+                <p style="font-size:0.95rem; line-height:1.5; color:var(--text-main);">
+                    <b>¿Cómo funciona?</b> La IA analiza tus gastos mes a mes. Para que funcione, necesitas ir a <b>Configuración (⚙️)</b> y obtener tu "Llave Gratis".<br><br>
+                    <b>Análisis Mensual:</b> Ve a la pestaña "Análisis" ⚡. Ahí verás diagnósticos, alertas de fugas y consejos personalizados.
+                </p>
+            </div>
 
-        // 2. AMOUNT
-        if (data.amount) {
-            // SANITY CHECK: If amount > 5.000.000, probably a barcode or NIT
-            if (data.amount > 5000000) {
-                alert(`⚠️ ATENCIÓN: Detecté un monto inusualmente alto ($${this.formatNumberWithDots(data.amount)}).\\n\\nProbablemente leí un código de barras, teléfono o NIT por error. Por favor verifica antes de guardar.`);
-                // Don't autofill insane amount to prevent accidental saving
-                form.querySelector('input[name="amount"]').value = '';
-                form.querySelector('input[name="amount"]').placeholder = 'Ingresa el valor real';
-                // Focus on amount for correction
-                setTimeout(() => form.querySelector('input[name="amount"]').focus(), 500);
-            } else {
-                // Normal Format (COP style: 1.000)
-                const fmt = this.formatNumberWithDots(data.amount);
-                form.querySelector('input[name="amount"]').value = fmt;
-            }
-        }
+            <div style="margin-bottom:25px;">
+                <h3 style="font-size:1.1rem; color:#4CAF50; margin-bottom:10px;">💰 2. Presupuestos</h3>
+                <p style="font-size:0.95rem; line-height:1.5; color:var(--text-main);">
+                    Define límites para categorías clave (como "Restaurantes" o "Ropa") en Configuración. La barra de progreso se pondrá roja si te excedes.
+                </p>
+            </div>
 
-        // 3. CATEGORY (Smart Match)
-        if (data.category) {
-            const search = data.category.toLowerCase();
-            const cat = this.store.categories.find(c =>
-                c.name.toLowerCase().includes(search) ||
-                c.group.toLowerCase().includes(search)
-            );
-            if (cat) {
-                form.querySelector('select[name="category_id"]').value = cat.id;
-            }
-        }
+            <div style="margin-bottom:25px;">
+                <h3 style="font-size:1.1rem; color:#2196F3; margin-bottom:10px;">📸 3. Escaneo de Recibos</h3>
+                <p style="font-size:0.95rem; line-height:1.5; color:var(--text-main);">
+                    Al crear un movimiento, usa el botón <b>"📷 Escanear"</b>. Sube una foto de tu factura y la app extraerá el total, el comercio y la categoría automáticamente.
+                </p>
+            </div>
 
-        // 4. NOTE (Merchant + Items)
-        let note = '';
-        if (data.merchant) note += `[${data.merchant}] `;
-        if (data.note) note += data.note;
-        form.querySelector('input[name="note"]').value = note;
+            <div style="margin-bottom:10px;">
+                <h3 style="font-size:1.1rem; color:#FF9800; margin-bottom:10px;">⚡ 4. Gasto Rápido</h3>
+                <p style="font-size:0.95rem; line-height:1.5; color:var(--text-main);">
+                    Usa el botón flotante del rayo para anotar gastos en segundos. La IA aprende tus categorías frecuentes (como Café o Gasolina) y las pone primero.
+                </p>
+            </div>
+        </div>
 
-        // Visual Feedback
-        const title = txModal.querySelector('h3');
-        const originalTitle = title.textContent;
-        title.innerHTML = '🧾 Recibo Escaneado <span style="font-size:0.6em;color:#2E7D32;">(Verifica los datos)</span>';
+        <div style="padding:20px; background:rgba(0,0,0,0.03); text-align:center; border-radius: 0 0 24px 24px;">
+            <button id="close-guide-btn-main" style="background:#212121; color:white; border:none; padding:12px 30px; border-radius:12px; font-weight:bold; font-size:1rem; cursor:pointer;">¡Entendido!</button>
+        </div>
+    `;
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        const closeFn = () => document.body.removeChild(overlay);
+        overlay.querySelector('#close-guide').onclick = closeFn;
+        overlay.querySelector('#close-guide-btn-main').onclick = closeFn;
+        overlay.onclick = (e) => { if (e.target === overlay) closeFn(); };
+    }form.reset();
+
+    // 1. DATE
+    if(data.date) {
+        form.querySelector('input[name="date"]').value = data.date;
+    } else {
+    form.querySelector('input[name="date"]').value = new Date().toISOString().split('T')[0];
+}
+
+// 2. AMOUNT
+if (data.amount) {
+    // SANITY CHECK: If amount > 5.000.000, probably a barcode or NIT
+    if (data.amount > 5000000) {
+        alert(`⚠️ ATENCIÓN: Detecté un monto inusualmente alto ($${this.formatNumberWithDots(data.amount)}).\\n\\nProbablemente leí un código de barras, teléfono o NIT por error. Por favor verifica antes de guardar.`);
+        // Don't autofill insane amount to prevent accidental saving
+        form.querySelector('input[name="amount"]').value = '';
+        form.querySelector('input[name="amount"]').placeholder = 'Ingresa el valor real';
+        // Focus on amount for correction
+        setTimeout(() => form.querySelector('input[name="amount"]').focus(), 500);
+    } else {
+        // Normal Format (COP style: 1.000)
+        const fmt = this.formatNumberWithDots(data.amount);
+        form.querySelector('input[name="amount"]').value = fmt;
+    }
+}
+
+// 3. CATEGORY (Smart Match)
+if (data.category) {
+    const search = data.category.toLowerCase();
+    const cat = this.store.categories.find(c =>
+        c.name.toLowerCase().includes(search) ||
+        c.group.toLowerCase().includes(search)
+    );
+    if (cat) {
+        form.querySelector('select[name="category_id"]').value = cat.id;
+    }
+}
+
+// 4. NOTE (Merchant + Items)
+let note = '';
+if (data.merchant) note += `[${data.merchant}] `;
+if (data.note) note += data.note;
+form.querySelector('input[name="note"]').value = note;
+
+// Visual Feedback
+const title = txModal.querySelector('h3');
+const originalTitle = title.textContent;
+title.innerHTML = '🧾 Recibo Escaneado <span style="font-size:0.6em;color:#2E7D32;">(Verifica los datos)</span>';
 
         // Restore title on close? Not strictly necessary as it resets next open
     }
 
     async handleFileImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    const file = event.target.files[0];
+    if (!file) return;
 
-        // IMAGE Handling (Receipt Scanning)
-        if (file.type.startsWith('image/')) {
-            // Visual Loading Indicator
+    // IMAGE Handling (Receipt Scanning)
+    if (file.type.startsWith('image/')) {
+        // Visual Loading Indicator
+        const loading = document.createElement('div');
+        loading.innerHTML = '📷 <b>Analizando recibo con IA...</b><br><span style="font-size:0.8em">Consultando a tu asistente inteligente...</span>';
+        loading.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:white;padding:25px;border-radius:12px;z-index:9999;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
+        document.body.appendChild(loading);
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file); // Base64
+        reader.onload = async () => {
+            try {
+                const base64 = reader.result.split(',')[1];
+                // Call Gemini Vision
+                const data = await this.aiAdvisor.scanReceipt(base64);
+                loading.remove();
+                this.openScanConfirmation(data);
+            } catch (err) {
+                loading.remove();
+                console.error(err);
+                alert('❌ Error analizando recibo:\n' + err.message + '\n\nAsegúrate de tener luz y que la imagen sea clara.');
+            }
+        };
+        return;
+    }
+
+    // PDF Handling
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        this.parsePDF(file);
+        return;
+    }
+
+    // CSV/Text Handling
+    const reader = new FileReader();
+    reader.onload = (e) => this.parseCSV(e.target.result);
+    reader.readAsText(file);
+}
+
+    async parsePDF(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const typedarea = new Uint8Array(arrayBuffer);
+
+        // Use loadingTask to handle passwords
+        const loadingTask = pdfjsLib.getDocument({ data: typedarea });
+
+        loadingTask.onPassword = (updatePassword, reason) => {
+            let reasonText = "";
+            if (reason === 1) reasonText = " (Contraseña incorrecta)";
+
+            const password = prompt(`🔒 Este extracto está protegido${reasonText}.\n\nPor seguridad, los bancos suelen poner tu cédula o una clave.\n\nIngrésala aquí para leer el archivo:`);
+
+            if (password) {
+                updatePassword(password);
+            } else {
+                // User cancelled
+                loadingTask.destroy();
+            }
+        };
+
+        const pdf = await loadingTask.promise;
+        let fullText = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join('  ');
+            fullText += pageText + '\n';
+        }
+
+        // HYBRID INTELLIGENCE: Single Page PDF Receipt -> Try AI First
+        if (pdf.numPages === 1 && fullText.length < 3000) {
+            // Show AI Loading
             const loading = document.createElement('div');
-            loading.innerHTML = '📷 <b>Analizando recibo con IA...</b><br><span style="font-size:0.8em">Consultando a tu asistente inteligente...</span>';
+            loading.id = 'ai-pdf-loading';
+            loading.innerHTML = '🤖 <b>Analizando PDF con IA...</b><br><span style="font-size:0.8em">Descifrando datos del documento...</span>';
             loading.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:white;padding:25px;border-radius:12px;z-index:9999;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
             document.body.appendChild(loading);
 
+            // Convert to Base64 for Gemini
             const reader = new FileReader();
-            reader.readAsDataURL(file); // Base64
+            reader.readAsDataURL(file);
             reader.onload = async () => {
                 try {
                     const base64 = reader.result.split(',')[1];
-                    // Call Gemini Vision
-                    const data = await this.aiAdvisor.scanReceipt(base64);
-                    loading.remove();
+                    const data = await this.aiAdvisor.scanReceipt(base64, 'application/pdf');
+
+                    if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
                     this.openScanConfirmation(data);
                 } catch (err) {
-                    loading.remove();
-                    console.error(err);
-                    alert('❌ Error analizando recibo:\n' + err.message + '\n\nAsegúrate de tener luz y que la imagen sea clara.');
+                    console.warn("AI PDF Scan failed, fallback to local regex:", err);
+                    if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
+
+                    // Fallback to local regex (Extracto Bancario logic)
+                    this.processExtractedText(fullText);
                 }
             };
             return;
         }
 
-        // PDF Handling
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-            this.parsePDF(file);
-            return;
-        }
-
-        // CSV/Text Handling
-        const reader = new FileReader();
-        reader.onload = (e) => this.parseCSV(e.target.result);
-        reader.readAsText(file);
-    }
-
-    async parsePDF(file) {
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const typedarea = new Uint8Array(arrayBuffer);
-
-            // Use loadingTask to handle passwords
-            const loadingTask = pdfjsLib.getDocument({ data: typedarea });
-
-            loadingTask.onPassword = (updatePassword, reason) => {
-                let reasonText = "";
-                if (reason === 1) reasonText = " (Contraseña incorrecta)";
-
-                const password = prompt(`🔒 Este extracto está protegido${reasonText}.\n\nPor seguridad, los bancos suelen poner tu cédula o una clave.\n\nIngrésala aquí para leer el archivo:`);
-
-                if (password) {
-                    updatePassword(password);
-                } else {
-                    // User cancelled
-                    loadingTask.destroy();
-                }
-            };
-
-            const pdf = await loadingTask.promise;
-            let fullText = '';
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join('  ');
-                fullText += pageText + '\n';
-            }
-
-            // HYBRID INTELLIGENCE: Single Page PDF Receipt -> Try AI First
-            if (pdf.numPages === 1 && fullText.length < 3000) {
-                // Show AI Loading
-                const loading = document.createElement('div');
-                loading.id = 'ai-pdf-loading';
-                loading.innerHTML = '🤖 <b>Analizando PDF con IA...</b><br><span style="font-size:0.8em">Descifrando datos del documento...</span>';
-                loading.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:white;padding:25px;border-radius:12px;z-index:9999;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);';
-                document.body.appendChild(loading);
-
-                // Convert to Base64 for Gemini
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = async () => {
-                    try {
-                        const base64 = reader.result.split(',')[1];
-                        const data = await this.aiAdvisor.scanReceipt(base64, 'application/pdf');
-
-                        if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
-                        this.openScanConfirmation(data);
-                    } catch (err) {
-                        console.warn("AI PDF Scan failed, fallback to local regex:", err);
-                        if (document.getElementById('ai-pdf-loading')) document.getElementById('ai-pdf-loading').remove();
-
-                        // Fallback to local regex (Extracto Bancario logic)
-                        this.processExtractedText(fullText);
-                    }
-                };
-                return;
-            }
-
-            this.processExtractedText(fullText);
-        } catch (err) {
-            console.error("PDF Error:", err);
-
-            // Specific handling for Password Exception (name can vary by version)
-            if (err.name === 'PasswordException' || err.message.toLowerCase().includes('password')) {
-                alert("❌ No se pudo abrir el PDF: Se requiere contraseña correcta.");
-            } else {
-                alert(`❌ Error técnico leyendo el PDF: "${err.message}"\n\nIntenta abrir el PDF en tu navegador para verificar que funciona.`);
-            }
-        }
-    }
-
-    parseCSV(text) {
-        this.processExtractedText(text);
-    }
-
-    processExtractedText(text) {
-        // AI Logic: Global Column Extraction (Robust to PDF Layouts)
-
-        // 1. DATES: Find all valid transaction dates
-        // Formats: "20 ENE 2026", "20/01/2026", "20-Ene-26", "20Ene2026"
-        // Improved Regex: Matches DD then Month then Year
-        const dateRegex = /\b(\d{1,2})[\/\-\.\s]?(ENE|JAN|FEB|MAR|ABR|APR|MAY|JUN|JUL|AGO|AUG|SEP|OCT|NOV|DIC|DEC)[A-Za-z]*[\/\-\.\s]?(\d{2,4})\b|\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/gi;
-
-        const allDates = [...text.matchAll(dateRegex)].map(m => m[0]);
-
-        // 2. AMOUNTS: Find all strictly formatted money values
-        // Must have at least one separator (. or ,) to avoid picking up Years (2025) or IDs (89012)
-        // Or be preceded by $ symbol.
-        // Rejects: "2025", "1", "30"
-        // Accepts: "1.000", "1,000", "1.250,50", "$ 5000", "$5000"
-        const amountRegex = /(?:\$ ?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{0,2})?)|(?:\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{0,2})?\b)|(?:\b\d{1,3}[.,]\d{2}\b)/g;
-
-        // We also want to capture simple high numbers if they are clearly cost? No, risky.
-        // Let's stick to formatted amounts OR $ prefixed.
-
-        const allAmountsRaw = [...text.matchAll(amountRegex)].map(m => m[0]);
-
-        // Filter Amounts: Remove likely false positives (Years like 2024, 2025, 2026 often appear in headers)
-        // If a number is exactly a recent year (2020-2030) and has no decimals, skip it.
-        const validAmounts = allAmountsRaw.filter(a => {
-            const val = parseFloat(a.replace(/[^0-9]/g, ''));
-            // Filter Year-like integers if they don't have currency symbol
-            if (!a.includes('$') && val >= 2000 && val <= 2030 && !a.includes(',') && !a.includes('.')) return false;
-            return true;
-        });
-
-        if (allDates.length === 0 || validAmounts.length === 0) {
-            alert(`❌ No encontramos fechas o montos claros.\n\nTexto muestra: "${text.substring(0, 100)}..."`);
-            return;
-        }
-
-        // 3. BLOCK LOGIC (Context-Aware)
-
-        let sampleDesc = "";
-        let debugBlock = ""; // For user feedback
-
-        const dateMatches = [...text.matchAll(dateRegex)];
-        const rawEntries = [];
-
-        for (let i = 0; i < dateMatches.length; i++) {
-            const currentMatch = dateMatches[i];
-            const nextMatch = dateMatches[i + 1];
-
-            const startIdx = currentMatch.index;
-            // Cap block length to avoid capturing unrelated junk
-            const endIdx = nextMatch ? nextMatch.index : Math.min(text.length, startIdx + 400);
-
-            // Extract the "Block" for this transaction
-            const block = text.substring(startIdx, endIdx);
-            if (i === 0) debugBlock = block.substring(0, 100); // Capture sample for debugging
-
-            const dateStr = currentMatch[0];
-
-            // Find Amount in this block
-            const amountMatches = block.match(amountRegex);
-            let amountStr = null;
-            let desc = "";
-
-            if (amountMatches) {
-                // Filter valid amounts (money)
-                const validBlockAmounts = amountMatches.filter(a => {
-                    const val = parseFloat(a.replace(/[^0-9]/g, ''));
-                    // Ignore years (2025) unless they have currency symbol
-                    if (!a.includes('$') && val >= 2000 && val <= 2030 && !a.includes(',') && !a.includes('.')) return false;
-                    return true;
-                });
-
-                if (validBlockAmounts.length > 0) {
-                    amountStr = validBlockAmounts[0];
-
-                    // STRATEGY A: Description matches text *between* Date and Amount
-                    // STRATEGY B: Description matches text *after* Amount
-
-                    const dateIdxInBlock = block.indexOf(dateStr);
-                    const amountIdxInBlock = block.indexOf(amountStr);
-
-                    // 1. Try Between
-                    if (amountIdxInBlock > dateIdxInBlock) {
-                        const between = block.substring(dateIdxInBlock + dateStr.length, amountIdxInBlock).trim();
-                        // If 'between' is substantial (e.g. > 3 chars and contains letters), use it.
-                        if (between.length > 3 && /[a-zA-Z]/.test(between)) {
-                            desc = between;
-                        } else {
-                            // 2. Try After (Date ... Amount ... Description)
-                            // This handles columns like: DATE | AMOUNT | DESC
-                            const after = block.substring(amountIdxInBlock + amountStr.length).trim();
-                            desc = after;
-                        }
-                    } else {
-                        // Amount is BEFORE Date? Unusual but possible in some layouts.
-                        // Try remaining text.
-                        desc = block.replace(dateStr, '').replace(amountStr, '');
-                    }
-
-                    // CLEANUP DESCRIPTION
-                    // 1. Remove Newlines & Punctuation
-                    desc = desc.replace(/[\r\n]+/g, ' ')
-                        .replace(/[\*\-\_\$]/g, ' ') // Keep dots/commas as they might be part of merchant names? No, usually valid to remove in statements.
-                        .replace(/[0-9]{4,}/g, '') // Remove long numbers (IDs)
-                        .replace(/\s+/g, ' ').trim();
-
-                    // 2. Remove the Amount itself if it leaked into Description (e.g. "ZONA PAGO 400 000")
-                    // We try to match "400 000" or "400.000" somewhat loosely
-                    let rawAmountNums = amountStr.replace(/[^0-9]/g, ''); // "400000"
-
-                    // Try to remove exact sequence
-                    if (rawAmountNums.length >= 4) {
-                        // Loose regex: digit, optional char, digit...
-                        // This is hard. Let's just remove the exact string `amountStr` and variations
-                        desc = desc.replace(amountStr, '').trim();
-                        // Also remove "400 000" style
-                        // If we really want to fix "436 438", we need a fuzzy match?
-                        // Let's just remove any sequence of digits that looks like the amount
-                    }
-
-                    // 3. Simple cleanup
-                    if (desc.length < 3) desc = "Movimiento Bancario";
-                }
-            }
-
-            if (amountStr) {
-                if (i === 0) sampleDesc = desc;
-                rawEntries.push({
-                    dateStr: dateStr,
-                    amountStr: amountStr,
-                    desc: desc
-                });
-            }
-        }
-
-        // ... (Date Filtering Code remains same) ...
-
-        // 4. FIND MAX DATE & FILTER OLD ONES
-        // First, parse all dates to objects
-        const parsedEntries = rawEntries.map(e => {
-            let processedDate = e.dateStr.toUpperCase();
-            // Simple clean, keep letters/nums
-
-            let finalDateStr = '';
-            let finalDateObj = null;
-
-            // Regex for cleaned date (Day Month Year)
-            // Matches "30ENE2026" or "30 ENE 2026" or "30/ENE/2026"
-            const dateMatch = processedDate.match(/(\d{1,2})[\/\-\.\s]?([A-Z]{3,})[\/\-\.\s]?(\d{2,4})/);
-
-            if (dateMatch) {
-                const day = dateMatch[1].padStart(2, '0');
-                const mStr = dateMatch[2].substring(0, 3);
-                let yStr = dateMatch[3];
-                if (yStr.length === 2) yStr = '20' + yStr;
-
-                const months = { 'ENE': '01', 'JAN': '01', 'FEB': '02', 'MAR': '03', 'ABR': '04', 'APR': '04', 'MAY': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DIC': '12', 'DEC': '12' };
-
-                if (months[mStr]) {
-                    finalDateStr = `${yStr}-${months[mStr]}-${day}`;
-                    finalDateObj = new Date(finalDateStr);
-                }
-            } else if (e.dateStr.includes('/')) {
-                const dParts = e.dateStr.split('/');
-                if (dParts.length === 3) {
-                    // Check if part 0 is year or day
-                    if (dParts[0].length === 4) {
-                        finalDateStr = `${dParts[0]}-${dParts[1].padStart(2, '0')}-${dParts[2].padStart(2, '0')}`;
-                    } else {
-                        finalDateStr = `${dParts[2]}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
-                    }
-                    if (finalDateStr.length === 10) finalDateObj = new Date(finalDateStr);
-                }
-            }
-
-            return { ...e, dateObj: finalDateObj, dateIso: finalDateStr };
-        }).filter(e => e.dateObj && !isNaN(e.dateObj));
-
-        if (parsedEntries.length === 0) {
-            alert("❌ No pudimos procesar fechas válidas.");
-            return;
-        }
-
-        const maxTime = Math.max(...parsedEntries.map(e => e.dateObj.getTime()));
-        const maxDate = new Date(maxTime);
-
-        // STRICT FILTER: Only allow transactions within 45 days of the latest date
-        // This removes "Movimientos meses anteriores" (Installment history) often present in statements
-        // Assumes a standard 30-day billing cycle + 15 days buffer
-        const CUTOFF_DAYS = 45;
-
-        // UNIQUE SET for Deduplication
-        const uniqueSignatures = new Set();
-
-        const validEntries = parsedEntries.filter(e => {
-            // 1. Date Filter (Relative to the LATEST date in the doc, not today)
-            const diffTime = (maxDate - e.dateObj); // Positive result
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            // Reject future dates (parsing errors) or too old (historical context)
-            if (diffDays < -5) return false; // Date is > 5 days ahead of max? Fishy.
-            if (diffDays > CUTOFF_DAYS) return false;
-
-            // 2. Amount Filter (Noise Reduction)
-            let aVal = parseFloat(e.amountStr.replace(/[^0-9\.,]/g, '').replace(/\./g, '').replace(',', '.'));
-            if (isNaN(aVal)) return false;
-
-            if (aVal < 50) return false; // Too small noise
-            if (aVal > 2000 && aVal < 2035 && Number.isInteger(aVal)) return false; // Likely a Year (2025)
-
-            // 3. Deduplication (Weak)
-            // Signature: Date + Amount + ShortDesc
-            // This allows "Uber $10" and "Rappi $10" on same day, but filters exact duplicates (shadow text)
-            const cleanDescSnippet = e.desc.substring(0, 5).replace(/[^a-zA-Z]/g, '');
-            const sig = `${e.dateIso}|${Math.round(aVal)}|${cleanDescSnippet}`;
-
-            if (uniqueSignatures.has(sig)) return false;
-            uniqueSignatures.add(sig);
-
-            return true;
-        });
-
-        let imported = 0;
-        validEntries.forEach(entry => {
-            // PARSE AMOUNT
-            let aStr = entry.amountStr.replace('$', '').replace(/\s/g, '').trim();
-            let amount = 0;
-            const commas = (aStr.match(/,/g) || []).length;
-            const dots = (aStr.match(/\./g) || []).length;
-            if (dots > 0 && commas > 0) {
-                if (aStr.lastIndexOf(',') > aStr.lastIndexOf('.')) { // 1.000,00
-                    amount = parseFloat(aStr.replace(/\./g, '').replace(',', '.'));
-                } else { // 1,000.00
-                    amount = parseFloat(aStr.replace(/,/g, ''));
-                }
-            } else if (dots > 0) {
-                amount = parseFloat(aStr.replace(/\./g, ''));
-            } else if (commas > 0) {
-                if (aStr.match(/,\d{2}$/)) {
-                    amount = parseFloat(aStr.replace(',', '.'));
-                } else {
-                    amount = parseFloat(aStr.replace(/,/g, ''));
-                }
-            } else {
-                amount = parseFloat(aStr);
-            }
-            if (isNaN(amount) || amount === 0) return;
-
-            // CLEANUP DESCRIPTION
-            // Remove common noise
-            let cleanDesc = entry.desc.replace(/[\r\n]+/g, ' ')
-                .replace(/[\*\-\_\$]/g, ' ')
-                .replace(/[0-9]{5,}/g, '') // Remove long IDs
-                .replace(/\b(GASTO|COMPRA|PAGO|ABONO)\b/gi, '') // Remove generic words
-                .replace(/\s+/g, ' ').trim();
-
-            if (cleanDesc.length < 3) cleanDesc = "Movimiento Bancario";
-
-            // 5. Predict Category
-            const catId = this.predictCategory(cleanDesc);
-            let type = 'GASTO';
-            if (entry.desc.toUpperCase().includes('PAGO') || entry.desc.toUpperCase().includes('ABONO')) type = 'PAGO_DEUDA';
-
-            this.store.addTransaction({
-                type: type, // Default
-                amount: Math.abs(amount),
-                date: entry.dateIso,
-                category_id: catId,
-                account_id: 'acc_2',
-                note: cleanDesc.substring(0, 50)
-            });
-            imported++;
-        });
-
-        if (imported > 0) {
-            alert(`✅ Éxito IA: Se importaron ${imported} movimientos de tu extracto.\n\nMuestra:\nFecha: ${validEntries[0].dateStr}\nDesc: "${validEntries[0].desc}"\nMonto: ${validEntries[0].amountStr}\n\nRevisa la tabla Historial.`);
-            this.render();
+        this.processExtractedText(fullText);
+    } catch (err) {
+        console.error("PDF Error:", err);
+
+        // Specific handling for Password Exception (name can vary by version)
+        if (err.name === 'PasswordException' || err.message.toLowerCase().includes('password')) {
+            alert("❌ No se pudo abrir el PDF: Se requiere contraseña correcta.");
         } else {
+            alert(`❌ Error técnico leyendo el PDF: "${err.message}"\n\nIntenta abrir el PDF en tu navegador para verificar que funciona.`);
+        }
+    }
+}
 
-            alert("⚠️ No se pudieron confirmar transacciones válidas.");
+parseCSV(text) {
+    this.processExtractedText(text);
+}
+
+processExtractedText(text) {
+    // AI Logic: Global Column Extraction (Robust to PDF Layouts)
+
+    // 1. DATES: Find all valid transaction dates
+    // Formats: "20 ENE 2026", "20/01/2026", "20-Ene-26", "20Ene2026"
+    // Improved Regex: Matches DD then Month then Year
+    const dateRegex = /\b(\d{1,2})[\/\-\.\s]?(ENE|JAN|FEB|MAR|ABR|APR|MAY|JUN|JUL|AGO|AUG|SEP|OCT|NOV|DIC|DEC)[A-Za-z]*[\/\-\.\s]?(\d{2,4})\b|\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/gi;
+
+    const allDates = [...text.matchAll(dateRegex)].map(m => m[0]);
+
+    // 2. AMOUNTS: Find all strictly formatted money values
+    // Must have at least one separator (. or ,) to avoid picking up Years (2025) or IDs (89012)
+    // Or be preceded by $ symbol.
+    // Rejects: "2025", "1", "30"
+    // Accepts: "1.000", "1,000", "1.250,50", "$ 5000", "$5000"
+    const amountRegex = /(?:\$ ?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{0,2})?)|(?:\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{0,2})?\b)|(?:\b\d{1,3}[.,]\d{2}\b)/g;
+
+    // We also want to capture simple high numbers if they are clearly cost? No, risky.
+    // Let's stick to formatted amounts OR $ prefixed.
+
+    const allAmountsRaw = [...text.matchAll(amountRegex)].map(m => m[0]);
+
+    // Filter Amounts: Remove likely false positives (Years like 2024, 2025, 2026 often appear in headers)
+    // If a number is exactly a recent year (2020-2030) and has no decimals, skip it.
+    const validAmounts = allAmountsRaw.filter(a => {
+        const val = parseFloat(a.replace(/[^0-9]/g, ''));
+        // Filter Year-like integers if they don't have currency symbol
+        if (!a.includes('$') && val >= 2000 && val <= 2030 && !a.includes(',') && !a.includes('.')) return false;
+        return true;
+    });
+
+    if (allDates.length === 0 || validAmounts.length === 0) {
+        alert(`❌ No encontramos fechas o montos claros.\n\nTexto muestra: "${text.substring(0, 100)}..."`);
+        return;
+    }
+
+    // 3. BLOCK LOGIC (Context-Aware)
+
+    let sampleDesc = "";
+    let debugBlock = ""; // For user feedback
+
+    const dateMatches = [...text.matchAll(dateRegex)];
+    const rawEntries = [];
+
+    for (let i = 0; i < dateMatches.length; i++) {
+        const currentMatch = dateMatches[i];
+        const nextMatch = dateMatches[i + 1];
+
+        const startIdx = currentMatch.index;
+        // Cap block length to avoid capturing unrelated junk
+        const endIdx = nextMatch ? nextMatch.index : Math.min(text.length, startIdx + 400);
+
+        // Extract the "Block" for this transaction
+        const block = text.substring(startIdx, endIdx);
+        if (i === 0) debugBlock = block.substring(0, 100); // Capture sample for debugging
+
+        const dateStr = currentMatch[0];
+
+        // Find Amount in this block
+        const amountMatches = block.match(amountRegex);
+        let amountStr = null;
+        let desc = "";
+
+        if (amountMatches) {
+            // Filter valid amounts (money)
+            const validBlockAmounts = amountMatches.filter(a => {
+                const val = parseFloat(a.replace(/[^0-9]/g, ''));
+                // Ignore years (2025) unless they have currency symbol
+                if (!a.includes('$') && val >= 2000 && val <= 2030 && !a.includes(',') && !a.includes('.')) return false;
+                return true;
+            });
+
+            if (validBlockAmounts.length > 0) {
+                amountStr = validBlockAmounts[0];
+
+                // STRATEGY A: Description matches text *between* Date and Amount
+                // STRATEGY B: Description matches text *after* Amount
+
+                const dateIdxInBlock = block.indexOf(dateStr);
+                const amountIdxInBlock = block.indexOf(amountStr);
+
+                // 1. Try Between
+                if (amountIdxInBlock > dateIdxInBlock) {
+                    const between = block.substring(dateIdxInBlock + dateStr.length, amountIdxInBlock).trim();
+                    // If 'between' is substantial (e.g. > 3 chars and contains letters), use it.
+                    if (between.length > 3 && /[a-zA-Z]/.test(between)) {
+                        desc = between;
+                    } else {
+                        // 2. Try After (Date ... Amount ... Description)
+                        // This handles columns like: DATE | AMOUNT | DESC
+                        const after = block.substring(amountIdxInBlock + amountStr.length).trim();
+                        desc = after;
+                    }
+                } else {
+                    // Amount is BEFORE Date? Unusual but possible in some layouts.
+                    // Try remaining text.
+                    desc = block.replace(dateStr, '').replace(amountStr, '');
+                }
+
+                // CLEANUP DESCRIPTION
+                // 1. Remove Newlines & Punctuation
+                desc = desc.replace(/[\r\n]+/g, ' ')
+                    .replace(/[\*\-\_\$]/g, ' ') // Keep dots/commas as they might be part of merchant names? No, usually valid to remove in statements.
+                    .replace(/[0-9]{4,}/g, '') // Remove long numbers (IDs)
+                    .replace(/\s+/g, ' ').trim();
+
+                // 2. Remove the Amount itself if it leaked into Description (e.g. "ZONA PAGO 400 000")
+                // We try to match "400 000" or "400.000" somewhat loosely
+                let rawAmountNums = amountStr.replace(/[^0-9]/g, ''); // "400000"
+
+                // Try to remove exact sequence
+                if (rawAmountNums.length >= 4) {
+                    // Loose regex: digit, optional char, digit...
+                    // This is hard. Let's just remove the exact string `amountStr` and variations
+                    desc = desc.replace(amountStr, '').trim();
+                    // Also remove "400 000" style
+                    // If we really want to fix "436 438", we need a fuzzy match?
+                    // Let's just remove any sequence of digits that looks like the amount
+                }
+
+                // 3. Simple cleanup
+                if (desc.length < 3) desc = "Movimiento Bancario";
+            }
+        }
+
+        if (amountStr) {
+            if (i === 0) sampleDesc = desc;
+            rawEntries.push({
+                dateStr: dateStr,
+                amountStr: amountStr,
+                desc: desc
+            });
         }
     }
 
-    predictCategory(desc) {
-        const d = desc.toLowerCase();
+    // ... (Date Filtering Code remains same) ...
 
-        // 0. Financiero (Intereses / Manejo)
-        if (d.includes('interes') || d.includes('manejo') || d.includes('cuota admin') || d.includes('gmf') || d.includes('4x1000') || d.includes('gravamen') || d.includes('seguro de vida') || d.includes('comision')) return 'cat_fin_int';
+    // 4. FIND MAX DATE & FILTER OLD ONES
+    // First, parse all dates to objects
+    const parsedEntries = rawEntries.map(e => {
+        let processedDate = e.dateStr.toUpperCase();
+        // Simple clean, keep letters/nums
 
-        // 1. Ocio / Subs
-        if (d.includes('netflix') || d.includes('spotify') || d.includes('youtube') || d.includes('apple') || d.includes('hbo') || d.includes('disney')) return 'cat_subs';
-        if (d.includes('cine') || d.includes('entradas') || d.includes('bar') || d.includes('discoteca') || d.includes('teatro')) return 'cat_9';
+        let finalDateStr = '';
+        let finalDateObj = null;
 
-        // 2. Comida / Restaurantes / Mercado
-        if (d.includes('rappi') || d.includes('uber eats') || d.includes('domicilio') || d.includes('ifood') || d.includes('pizza') || d.includes('burger')) return 'cat_rest';
-        if (d.includes('exito') || d.includes('jumbo') || d.includes('carulla') || d.includes('d1') || d.includes('ara') || d.includes('mercado') || d.includes('olimpica')) return 'cat_2';
-        if (d.includes('restaurante') || d.includes('wok') || d.includes('crepes') || d.includes('el corral') || d.includes('mcdonalds') || d.includes('kfc')) return 'cat_rest';
-        if (d.includes('starbucks') || d.includes('tostao') || d.includes('juan valdez') || d.includes('oma') || d.includes('cafe')) return 'cat_ant';
+        // Regex for cleaned date (Day Month Year)
+        // Matches "30ENE2026" or "30 ENE 2026" or "30/ENE/2026"
+        const dateMatch = processedDate.match(/(\d{1,2})[\/\-\.\s]?([A-Z]{3,})[\/\-\.\s]?(\d{2,4})/);
 
-        // 2.5 Vicios (Alcohol / Tabaco)
-        if (d.includes('licor') || d.includes('cerveza') || d.includes('vino') || d.includes('aguardiente') || d.includes('ron') || d.includes('cigarrillo') || d.includes('tabaco') || d.includes('vape') || d.includes('iqos') || d.includes('coltabaco') || d.includes('dislicores')) return 'cat_vicios';
+        if (dateMatch) {
+            const day = dateMatch[1].padStart(2, '0');
+            const mStr = dateMatch[2].substring(0, 3);
+            let yStr = dateMatch[3];
+            if (yStr.length === 2) yStr = '20' + yStr;
 
-        // 2.6 Ropa / Cuidado Personal
-        if (d.includes('zara') || d.includes('h&m') || d.includes('bershka') || d.includes('pull&bear') || d.includes('stradivarius') || d.includes('koaj') || d.includes('arturo calle') || d.includes('studio f') || d.includes('ela') || d.includes('mattelsa') || d.includes('falabella') || d.includes('adidas') || d.includes('nike')) return 'cat_personal';
-        if (d.includes('peluqueria') || d.includes('barberia') || d.includes('spa') || d.includes('uñas') || d.includes('nails') || d.includes('cosmetico') || d.includes('maquillaje') || d.includes('cromantic') || d.includes('blind') || d.includes('sephora') || d.includes('fedco')) return 'cat_personal';
+            const months = { 'ENE': '01', 'JAN': '01', 'FEB': '02', 'MAR': '03', 'ABR': '04', 'APR': '04', 'MAY': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DIC': '12', 'DEC': '12' };
 
-        // 2.7 Deporte / Gym
-        if (d.includes('smartfit') || d.includes('bodytech') || d.includes('stark') || d.includes('gym') || d.includes('gimnasio') || d.includes('crossfit') || d.includes('fitness') || d.includes('cancha') || d.includes('entrenamiento') || d.includes('decathlon') || d.includes('sport')) return 'cat_deporte';
+            if (months[mStr]) {
+                finalDateStr = `${yStr}-${months[mStr]}-${day}`;
+                finalDateObj = new Date(finalDateStr);
+            }
+        } else if (e.dateStr.includes('/')) {
+            const dParts = e.dateStr.split('/');
+            if (dParts.length === 3) {
+                // Check if part 0 is year or day
+                if (dParts[0].length === 4) {
+                    finalDateStr = `${dParts[0]}-${dParts[1].padStart(2, '0')}-${dParts[2].padStart(2, '0')}`;
+                } else {
+                    finalDateStr = `${dParts[2]}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
+                }
+                if (finalDateStr.length === 10) finalDateObj = new Date(finalDateStr);
+            }
+        }
 
-        // 3. Transporte
-        if (d.includes('uber') || d.includes('didi') || d.includes('cabify') || d.includes('taxi') || d.includes('peaje') || d.includes('gasolina') || d.includes('terpel') || d.includes('primax') || d.includes('parqueadero')) return 'cat_3';
+        return { ...e, dateObj: finalDateObj, dateIso: finalDateStr };
+    }).filter(e => e.dateObj && !isNaN(e.dateObj));
 
-        // 3.5 Deuda (Specific keywords to avoid capturing generic "Credito" in income names)
-        if (d.includes('pago credito') || d.includes('cuota credito') || d.includes('abono credito') || d.includes('cobro credito')) return 'cat_7';
-        if (d.includes('tarjeta') || d.includes('visa') || d.includes('mastercard') || d.includes('credisit') || d.includes('pago t.c')) return 'cat_fin_4';
-
-        // 4. Servicios / Vivienda
-        if (d.includes('codensa') || d.includes('enel') || d.includes('acueducto') || d.includes('luz') || d.includes('agua') || d.includes('publicos')) return 'cat_viv_servicios';
-        if (d.includes('gas') || d.includes('alcantarillado')) return 'cat_viv_servicios';
-        if (d.includes('administracion') || d.includes('arriendo')) return 'cat_1';
-        if (d.includes('claro') || d.includes('movistar') || d.includes('tigo') || d.includes('etb')) return 'cat_viv_net';
-
-        // 5. Salud
-        if (d.includes('farma') || d.includes('cruz verde') || d.includes('medicina') || d.includes('doctor') || d.includes('eps') || d.includes('colsanitas')) return 'cat_4';
-
-        // Default
-        return 'cat_10'; // Otros
+    if (parsedEntries.length === 0) {
+        alert("❌ No pudimos procesar fechas válidas.");
+        return;
     }
 
-    renderInsightsPage() {
-        this.pageTitle.textContent = 'Análisis de tus Finanzas 🔍';
+    const maxTime = Math.max(...parsedEntries.map(e => e.dateObj.getTime()));
+    const maxDate = new Date(maxTime);
 
-        // 1. CHART SECTION
-        let html = `
+    // STRICT FILTER: Only allow transactions within 45 days of the latest date
+    // This removes "Movimientos meses anteriores" (Installment history) often present in statements
+    // Assumes a standard 30-day billing cycle + 15 days buffer
+    const CUTOFF_DAYS = 45;
+
+    // UNIQUE SET for Deduplication
+    const uniqueSignatures = new Set();
+
+    const validEntries = parsedEntries.filter(e => {
+        // 1. Date Filter (Relative to the LATEST date in the doc, not today)
+        const diffTime = (maxDate - e.dateObj); // Positive result
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Reject future dates (parsing errors) or too old (historical context)
+        if (diffDays < -5) return false; // Date is > 5 days ahead of max? Fishy.
+        if (diffDays > CUTOFF_DAYS) return false;
+
+        // 2. Amount Filter (Noise Reduction)
+        let aVal = parseFloat(e.amountStr.replace(/[^0-9\.,]/g, '').replace(/\./g, '').replace(',', '.'));
+        if (isNaN(aVal)) return false;
+
+        if (aVal < 50) return false; // Too small noise
+        if (aVal > 2000 && aVal < 2035 && Number.isInteger(aVal)) return false; // Likely a Year (2025)
+
+        // 3. Deduplication (Weak)
+        // Signature: Date + Amount + ShortDesc
+        // This allows "Uber $10" and "Rappi $10" on same day, but filters exact duplicates (shadow text)
+        const cleanDescSnippet = e.desc.substring(0, 5).replace(/[^a-zA-Z]/g, '');
+        const sig = `${e.dateIso}|${Math.round(aVal)}|${cleanDescSnippet}`;
+
+        if (uniqueSignatures.has(sig)) return false;
+        uniqueSignatures.add(sig);
+
+        return true;
+    });
+
+    let imported = 0;
+    validEntries.forEach(entry => {
+        // PARSE AMOUNT
+        let aStr = entry.amountStr.replace('$', '').replace(/\s/g, '').trim();
+        let amount = 0;
+        const commas = (aStr.match(/,/g) || []).length;
+        const dots = (aStr.match(/\./g) || []).length;
+        if (dots > 0 && commas > 0) {
+            if (aStr.lastIndexOf(',') > aStr.lastIndexOf('.')) { // 1.000,00
+                amount = parseFloat(aStr.replace(/\./g, '').replace(',', '.'));
+            } else { // 1,000.00
+                amount = parseFloat(aStr.replace(/,/g, ''));
+            }
+        } else if (dots > 0) {
+            amount = parseFloat(aStr.replace(/\./g, ''));
+        } else if (commas > 0) {
+            if (aStr.match(/,\d{2}$/)) {
+                amount = parseFloat(aStr.replace(',', '.'));
+            } else {
+                amount = parseFloat(aStr.replace(/,/g, ''));
+            }
+        } else {
+            amount = parseFloat(aStr);
+        }
+        if (isNaN(amount) || amount === 0) return;
+
+        // CLEANUP DESCRIPTION
+        // Remove common noise
+        let cleanDesc = entry.desc.replace(/[\r\n]+/g, ' ')
+            .replace(/[\*\-\_\$]/g, ' ')
+            .replace(/[0-9]{5,}/g, '') // Remove long IDs
+            .replace(/\b(GASTO|COMPRA|PAGO|ABONO)\b/gi, '') // Remove generic words
+            .replace(/\s+/g, ' ').trim();
+
+        if (cleanDesc.length < 3) cleanDesc = "Movimiento Bancario";
+
+        // 5. Predict Category
+        const catId = this.predictCategory(cleanDesc);
+        let type = 'GASTO';
+        if (entry.desc.toUpperCase().includes('PAGO') || entry.desc.toUpperCase().includes('ABONO')) type = 'PAGO_DEUDA';
+
+        this.store.addTransaction({
+            type: type, // Default
+            amount: Math.abs(amount),
+            date: entry.dateIso,
+            category_id: catId,
+            account_id: 'acc_2',
+            note: cleanDesc.substring(0, 50)
+        });
+        imported++;
+    });
+
+    if (imported > 0) {
+        alert(`✅ Éxito IA: Se importaron ${imported} movimientos de tu extracto.\n\nMuestra:\nFecha: ${validEntries[0].dateStr}\nDesc: "${validEntries[0].desc}"\nMonto: ${validEntries[0].amountStr}\n\nRevisa la tabla Historial.`);
+        this.render();
+    } else {
+
+        alert("⚠️ No se pudieron confirmar transacciones válidas.");
+    }
+}
+
+predictCategory(desc) {
+    const d = desc.toLowerCase();
+
+    // 0. Financiero (Intereses / Manejo)
+    if (d.includes('interes') || d.includes('manejo') || d.includes('cuota admin') || d.includes('gmf') || d.includes('4x1000') || d.includes('gravamen') || d.includes('seguro de vida') || d.includes('comision')) return 'cat_fin_int';
+
+    // 1. Ocio / Subs
+    if (d.includes('netflix') || d.includes('spotify') || d.includes('youtube') || d.includes('apple') || d.includes('hbo') || d.includes('disney')) return 'cat_subs';
+    if (d.includes('cine') || d.includes('entradas') || d.includes('bar') || d.includes('discoteca') || d.includes('teatro')) return 'cat_9';
+
+    // 2. Comida / Restaurantes / Mercado
+    if (d.includes('rappi') || d.includes('uber eats') || d.includes('domicilio') || d.includes('ifood') || d.includes('pizza') || d.includes('burger')) return 'cat_rest';
+    if (d.includes('exito') || d.includes('jumbo') || d.includes('carulla') || d.includes('d1') || d.includes('ara') || d.includes('mercado') || d.includes('olimpica')) return 'cat_2';
+    if (d.includes('restaurante') || d.includes('wok') || d.includes('crepes') || d.includes('el corral') || d.includes('mcdonalds') || d.includes('kfc')) return 'cat_rest';
+    if (d.includes('starbucks') || d.includes('tostao') || d.includes('juan valdez') || d.includes('oma') || d.includes('cafe')) return 'cat_ant';
+
+    // 2.5 Vicios (Alcohol / Tabaco)
+    if (d.includes('licor') || d.includes('cerveza') || d.includes('vino') || d.includes('aguardiente') || d.includes('ron') || d.includes('cigarrillo') || d.includes('tabaco') || d.includes('vape') || d.includes('iqos') || d.includes('coltabaco') || d.includes('dislicores')) return 'cat_vicios';
+
+    // 2.6 Ropa / Cuidado Personal
+    if (d.includes('zara') || d.includes('h&m') || d.includes('bershka') || d.includes('pull&bear') || d.includes('stradivarius') || d.includes('koaj') || d.includes('arturo calle') || d.includes('studio f') || d.includes('ela') || d.includes('mattelsa') || d.includes('falabella') || d.includes('adidas') || d.includes('nike')) return 'cat_personal';
+    if (d.includes('peluqueria') || d.includes('barberia') || d.includes('spa') || d.includes('uñas') || d.includes('nails') || d.includes('cosmetico') || d.includes('maquillaje') || d.includes('cromantic') || d.includes('blind') || d.includes('sephora') || d.includes('fedco')) return 'cat_personal';
+
+    // 2.7 Deporte / Gym
+    if (d.includes('smartfit') || d.includes('bodytech') || d.includes('stark') || d.includes('gym') || d.includes('gimnasio') || d.includes('crossfit') || d.includes('fitness') || d.includes('cancha') || d.includes('entrenamiento') || d.includes('decathlon') || d.includes('sport')) return 'cat_deporte';
+
+    // 3. Transporte
+    if (d.includes('uber') || d.includes('didi') || d.includes('cabify') || d.includes('taxi') || d.includes('peaje') || d.includes('gasolina') || d.includes('terpel') || d.includes('primax') || d.includes('parqueadero')) return 'cat_3';
+
+    // 3.5 Deuda (Specific keywords to avoid capturing generic "Credito" in income names)
+    if (d.includes('pago credito') || d.includes('cuota credito') || d.includes('abono credito') || d.includes('cobro credito')) return 'cat_7';
+    if (d.includes('tarjeta') || d.includes('visa') || d.includes('mastercard') || d.includes('credisit') || d.includes('pago t.c')) return 'cat_fin_4';
+
+    // 4. Servicios / Vivienda
+    if (d.includes('codensa') || d.includes('enel') || d.includes('acueducto') || d.includes('luz') || d.includes('agua') || d.includes('publicos')) return 'cat_viv_servicios';
+    if (d.includes('gas') || d.includes('alcantarillado')) return 'cat_viv_servicios';
+    if (d.includes('administracion') || d.includes('arriendo')) return 'cat_1';
+    if (d.includes('claro') || d.includes('movistar') || d.includes('tigo') || d.includes('etb')) return 'cat_viv_net';
+
+    // 5. Salud
+    if (d.includes('farma') || d.includes('cruz verde') || d.includes('medicina') || d.includes('doctor') || d.includes('eps') || d.includes('colsanitas')) return 'cat_4';
+
+    // Default
+    return 'cat_10'; // Otros
+}
+
+renderInsightsPage() {
+    this.pageTitle.textContent = 'Análisis de tus Finanzas 🔍';
+
+    // 1. CHART SECTION
+    let html = `
             <div class="card" style="margin-bottom: 2rem;">
                 <h3>Evolución Financiera (6 Meses) 📈</h3>
                 <div style="height: 300px; position: relative;">
@@ -2995,50 +3102,50 @@ class UIManager {
                 <h3 style="margin-bottom: 1rem;">Diagnóstico Mensual 🩺</h3>
         `;
 
-        const insights = this.advisor.analyze(this.viewDate.getMonth(), this.viewDate.getFullYear());
+    const insights = this.advisor.analyze(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
-        if (insights.length === 0) {
-            html += `
+    if (insights.length === 0) {
+        html += `
                 <div style="text-align: center; padding: 2rem 1.5rem;">
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">🔍</div>
                     <h3 style="margin: 0 0 8px; color: #333;">Aún no hay suficientes datos</h3>
                     <p style="color: #888; margin: 0; font-size: 0.9rem; line-height: 1.5;">Registra al menos <strong>5 movimientos</strong> (ingresos y gastos) para que la IA pueda analizar tus patrones financieros y darte un diagnóstico completo.</p>
                 </div>
             `;
-        } else {
-            insights.forEach(i => {
-                try {
-                    const potentialHtml = i.savingsPotential
-                        ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
-                        : '';
+    } else {
+        insights.forEach(i => {
+            try {
+                const potentialHtml = i.savingsPotential
+                    ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
+                    : '';
 
-                    // Map advisor type to severity (advisor returns: critical, warning, info)
-                    const severityMap = { 'critical': 'HIGH', 'warning': 'MEDIUM', 'info': 'LOW' };
-                    const severity = severityMap[i.type] || i.severity || 'INFO';
+                // Map advisor type to severity (advisor returns: critical, warning, info)
+                const severityMap = { 'critical': 'HIGH', 'warning': 'MEDIUM', 'info': 'LOW' };
+                const severity = severityMap[i.type] || i.severity || 'INFO';
 
-                    // Color mapping
-                    const colors = {
-                        'HIGH': '#F44336',
-                        'MEDIUM': '#FF9800',
-                        'LOW': '#4CAF50',
-                        'INFO': '#2196F3'
-                    };
-                    const color = colors[severity] || '#666';
+                // Color mapping
+                const colors = {
+                    'HIGH': '#F44336',
+                    'MEDIUM': '#FF9800',
+                    'LOW': '#4CAF50',
+                    'INFO': '#2196F3'
+                };
+                const color = colors[severity] || '#666';
 
-                    // Icon mapping
-                    const icons = {
-                        'HIGH': 'alert-circle',
-                        'MEDIUM': 'alert-triangle',
-                        'LOW': 'check-circle',
-                        'INFO': 'info'
-                    };
-                    const icon = icons[severity] || 'info';
+                // Icon mapping
+                const icons = {
+                    'HIGH': 'alert-circle',
+                    'MEDIUM': 'alert-triangle',
+                    'LOW': 'check-circle',
+                    'INFO': 'info'
+                };
+                const icon = icons[severity] || 'info';
 
-                    // Use message or description (advisor uses 'message')
-                    const desc = i.description || i.message || '';
-                    const rec = i.recommendation || '';
+                // Use message or description (advisor uses 'message')
+                const desc = i.description || i.message || '';
+                const rec = i.recommendation || '';
 
-                    html += `
+                html += `
                         <div class="insight-card severity-${severity.toLowerCase()}">
                             <div class="insight-header">
                                 <span class="insight-title" style="color:${color}; display:flex; align-items:center; gap:0.5rem;">
@@ -3053,20 +3160,20 @@ class UIManager {
                             </div>` : ''}
                         </div>
                     `;
-                } catch (err) {
-                    console.error('Error rendering insight:', err, i);
-                }
-            });
-        }
+            } catch (err) {
+                console.error('Error rendering insight:', err, i);
+            }
+        });
+    }
 
-        html += '</div>'; // Close max-width container
+    html += '</div>'; // Close max-width container
 
-        // --- AI ADVISOR SECTION (Gemini / ChatGPT) ---
-        const hasKey = this.aiAdvisor && this.aiAdvisor.hasApiKey();
-        const cached = hasKey ? this.aiAdvisor.getCachedResponse(this.viewDate.getMonth(), this.viewDate.getFullYear()) : null;
-        const providerName = this.aiAdvisor ? (this.aiAdvisor.getProvider() === 'openai' ? 'ChatGPT' : 'Gemini') : 'IA';
+    // --- AI ADVISOR SECTION (Gemini / ChatGPT) ---
+    const hasKey = this.aiAdvisor && this.aiAdvisor.hasApiKey();
+    const cached = hasKey ? this.aiAdvisor.getCachedResponse(this.viewDate.getMonth(), this.viewDate.getFullYear()) : null;
+    const providerName = this.aiAdvisor ? (this.aiAdvisor.getProvider() === 'openai' ? 'ChatGPT' : 'Gemini') : 'IA';
 
-        html += `
+    html += `
             <div class="card" style="margin-top: 2rem; border: 2px solid ${hasKey ? '#E91E63' : '#ddd'}; border-radius: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                     <h3 style="margin: 0;">🧠 Asesor IA Personal</h3>
@@ -3074,8 +3181,8 @@ class UIManager {
                 </div>
         `;
 
-        if (!hasKey) {
-            html += `
+    if (!hasKey) {
+        html += `
                 <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
                     <p style="font-size: 2rem; margin-bottom: 0.5rem;">🤖</p>
                     <p style="color: #555; margin-bottom: 1rem;">Conecta tu cuenta de <strong>Google Gemini</strong> (gratis) o <strong>ChatGPT</strong> para recibir consejos personalizados con IA real.</p>
@@ -3085,8 +3192,8 @@ class UIManager {
                     <p style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">Tus datos se envían directo a la IA desde tu celular. No pasan por ningún servidor.</p>
                 </div>
             `;
-        } else if (cached) {
-            html += `
+    } else if (cached) {
+        html += `
                 <div id="ai-response" style="white-space: pre-line; line-height: 1.7; font-size: 0.95rem; color: #444;">
                     ${cached}
                 </div>
@@ -3097,8 +3204,8 @@ class UIManager {
                     </button>
                 </div>
             `;
-        } else {
-            html += `
+    } else {
+        html += `
                 <div id="ai-response" style="text-align: center; padding: 1rem;">
                     <p style="color: #666;">¿Listo para recibir tu consejo financiero personalizado?</p>
                 </div>
@@ -3108,199 +3215,199 @@ class UIManager {
                     </button>
                 </div>
             `;
-        }
+    }
 
-        html += '</div>'; // Close AI card
+    html += '</div>'; // Close AI card
 
-        this.container.innerHTML = html;
-        if (window.feather) window.feather.replace();
+    this.container.innerHTML = html;
+    if (window.feather) window.feather.replace();
 
-        // Bind AI buttons
-        const askBtn = document.getElementById('ai-ask-btn');
-        const refreshBtn = document.getElementById('ai-refresh-btn');
+    // Bind AI buttons
+    const askBtn = document.getElementById('ai-ask-btn');
+    const refreshBtn = document.getElementById('ai-refresh-btn');
 
-        const handleAIRequest = async () => {
-            const responseDiv = document.getElementById('ai-response');
-            const btn = askBtn || refreshBtn;
-            if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando...'; }
-            if (responseDiv) {
-                responseDiv.innerHTML = `
+    const handleAIRequest = async () => {
+        const responseDiv = document.getElementById('ai-response');
+        const btn = askBtn || refreshBtn;
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando...'; }
+        if (responseDiv) {
+            responseDiv.innerHTML = `
                     <div style="text-align: center; padding: 2rem;">
                         <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #ddd; border-top-color: #E91E63; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                         <p style="color: #999; margin-top: 1rem;">La IA está analizando tus finanzas...</p>
                     </div>
                 `;
-            }
+        }
 
-            try {
-                const advice = await this.aiAdvisor.getAdvice(this.viewDate.getMonth(), this.viewDate.getFullYear());
-                if (responseDiv) {
-                    responseDiv.style.textAlign = 'left';
-                    responseDiv.innerHTML = advice;
-                }
-                if (btn) { btn.textContent = '✅ Listo'; }
-            } catch (err) {
-                console.error('AI Request Error:', err);
-                const messages = {
-                    'NO_KEY': '⚙️ Configura tu API Key en Configuración.',
-                    'INVALID_KEY': '❌ API Key inválida. revísala.',
-                    'RATE_LIMIT': '⏳ Muchas consultas seguidas. Por favor, espera 60 segundos antes de intentar de nuevo.',
-                    'NETWORK_ERROR': '📡 Sin conexión a internet.',
-                    'EMPTY_RESPONSE': '🤷 La IA no pudo generar una respuesta. Intenta de nuevo.',
-                    'API_ERROR': '⚠️ Error del servicio de IA (Google/OpenAI). Intenta más tarde.'
-                };
-                if (responseDiv) {
-                    responseDiv.innerHTML = `<div style="background:#fff5f5; border:1px solid #feb2b2; padding:1.5rem; border-radius:8px; color: #c53030; text-align: center;">
+        try {
+            const advice = await this.aiAdvisor.getAdvice(this.viewDate.getMonth(), this.viewDate.getFullYear());
+            if (responseDiv) {
+                responseDiv.style.textAlign = 'left';
+                responseDiv.innerHTML = advice;
+            }
+            if (btn) { btn.textContent = '✅ Listo'; }
+        } catch (err) {
+            console.error('AI Request Error:', err);
+            const messages = {
+                'NO_KEY': '⚙️ Configura tu API Key en Configuración.',
+                'INVALID_KEY': '❌ API Key inválida. revísala.',
+                'RATE_LIMIT': '⏳ Muchas consultas seguidas. Por favor, espera 60 segundos antes de intentar de nuevo.',
+                'NETWORK_ERROR': '📡 Sin conexión a internet.',
+                'EMPTY_RESPONSE': '🤷 La IA no pudo generar una respuesta. Intenta de nuevo.',
+                'API_ERROR': '⚠️ Error del servicio de IA (Google/OpenAI). Intenta más tarde.'
+            };
+            if (responseDiv) {
+                responseDiv.innerHTML = `<div style="background:#fff5f5; border:1px solid #feb2b2; padding:1.5rem; border-radius:8px; color: #c53030; text-align: center;">
                         <p style="font-weight:bold; margin-bottom:0.5rem;">No pudimos consultar a la IA</p>
                         <p style="font-size:0.9rem;">${messages[err.message] || 'Error inesperado: ' + err.message}</p>
                     </div>`;
-                }
-                if (btn) { btn.disabled = false; btn.textContent = '🔄 Reintentar'; }
             }
-        };
+            if (btn) { btn.disabled = false; btn.textContent = '🔄 Reintentar'; }
+        }
+    };
 
-        if (askBtn) askBtn.addEventListener('click', handleAIRequest);
-        if (refreshBtn) refreshBtn.addEventListener('click', handleAIRequest);
+    if (askBtn) askBtn.addEventListener('click', handleAIRequest);
+    if (refreshBtn) refreshBtn.addEventListener('click', handleAIRequest);
 
-        // Render Chart
-        this.renderTrendChart();
+    // Render Chart
+    this.renderTrendChart();
+}
+
+renderTrendChart() {
+    const ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+
+    // Get last 6 months data
+    const labels = [];
+    const incomeData = [];
+    const expenseData = [];
+    const savingsData = [];
+
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthName = d.toLocaleDateString('es-CO', { month: 'short' });
+        labels.push(monthName);
+
+        const summary = this.store.getFinancialSummary(d.getMonth(), d.getFullYear());
+        incomeData.push(summary.income);
+        expenseData.push(summary.expenses + summary.debt_payment); // Expenses + Debt as "Outflow"
+        savingsData.push(summary.savings + summary.investment); // Wealth building
     }
 
-    renderTrendChart() {
-        const ctx = document.getElementById('trendChart');
-        if (!ctx) return;
-
-        // Get last 6 months data
-        const labels = [];
-        const incomeData = [];
-        const expenseData = [];
-        const savingsData = [];
-
-        const today = new Date();
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const monthName = d.toLocaleDateString('es-CO', { month: 'short' });
-            labels.push(monthName);
-
-            const summary = this.store.getFinancialSummary(d.getMonth(), d.getFullYear());
-            incomeData.push(summary.income);
-            expenseData.push(summary.expenses + summary.debt_payment); // Expenses + Debt as "Outflow"
-            savingsData.push(summary.savings + summary.investment); // Wealth building
-        }
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Ingresos',
-                        data: incomeData,
-                        borderColor: '#2E7D32', // Green
-                        backgroundColor: '#2E7D32',
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Gastos + Deuda',
-                        data: expenseData,
-                        borderColor: '#F44336', // Red
-                        backgroundColor: '#F44336',
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Ahorro + Inversión',
-                        data: savingsData,
-                        borderColor: '#2196F3', // Blue
-                        backgroundColor: '#2196F3',
-                        tension: 0.4,
-                        borderDash: [5, 5]
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Ingresos',
+                    data: incomeData,
+                    borderColor: '#2E7D32', // Green
+                    backgroundColor: '#2E7D32',
+                    tension: 0.4
+                },
+                {
+                    label: 'Gastos + Deuda',
+                    data: expenseData,
+                    borderColor: '#F44336', // Red
+                    backgroundColor: '#F44336',
+                    tension: 0.4
+                },
+                {
+                    label: 'Ahorro + Inversión',
+                    data: savingsData,
+                    borderColor: '#2196F3', // Blue
+                    backgroundColor: '#2196F3',
+                    tension: 0.4,
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            return ` ${context.dataset.label}: ${this.formatCurrency(context.raw)}`;
+                        }
                     }
-                ]
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => {
-                                return ` ${context.dataset.label}: ${this.formatCurrency(context.raw)}`;
-                            }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f0f0f0' },
+                    ticks: {
+                        callback: (value) => {
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                            if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
+                            return value;
                         }
                     }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f0f0f0' },
-                        ticks: {
-                            callback: (value) => {
-                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
-                                if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
-                                return value;
-                            }
-                        }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
+                x: {
+                    grid: { display: false }
                 }
             }
-        });
-    }
+        }
+    });
+}
 
-    renderSettings() {
-        this.pageTitle.textContent = 'Configuración ⚙️';
-        const conf = this.store.config;
+renderSettings() {
+    this.pageTitle.textContent = 'Configuración ⚙️';
+    const conf = this.store.config;
 
-        // Filter categories for Budget
-        const categories = this.store.categories.filter(c =>
-            ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group) &&
-            c.id !== 'cat_fin_4' // Quitar Tarjeta de Crédito del presupuesto (Settings)
-        );
+    // Filter categories for Budget
+    const categories = this.store.categories.filter(c =>
+        ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group) &&
+        c.id !== 'cat_fin_4' // Quitar Tarjeta de Crédito del presupuesto (Settings)
+    );
 
-        // 1. Calculate floors per category
-        const budgets = conf.budgets || {};
-        const fixedFloor = {};
-        (conf.fixed_expenses || []).forEach(fe => {
-            if (fe.category_id && fe.amount) {
-                fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
-            }
-        });
+    // 1. Calculate floors per category
+    const budgets = conf.budgets || {};
+    const fixedFloor = {};
+    (conf.fixed_expenses || []).forEach(fe => {
+        if (fe.category_id && fe.amount) {
+            fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+        }
+    });
 
-        // Sorting & Grouping Logic
-        const fixedCats = categories.filter(c => (fixedFloor[c.id] || 0) > 0);
-        const savingCat = categories.find(c => c.id === 'cat_5');
-        const groups = {
-            'VIVIENDA': 'Vivienda y Servicios 🏠',
-            'NECESIDADES': 'Necesidades y Transporte 🛒',
-            'ESTILO_DE_VIDA': 'Estilo de Vida y Ocio 🍿',
-            'FINANCIERO': 'Finanzas y Deuda 💳',
-            'CRECIMIENTO': 'Crecimiento y Educación 📚',
-            'OTROS': 'Otros Gastos 🌀'
-        };
+    // Sorting & Grouping Logic
+    const fixedCats = categories.filter(c => (fixedFloor[c.id] || 0) > 0);
+    const savingCat = categories.find(c => c.id === 'cat_5');
+    const groups = {
+        'VIVIENDA': 'Vivienda y Servicios 🏠',
+        'NECESIDADES': 'Necesidades y Transporte 🛒',
+        'ESTILO_DE_VIDA': 'Estilo de Vida y Ocio 🍿',
+        'FINANCIERO': 'Finanzas y Deuda 💳',
+        'CRECIMIENTO': 'Crecimiento y Educación 📚',
+        'OTROS': 'Otros Gastos 🌀'
+    };
 
-        const renderRow = (c, isFixed = false, isSaving = false) => {
-            const limit = budgets[c.id] || 0;
-            const floor = fixedFloor[c.id] || 0;
-            // For fixed, we strictly show the floor if it's not set or if we want to lock it
-            const displayVal = isFixed ? this.formatNumberWithDots(Math.max(limit, floor)) : (limit > 0 ? this.formatNumberWithDots(limit) : '');
+    const renderRow = (c, isFixed = false, isSaving = false) => {
+        const limit = budgets[c.id] || 0;
+        const floor = fixedFloor[c.id] || 0;
+        // For fixed, we strictly show the floor if it's not set or if we want to lock it
+        const displayVal = isFixed ? this.formatNumberWithDots(Math.max(limit, floor)) : (limit > 0 ? this.formatNumberWithDots(limit) : '');
 
-            let extraStyle = 'background: white; border: 1px solid #edf2f7;';
-            let labelExtra = '';
-            let inputAttrs = '';
+        let extraStyle = 'background: white; border: 1px solid #edf2f7;';
+        let labelExtra = '';
+        let inputAttrs = '';
 
-            if (isFixed) {
-                extraStyle = 'background: #f1f5f9; border-left: 5px solid #3b82f6;';
-                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO 🔒</span>';
-                inputAttrs = `readonly title="Gasto fijo no modificable"`;
-            } else if (isSaving) {
-                extraStyle = 'background: #f0fdf4; border-left: 5px solid #10b981;';
-                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META ⭐</span>';
-            }
+        if (isFixed) {
+            extraStyle = 'background: #f1f5f9; border-left: 5px solid #3b82f6;';
+            labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO 🔒</span>';
+            inputAttrs = `readonly title="Gasto fijo no modificable"`;
+        } else if (isSaving) {
+            extraStyle = 'background: #f0fdf4; border-left: 5px solid #10b981;';
+            labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META ⭐</span>';
+        }
 
-            return `
+        return `
                 <div class="form-group" style="margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; transition: all 0.2s; ${extraStyle}">
                     <label style="margin: 0; flex: 1; font-weight: ${isFixed || isSaving ? '700' : '500'}; color: #334155; font-size: 0.9rem;">
                         ${c.name} ${labelExtra}
@@ -3317,9 +3424,9 @@ class UIManager {
                     </div>
                 </div>
             `;
-        };
+    };
 
-        let budgetInputs = `
+    let budgetInputs = `
             <div style="margin-bottom: 1rem;">
                 <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">📌 Gastos Fijos (Compromisos)</h4>
                 ${fixedCats.map(c => renderRow(c, true)).join('')}
@@ -3332,19 +3439,19 @@ class UIManager {
             ` : ''}
         `;
 
-        Object.keys(groups).forEach(gKey => {
-            const groupCats = categories.filter(c => c.group === gKey && (fixedFloor[c.id] || 0) === 0 && c.id !== 'cat_5');
-            if (groupCats.length > 0) {
-                budgetInputs += `
+    Object.keys(groups).forEach(gKey => {
+        const groupCats = categories.filter(c => c.group === gKey && (fixedFloor[c.id] || 0) === 0 && c.id !== 'cat_5');
+        if (groupCats.length > 0) {
+            budgetInputs += `
                     <div style="margin-bottom: 1rem;">
                         <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${groups[gKey]}</h4>
                         ${groupCats.map(c => renderRow(c)).join('')}
                     </div>
                 `;
-            }
-        });
+        }
+    });
 
-        this.container.innerHTML = `
+    this.container.innerHTML = `
             <div class="settings-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
                 <!-- Column 1: Profile -->
                 <div class="card">
@@ -3620,336 +3727,336 @@ class UIManager {
             </div>
         `;
 
-        // Direct trigger for first sum update
-        setTimeout(() => {
-            this.updateBudgetTotal();
-            this.updateProfileInfo(conf.spending_profile || 'BALANCEADO');
-        }, 500);
+    // Direct trigger for first sum update
+    setTimeout(() => {
+        this.updateBudgetTotal();
+        this.updateProfileInfo(conf.spending_profile || 'BALANCEADO');
+    }, 500);
 
-        // EVENT DELEGATION: Universal Form and Button Handler
-        this.container.onclick = (e) => {
-            const target = e.target;
+    // EVENT DELEGATION: Universal Form and Button Handler
+    this.container.onclick = (e) => {
+        const target = e.target;
 
-            // Profile Guide Button
-            if (target.id === 'profile-info-btn' || target.closest('#profile-info-btn')) {
-                const modal = document.getElementById('profile-modal');
-                if (modal) modal.classList.remove('hidden');
+        // Profile Guide Button
+        if (target.id === 'profile-info-btn' || target.closest('#profile-info-btn')) {
+            const modal = document.getElementById('profile-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        // Force Update Button (The "Nuclear" button in Settings)
+        if (target.id === 'force-update-env-btn' || target.closest('#force-update-env-btn')) {
+            this.performNuclearUpdate();
+        }
+
+        // Auto-Suggest Budgets
+        if (target.id === 'auto-budget-btn' || target.closest('#auto-budget-btn')) {
+            // Read LIVE values from form to avoid requiring "Save Profile" first
+            const incomeInput = document.querySelector('input[name="monthly_income_target"]');
+            const profileSelect = document.querySelector('select[name="spending_profile"]');
+
+            // Robust parsing: remove anything that is not a digit
+            const incomeStr = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
+            const income = parseFloat(incomeStr) || 0;
+            const profile = profileSelect ? profileSelect.value : 'BALANCEADO';
+
+            if (income <= 0) {
+                alert('⚠️ Por favor ingresa un "Ingreso Mensual Objetivo" válido en la columna de Perfil (izquierda).');
+                if (incomeInput) incomeInput.focus();
+                return;
             }
 
-            // Force Update Button (The "Nuclear" button in Settings)
-            if (target.id === 'force-update-env-btn' || target.closest('#force-update-env-btn')) {
-                this.performNuclearUpdate();
+            // DEBUGGING / CONFIRMATION FOR USER
+            const fixedFloorDebug = {};
+            (this.store.config.fixed_expenses || []).forEach(fe => {
+                if (fe.category_id && fe.amount) {
+                    fixedFloorDebug[fe.category_id] = (fixedFloorDebug[fe.category_id] || 0) + fe.amount;
+                }
+            });
+            const totalFixedDebug = Object.values(fixedFloorDebug).reduce((a, b) => a + b, 0);
+
+            if (!confirm(`🤖 INICIO DE CÁLCULO:\n\n• Ingreso detectado: $${this.formatNumberWithDots(income)}\n• Gastos Fijos detectados: $${this.formatNumberWithDots(totalFixedDebug)}\n• Perfil: ${profile}\n\n💡 TIP: Si pones $0 en una categoría, la IA no le sugerirá presupuesto y repartirá ese dinero en las demás.\n\n¿Proceder con la sugerencia exacta?`)) {
+                return;
             }
 
-            // Auto-Suggest Budgets
-            if (target.id === 'auto-budget-btn' || target.closest('#auto-budget-btn')) {
-                // Read LIVE values from form to avoid requiring "Save Profile" first
-                const incomeInput = document.querySelector('input[name="monthly_income_target"]');
-                const profileSelect = document.querySelector('select[name="spending_profile"]');
+            // Balanced distributions (Summing to ~100%)
+            const distributions = this.getDistributions();
 
-                // Robust parsing: remove anything that is not a digit
-                const incomeStr = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
-                const income = parseFloat(incomeStr) || 0;
-                const profile = profileSelect ? profileSelect.value : 'BALANCEADO';
+            const weights = distributions[profile] || distributions['BALANCEADO'];
+            let appliedCount = 0;
 
-                if (income <= 0) {
-                    alert('⚠️ Por favor ingresa un "Ingreso Mensual Objetivo" válido en la columna de Perfil (izquierda).');
-                    if (incomeInput) incomeInput.focus();
-                    return;
+            // 1. Calculate floors per category
+            const fixedFloor = {};
+            (this.store.config.fixed_expenses || []).forEach(fe => {
+                if (fe.category_id && fe.amount) {
+                    fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
                 }
+            });
 
-                // DEBUGGING / CONFIRMATION FOR USER
-                const fixedFloorDebug = {};
-                (this.store.config.fixed_expenses || []).forEach(fe => {
-                    if (fe.category_id && fe.amount) {
-                        fixedFloorDebug[fe.category_id] = (fixedFloorDebug[fe.category_id] || 0) + fe.amount;
-                    }
-                });
-                const totalFixedDebug = Object.values(fixedFloorDebug).reduce((a, b) => a + b, 0);
+            // 2. Identify active categories (those with inputs. Exclude ONLY if explicitly set to 0)
+            const activeCats = this.store.categories.filter(cat => {
+                const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                if (!input) return false;
 
-                if (!confirm(`🤖 INICIO DE CÁLCULO:\n\n• Ingreso detectado: $${this.formatNumberWithDots(income)}\n• Gastos Fijos detectados: $${this.formatNumberWithDots(totalFixedDebug)}\n• Perfil: ${profile}\n\n💡 TIP: Si pones $0 en una categoría, la IA no le sugerirá presupuesto y repartirá ese dinero en las demás.\n\n¿Proceder con la sugerencia exacta?`)) {
-                    return;
-                }
+                const valClean = input.value.replace(/\D/g, '');
+                // Exclude ONLY if it's explicitly "0". 
+                // Empty fields (valClean === "") MUST be included for new users.
+                if (valClean === '0' && input.value !== '') return false;
 
-                // Balanced distributions (Summing to ~100%)
-                const distributions = this.getDistributions();
+                return true;
+            });
 
-                const weights = distributions[profile] || distributions['BALANCEADO'];
-                let appliedCount = 0;
+            // 3. Sum total fixed obligations for these categories
+            const totalFixed = activeCats.reduce((sum, cat) => sum + (fixedFloor[cat.id] || 0), 0);
+            const surplus = income - totalFixed;
 
-                // 1. Calculate floors per category
-                const fixedFloor = {};
-                (this.store.config.fixed_expenses || []).forEach(fe => {
-                    if (fe.category_id && fe.amount) {
-                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
-                    }
-                });
-
-                // 2. Identify active categories (those with inputs. Exclude ONLY if explicitly set to 0)
-                const activeCats = this.store.categories.filter(cat => {
+            if (surplus < 0) {
+                // Scenario A: Deficit - Fixed expenses already exceed income
+                activeCats.forEach(cat => {
                     const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                    if (!input) return false;
-
-                    const valClean = input.value.replace(/\D/g, '');
-                    // Exclude ONLY if it's explicitly "0". 
-                    // Empty fields (valClean === "") MUST be included for new users.
-                    if (valClean === '0' && input.value !== '') return false;
-
-                    return true;
-                });
-
-                // 3. Sum total fixed obligations for these categories
-                const totalFixed = activeCats.reduce((sum, cat) => sum + (fixedFloor[cat.id] || 0), 0);
-                const surplus = income - totalFixed;
-
-                if (surplus < 0) {
-                    // Scenario A: Deficit - Fixed expenses already exceed income
-                    activeCats.forEach(cat => {
-                        const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                        if (input) {
-                            const val = fixedFloor[cat.id] || 0;
-                            input.value = this.formatNumberWithDots(val);
-                            input.style.backgroundColor = '#ffebee'; // Light red for warning
-                            setTimeout(() => input.style.backgroundColor = '#fff', 2000);
-                            appliedCount++;
-                        }
-                    });
-                    alert(`⚠️ ¡ATENCIÓN COHERENCIA!\nTus gastos fijos ($${this.formatNumberWithDots(totalFixed)}) ya superan tus ingresos ($${this.formatNumberWithDots(income)}).\n\nEl presupuesto se llenó con tus compromisos mínimos para cubrir tus gastos fijos registrados, pero el total excedería tu nómina.`);
-                } else {
-                    // Scenario B: Coherent Distribution
-                    // 1. Calculate weighted target for the surplus
-                    const rawSuggestions = {};
-                    let currentSum = totalFixed;
-
-                    activeCats.forEach(cat => {
-                        const floor = fixedFloor[cat.id] || 0;
-                        const weight = weights[cat.id] || 0.005;
-                        const ideal = income * weight;
-                        const gap = Math.max(0, ideal - floor);
-                        rawSuggestions[cat.id] = { floor, gap };
-                    });
-
-                    // Calculate sum of gaps to distribute surplus
-                    const totalGap = activeCats.reduce((s, c) => s + rawSuggestions[c.id].gap, 0);
-
-                    const finalValues = {};
-                    let totalRounded = 0;
-
-                    activeCats.forEach((cat, index) => {
-                        const { floor, gap } = rawSuggestions[cat.id];
-                        let extra = 0;
-                        if (totalGap > 0) {
-                            extra = surplus * (gap / totalGap);
-                        } else {
-                            const sumWeights = activeCats.reduce((s, c) => s + (weights[c.id] || 0.005), 0);
-                            extra = surplus * ((weights[cat.id] || 0.005) / sumWeights);
-                        }
-
-                        let val = floor + extra;
-
-                        // Round everything to nearest 1000 except the last active category
-                        if (index < activeCats.length - 1) {
-                            val = Math.round(val / 1000) * 1000;
-                            totalRounded += val;
-                        }
-                        finalValues[cat.id] = val;
-                    });
-
-                    // Adjust last category (Residual match)
-                    const lastCat = activeCats[activeCats.length - 1];
-                    const remainingForLast = income - totalRounded;
-                    // In Scenario B (income >= totalFixed), remainingForLast will naturally be >= floor
-                    finalValues[lastCat.id] = Math.max(0, remainingForLast);
-
-                    // Final pass to set values and feedback
-                    activeCats.forEach(cat => {
-                        const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                        if (input) {
-                            const suggested = finalValues[cat.id];
-                            input.value = this.formatNumberWithDots(suggested);
-                            input.style.backgroundColor = '#e8f5e9';
-                            setTimeout(() => input.style.backgroundColor = '#fff', 2000);
-                            appliedCount++;
-                        }
-                    });
-
-                    // Update the live summary pill
-                    this.updateBudgetTotal();
-
-                    const totalActual = Object.values(finalValues).reduce((s, v) => s + v, 0);
-
-                    alert(`✨ Sugerencias coherentes generadas.\n\nLOGICA APLICADA:\n1. Se cubrieron tus $${this.formatNumberWithDots(totalFixed)} en gastos fijos.\n2. Se distribuyó el excedente según tu perfil ${profile}.\n3. Si marcaste categorías con $0, ese dinero se repartió proporcionalmente.\n4. El total ($${this.formatNumberWithDots(totalActual)}) suma exactamente tus ingresos ($${this.formatNumberWithDots(income)}).`);
-                }
-            }
-
-            // Edit Fixed Expense
-            if (target.classList.contains('edit-fixed-exp') || target.closest('.edit-fixed-exp')) {
-                const id = (target.dataset.id || target.closest('.edit-fixed-exp').dataset.id);
-                const fe = this.store.config.fixed_expenses.find(e => e.id === id);
-                if (fe) {
-                    const form = document.getElementById('fixed-expense-form');
-                    form.querySelector('[name="edit_fe_id"]').value = fe.id;
-                    form.querySelector('[name="name"]').value = fe.name;
-                    form.querySelector('[name="amount"]').value = fe.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
-                    form.querySelector('[name="category_id"]').value = fe.category_id;
-                    form.querySelector('[name="day"]').value = fe.day;
-                    document.getElementById('fe-form-title').textContent = 'Editar Gasto Fijo ✏️';
-                    document.getElementById('fe-submit-btn').textContent = 'Guardar Cambios';
-                    form.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            // Delete Fixed Expense
-            if (target.classList.contains('delete-fixed-exp') || target.closest('.delete-fixed-exp')) {
-                const id = (target.dataset.id || target.closest('.delete-fixed-exp').dataset.id);
-                if (confirm('¿Borrar este gasto fijo?')) {
-                    this.store.deleteFixedExpense(id);
-                    this.render();
-                }
-            }
-
-            // Edit Recurring Income
-            if (target.classList.contains('edit-rec-inc') || target.closest('.edit-rec-inc')) {
-                const id = (target.dataset.id || target.closest('.edit-rec-inc').dataset.id);
-                const ri = this.store.config.recurring_incomes.find(i => i.id === id);
-                if (ri) {
-                    const form = document.getElementById('recurring-income-form');
-                    form.querySelector('[name="edit_ri_id"]').value = ri.id;
-                    form.querySelector('[name="name"]').value = ri.name;
-                    form.querySelector('[name="amount"]').value = ri.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
-                    form.querySelector('[name="category_id"]').value = ri.category_id || 'cat_inc_1';
-                    form.querySelector('[name="day"]').value = ri.day;
-                    document.getElementById('ri-form-title').textContent = 'Editar Ingreso ✏️';
-                    document.getElementById('ri-submit-btn').textContent = 'Guardar Cambios';
-                    form.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            // Delete Recurring Income
-            if (target.classList.contains('delete-rec-inc') || target.closest('.delete-rec-inc')) {
-                const id = (target.dataset.id || target.closest('.delete-rec-inc').dataset.id);
-                if (confirm('¿Borrar este ingreso recurrente?')) {
-                    this.store.deleteRecurringIncome(id);
-                    this.render();
-                }
-            }
-        };
-
-        this.container.onsubmit = (e) => {
-            const formId = e.target.id;
-            e.preventDefault();
-            console.log(`🚀 Form Submitted via Delegation: ${formId}`);
-
-            if (formId === 'settings-form') {
-                const formData = new FormData(e.target);
-                const rawIncome = formData.get('monthly_income_target').toString().replace(/\D/g, '');
-                const rawDebt = formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0';
-
-                this.store.updateConfig({
-                    monthly_income_target: parseFloat(rawIncome) || 0,
-                    user_name: formData.get('user_name'),
-                    spending_profile: formData.get('spending_profile'),
-                    currency: formData.get('currency') || 'COP',
-                    has_debts: formData.get('has_debts') === 'on',
-                    total_debt: parseFloat(rawDebt) || 0
-                });
-                alert('✅ Perfil guardado correctamente.');
-                this.render();
-            }
-
-            if (formId === 'budget-form') {
-                const formData = new FormData(e.target);
-                const newBudgets = {};
-                for (let [key, value] of formData.entries()) {
-                    if (key.startsWith('budget_')) {
-                        const catId = key.replace('budget_', '');
-                        const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
-                        if (val > 0) newBudgets[catId] = val;
+                    if (input) {
+                        const val = fixedFloor[cat.id] || 0;
+                        input.value = this.formatNumberWithDots(val);
+                        input.style.backgroundColor = '#ffebee'; // Light red for warning
+                        setTimeout(() => input.style.backgroundColor = '#fff', 2000);
+                        appliedCount++;
                     }
-                }
-                this.store.updateConfig({ budgets: newBudgets });
-                alert('✅ Metas de presupuesto actualizadas.');
-                this.render();
-            }
-
-            if (formId === 'ai-config-form') {
-                const formData = new FormData(e.target);
-                this.store.updateConfig({
-                    ai_provider: formData.get('ai_provider') || 'gemini',
-                    gemini_api_key: formData.get('gemini_api_key') || '',
-                    openai_api_key: formData.get('openai_api_key') || ''
                 });
-                alert('✅ Configuración de IA guardada.');
+                alert(`⚠️ ¡ATENCIÓN COHERENCIA!\nTus gastos fijos ($${this.formatNumberWithDots(totalFixed)}) ya superan tus ingresos ($${this.formatNumberWithDots(income)}).\n\nEl presupuesto se llenó con tus compromisos mínimos para cubrir tus gastos fijos registrados, pero el total excedería tu nómina.`);
+            } else {
+                // Scenario B: Coherent Distribution
+                // 1. Calculate weighted target for the surplus
+                const rawSuggestions = {};
+                let currentSum = totalFixed;
+
+                activeCats.forEach(cat => {
+                    const floor = fixedFloor[cat.id] || 0;
+                    const weight = weights[cat.id] || 0.005;
+                    const ideal = income * weight;
+                    const gap = Math.max(0, ideal - floor);
+                    rawSuggestions[cat.id] = { floor, gap };
+                });
+
+                // Calculate sum of gaps to distribute surplus
+                const totalGap = activeCats.reduce((s, c) => s + rawSuggestions[c.id].gap, 0);
+
+                const finalValues = {};
+                let totalRounded = 0;
+
+                activeCats.forEach((cat, index) => {
+                    const { floor, gap } = rawSuggestions[cat.id];
+                    let extra = 0;
+                    if (totalGap > 0) {
+                        extra = surplus * (gap / totalGap);
+                    } else {
+                        const sumWeights = activeCats.reduce((s, c) => s + (weights[c.id] || 0.005), 0);
+                        extra = surplus * ((weights[cat.id] || 0.005) / sumWeights);
+                    }
+
+                    let val = floor + extra;
+
+                    // Round everything to nearest 1000 except the last active category
+                    if (index < activeCats.length - 1) {
+                        val = Math.round(val / 1000) * 1000;
+                        totalRounded += val;
+                    }
+                    finalValues[cat.id] = val;
+                });
+
+                // Adjust last category (Residual match)
+                const lastCat = activeCats[activeCats.length - 1];
+                const remainingForLast = income - totalRounded;
+                // In Scenario B (income >= totalFixed), remainingForLast will naturally be >= floor
+                finalValues[lastCat.id] = Math.max(0, remainingForLast);
+
+                // Final pass to set values and feedback
+                activeCats.forEach(cat => {
+                    const input = document.querySelector(`input[name="budget_${cat.id}"]`);
+                    if (input) {
+                        const suggested = finalValues[cat.id];
+                        input.value = this.formatNumberWithDots(suggested);
+                        input.style.backgroundColor = '#e8f5e9';
+                        setTimeout(() => input.style.backgroundColor = '#fff', 2000);
+                        appliedCount++;
+                    }
+                });
+
+                // Update the live summary pill
+                this.updateBudgetTotal();
+
+                const totalActual = Object.values(finalValues).reduce((s, v) => s + v, 0);
+
+                alert(`✨ Sugerencias coherentes generadas.\n\nLOGICA APLICADA:\n1. Se cubrieron tus $${this.formatNumberWithDots(totalFixed)} en gastos fijos.\n2. Se distribuyó el excedente según tu perfil ${profile}.\n3. Si marcaste categorías con $0, ese dinero se repartió proporcionalmente.\n4. El total ($${this.formatNumberWithDots(totalActual)}) suma exactamente tus ingresos ($${this.formatNumberWithDots(income)}).`);
+            }
+        }
+
+        // Edit Fixed Expense
+        if (target.classList.contains('edit-fixed-exp') || target.closest('.edit-fixed-exp')) {
+            const id = (target.dataset.id || target.closest('.edit-fixed-exp').dataset.id);
+            const fe = this.store.config.fixed_expenses.find(e => e.id === id);
+            if (fe) {
+                const form = document.getElementById('fixed-expense-form');
+                form.querySelector('[name="edit_fe_id"]').value = fe.id;
+                form.querySelector('[name="name"]').value = fe.name;
+                form.querySelector('[name="amount"]').value = fe.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                form.querySelector('[name="category_id"]').value = fe.category_id;
+                form.querySelector('[name="day"]').value = fe.day;
+                document.getElementById('fe-form-title').textContent = 'Editar Gasto Fijo ✏️';
+                document.getElementById('fe-submit-btn').textContent = 'Guardar Cambios';
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Delete Fixed Expense
+        if (target.classList.contains('delete-fixed-exp') || target.closest('.delete-fixed-exp')) {
+            const id = (target.dataset.id || target.closest('.delete-fixed-exp').dataset.id);
+            if (confirm('¿Borrar este gasto fijo?')) {
+                this.store.deleteFixedExpense(id);
                 this.render();
             }
+        }
 
-            if (formId === 'fixed-expense-form') {
-                const formData = new FormData(e.target);
-                const editId = formData.get('edit_fe_id');
-                const data = {
-                    name: formData.get('name'),
-                    amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
-                    category_id: formData.get('category_id'),
-                    day: parseInt(formData.get('day')) || 1
-                };
+        // Edit Recurring Income
+        if (target.classList.contains('edit-rec-inc') || target.closest('.edit-rec-inc')) {
+            const id = (target.dataset.id || target.closest('.edit-rec-inc').dataset.id);
+            const ri = this.store.config.recurring_incomes.find(i => i.id === id);
+            if (ri) {
+                const form = document.getElementById('recurring-income-form');
+                form.querySelector('[name="edit_ri_id"]').value = ri.id;
+                form.querySelector('[name="name"]').value = ri.name;
+                form.querySelector('[name="amount"]').value = ri.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                form.querySelector('[name="category_id"]').value = ri.category_id || 'cat_inc_1';
+                form.querySelector('[name="day"]').value = ri.day;
+                document.getElementById('ri-form-title').textContent = 'Editar Ingreso ✏️';
+                document.getElementById('ri-submit-btn').textContent = 'Guardar Cambios';
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
 
-                if (editId) {
-                    this.store.updateFixedExpense(editId, data);
-                } else {
-                    this.store.addFixedExpense(data);
+        // Delete Recurring Income
+        if (target.classList.contains('delete-rec-inc') || target.closest('.delete-rec-inc')) {
+            const id = (target.dataset.id || target.closest('.delete-rec-inc').dataset.id);
+            if (confirm('¿Borrar este ingreso recurrente?')) {
+                this.store.deleteRecurringIncome(id);
+                this.render();
+            }
+        }
+    };
+
+    this.container.onsubmit = (e) => {
+        const formId = e.target.id;
+        e.preventDefault();
+        console.log(`🚀 Form Submitted via Delegation: ${formId}`);
+
+        if (formId === 'settings-form') {
+            const formData = new FormData(e.target);
+            const rawIncome = formData.get('monthly_income_target').toString().replace(/\D/g, '');
+            const rawDebt = formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0';
+
+            this.store.updateConfig({
+                monthly_income_target: parseFloat(rawIncome) || 0,
+                user_name: formData.get('user_name'),
+                spending_profile: formData.get('spending_profile'),
+                currency: formData.get('currency') || 'COP',
+                has_debts: formData.get('has_debts') === 'on',
+                total_debt: parseFloat(rawDebt) || 0
+            });
+            alert('✅ Perfil guardado correctamente.');
+            this.render();
+        }
+
+        if (formId === 'budget-form') {
+            const formData = new FormData(e.target);
+            const newBudgets = {};
+            for (let [key, value] of formData.entries()) {
+                if (key.startsWith('budget_')) {
+                    const catId = key.replace('budget_', '');
+                    const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
+                    if (val > 0) newBudgets[catId] = val;
                 }
-                this.render();
             }
+            this.store.updateConfig({ budgets: newBudgets });
+            alert('✅ Metas de presupuesto actualizadas.');
+            this.render();
+        }
 
-            if (formId === 'recurring-income-form') {
-                const formData = new FormData(e.target);
-                const editId = formData.get('edit_ri_id');
-                const data = {
-                    name: formData.get('name'),
-                    amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
-                    category_id: formData.get('category_id'),
-                    day: parseInt(formData.get('day')) || 1
-                };
+        if (formId === 'ai-config-form') {
+            const formData = new FormData(e.target);
+            this.store.updateConfig({
+                ai_provider: formData.get('ai_provider') || 'gemini',
+                gemini_api_key: formData.get('gemini_api_key') || '',
+                openai_api_key: formData.get('openai_api_key') || ''
+            });
+            alert('✅ Configuración de IA guardada.');
+            this.render();
+        }
 
-                if (editId) {
-                    this.store.updateRecurringIncome(editId, data);
-                } else {
-                    this.store.addRecurringIncome(data);
-                }
-                this.render();
+        if (formId === 'fixed-expense-form') {
+            const formData = new FormData(e.target);
+            const editId = formData.get('edit_fe_id');
+            const data = {
+                name: formData.get('name'),
+                amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
+                category_id: formData.get('category_id'),
+                day: parseInt(formData.get('day')) || 1
+            };
+
+            if (editId) {
+                this.store.updateFixedExpense(editId, data);
+            } else {
+                this.store.addFixedExpense(data);
             }
-        };
+            this.render();
+        }
 
-        // Feather icons replace
-        if (window.feather) window.feather.replace();
-    }
+        if (formId === 'recurring-income-form') {
+            const formData = new FormData(e.target);
+            const editId = formData.get('edit_ri_id');
+            const data = {
+                name: formData.get('name'),
+                amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
+                category_id: formData.get('category_id'),
+                day: parseInt(formData.get('day')) || 1
+            };
+
+            if (editId) {
+                this.store.updateRecurringIncome(editId, data);
+            } else {
+                this.store.addRecurringIncome(data);
+            }
+            this.render();
+        }
+    };
+
+    // Feather icons replace
+    if (window.feather) window.feather.replace();
+}
 
     // New Nuclear Update Method for delegation
     async performNuclearUpdate() {
-        if (!confirm('¿Actualizar a la última versión? Esto recargará la aplicación.')) return;
+    if (!confirm('¿Actualizar a la última versión? Esto recargará la aplicación.')) return;
 
-        try {
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for (let r of regs) await r.unregister();
-            }
-            const keys = await caches.keys();
-            for (let k of keys) await caches.delete(k);
-
-            console.log('Forcing nuclear reload...');
-            window.location.href = window.location.pathname + '?update=' + Date.now();
-        } catch (e) {
-            window.location.reload();
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (let r of regs) await r.unregister();
         }
+        const keys = await caches.keys();
+        for (let k of keys) await caches.delete(k);
+
+        console.log('Forcing nuclear reload...');
+        window.location.href = window.location.pathname + '?update=' + Date.now();
+    } catch (e) {
+        window.location.reload();
     }
+}
 
-    renderFixedExpensesList() {
-        const list = this.store.config.fixed_expenses || [];
-        if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes gastos fijos configurados.</p>';
+renderFixedExpensesList() {
+    const list = this.store.config.fixed_expenses || [];
+    if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes gastos fijos configurados.</p>';
 
-        return list.map(fe => {
-            const cat = this.store.categories.find(c => c.id === fe.category_id) || { name: '?' };
-            return `
+    return list.map(fe => {
+        const cat = this.store.categories.find(c => c.id === fe.category_id) || { name: '?' };
+        return `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
                     <div>
                         <div style="font-weight: 600; font-size: 0.95rem;">${fe.name}</div>
@@ -3967,16 +4074,16 @@ class UIManager {
                     </div>
                 </div>
             `;
-        }).join('');
-    }
+    }).join('');
+}
 
-    renderRecurringIncomesList() {
-        const list = this.store.config.recurring_incomes || [];
-        if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes ingresos recurrentes configurados.</p>';
+renderRecurringIncomesList() {
+    const list = this.store.config.recurring_incomes || [];
+    if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes ingresos recurrentes configurados.</p>';
 
-        return list.map(ri => {
-            const cat = this.store.categories.find(c => c.id === ri.category_id) || { name: 'Ingreso' };
-            return `
+    return list.map(ri => {
+        const cat = this.store.categories.find(c => c.id === ri.category_id) || { name: 'Ingreso' };
+        return `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
                     <div>
                         <div style="font-weight: 600; font-size: 0.95rem;">${ri.name}</div>
@@ -3994,15 +4101,15 @@ class UIManager {
                     </div>
                 </div>
             `;
-        }).join('');
-    }
+    }).join('');
+}
 
-    renderGoals() {
-        this.pageTitle.textContent = 'Metas Financieras 🎯';
-        // Use the getter that calculates real progress from transactions
-        const goals = this.store.getGoals();
+renderGoals() {
+    this.pageTitle.textContent = 'Metas Financieras 🎯';
+    // Use the getter that calculates real progress from transactions
+    const goals = this.store.getGoals();
 
-        let html = `
+    let html = `
             <div style="margin-bottom: 2rem; display: flex; justify-content: flex-end;">
                 <button class="btn btn-primary" id="add-goal-btn">
                     <i data-feather="plus"></i> Nueva Meta
@@ -4010,10 +4117,10 @@ class UIManager {
             </div>
         `;
 
-        // Calculate Plan / Projection info per goal could happen here
+    // Calculate Plan / Projection info per goal could happen here
 
-        if (goals.length === 0) {
-            html += `
+    if (goals.length === 0) {
+        html += `
                 <div style="text-align: center; padding: 3rem 1.5rem;">
                     <div style="font-size: 3rem; margin-bottom: 12px;">🎯</div>
                     <h3 style="margin: 0 0 8px; color: #333;">Dale un propósito a tu dinero</h3>
@@ -4034,27 +4141,27 @@ class UIManager {
                     </button>
                 </div>
             `;
-        } else {
-            html += `<div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">`;
+    } else {
+        html += `<div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">`;
 
-            goals.forEach(g => {
-                const percent = Math.min((g.current_amount / g.target_amount) * 100, 100);
-                const remaining = g.target_amount - g.current_amount;
+        goals.forEach(g => {
+            const percent = Math.min((g.current_amount / g.target_amount) * 100, 100);
+            const remaining = g.target_amount - g.current_amount;
 
-                let icon = 'target';
-                let color = '#2196F3';
-                if (g.type === 'EMERGENCY') { icon = 'shield'; color = '#4CAF50'; }
-                if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; } // Red for Debt
-                if (g.type === 'PURCHASE') { icon = 'gift'; color = '#9C27B0'; }
+            let icon = 'target';
+            let color = '#2196F3';
+            if (g.type === 'EMERGENCY') { icon = 'shield'; color = '#4CAF50'; }
+            if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; } // Red for Debt
+            if (g.type === 'PURCHASE') { icon = 'gift'; color = '#9C27B0'; }
 
-                // Recent contributions
-                const lastContrib = g.recent_contributions && g.recent_contributions.length > 0
-                    ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
+            // Recent contributions
+            const lastContrib = g.recent_contributions && g.recent_contributions.length > 0
+                ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
                         Último abono: ${this.formatCurrency(g.recent_contributions[0].amount)} (${new Date(g.recent_contributions[0].date).toLocaleDateString()})
                        </div>`
-                    : '<div style="font-size: 0.75rem; color: #ccc; margin-top: 0.5rem;">Sin abonos recientes</div>';
+                : '<div style="font-size: 0.75rem; color: #ccc; margin-top: 0.5rem;">Sin abonos recientes</div>';
 
-                html += `
+            html += `
                     <div class="card" style="border-top: 4px solid ${color}; display: flex; flex-direction: column;">
                         <div class="card-header">
                             <div class="card-title" style="display:flex; justify-content:space-between; width:100%">
@@ -4085,110 +4192,110 @@ class UIManager {
                         </button>
                     </div>
                 `;
-            });
-            html += `</div>`;
-        }
-
-        this.container.innerHTML = html;
-
-        // Add Goal Handler
-        const addBtn = document.getElementById('add-goal-btn');
-        if (addBtn) {
-            addBtn.addEventListener('click', () => {
-                const type = prompt("Tipo de Meta:\n1. Fondo de Emergencia\n2. Pago de Deuda\n3. Ahorro Específico\n\n(1-3):");
-                if (!type) return;
-
-                let typeKey = 'PURCHASE';
-                let nameDefault = 'Nueva Meta';
-                if (type === '1') { typeKey = 'EMERGENCY'; nameDefault = 'Fondo de Emergencia'; }
-                else if (type === '2') { typeKey = 'DEBT'; nameDefault = 'Salir de Deudas'; }
-                else if (type === '3') { typeKey = 'PURCHASE'; nameDefault = 'Viaje soñado'; }
-                else return;
-
-                const name = prompt("Nombre de la meta:", nameDefault) || nameDefault;
-                const targetStr = prompt("Monto objetivo ($):");
-                if (!targetStr) return;
-                const target = parseFloat(targetStr.replace(/\./g, ''));
-
-                this.store.addGoal({
-                    type: typeKey,
-                    name: name,
-                    target_amount: target,
-                    current_amount: 0 // Always starts at 0, adds via transactions
-                });
-                this.render();
-            });
-        }
-
-        // Add Fund Handler (Creates REAL transaction)
-        document.querySelectorAll('.add-fund-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = e.target.dataset.id;
-                const type = e.target.dataset.type;
-
-                const amountStr = prompt("Monto a abonar hoy ($):");
-                if (!amountStr) return;
-                const amount = parseFloat(amountStr.replace(/\./g, ''));
-                if (isNaN(amount) || amount <= 0) return;
-
-                const accounts = this.store.accounts;
-                const accNames = accounts.map((a, i) => `${i + 1}. ${a.name} ($${a.current_balance})`).join('\n');
-                const accIndex = prompt(`¿De qué cuenta sale el dinero?\n${accNames}`);
-                if (!accIndex) return;
-                const account = accounts[parseInt(accIndex) - 1];
-                if (!account) return;
-
-                // Auto-categorize
-                // Payment of Debt -> Spending/Flow Out -> Type: PAGO_DEUDA
-                // Savings -> Transfer to "Savings" (conceptually) -> Type: AHORRO
-                let txType = 'AHORRO';
-                let catId = 'cat_5'; // Ahorro default
-                let note = 'Abono a meta';
-
-                if (type === 'DEBT') {
-                    txType = 'PAGO_DEUDA';
-                    catId = 'cat_7'; // Deuda default
-                    note = 'Pago abono a deuda';
-                }
-
-                this.store.addTransaction({
-                    type: txType,
-                    amount: amount,
-                    date: new Date().toISOString().split('T')[0],
-                    category_id: catId,
-                    account_id: account.id,
-                    goal_id: id,
-                    note: note
-                });
-
-                alert('✅ Abono registrado correctamente como movimiento.');
-                this.render();
-            });
         });
+        html += `</div>`;
+    }
 
-        // Delete Handler
-        document.querySelectorAll('.delete-goal').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                if (confirm('¿Borrar esta meta? Los movimientos históricos NO se borrarán.')) {
-                    const id = e.target.closest('button').dataset.id;
-                    this.store.deleteGoal(id);
-                    this.render();
-                }
+    this.container.innerHTML = html;
+
+    // Add Goal Handler
+    const addBtn = document.getElementById('add-goal-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            const type = prompt("Tipo de Meta:\n1. Fondo de Emergencia\n2. Pago de Deuda\n3. Ahorro Específico\n\n(1-3):");
+            if (!type) return;
+
+            let typeKey = 'PURCHASE';
+            let nameDefault = 'Nueva Meta';
+            if (type === '1') { typeKey = 'EMERGENCY'; nameDefault = 'Fondo de Emergencia'; }
+            else if (type === '2') { typeKey = 'DEBT'; nameDefault = 'Salir de Deudas'; }
+            else if (type === '3') { typeKey = 'PURCHASE'; nameDefault = 'Viaje soñado'; }
+            else return;
+
+            const name = prompt("Nombre de la meta:", nameDefault) || nameDefault;
+            const targetStr = prompt("Monto objetivo ($):");
+            if (!targetStr) return;
+            const target = parseFloat(targetStr.replace(/\./g, ''));
+
+            this.store.addGoal({
+                type: typeKey,
+                name: name,
+                target_amount: target,
+                current_amount: 0 // Always starts at 0, adds via transactions
             });
+            this.render();
         });
     }
 
-    renderBudgetProgress() {
-        const budgets = this.store.config.budgets || {};
-        if (Object.keys(budgets).length === 0) return '';
+    // Add Fund Handler (Creates REAL transaction)
+    document.querySelectorAll('.add-fund-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            const type = e.target.dataset.type;
 
-        // Safely get category breakdown
-        let breakdown = {};
-        try {
-            breakdown = this.store.getCategoryBreakdown();
-        } catch (e) { console.error('Error fetching breakdown', e); return ''; }
+            const amountStr = prompt("Monto a abonar hoy ($):");
+            if (!amountStr) return;
+            const amount = parseFloat(amountStr.replace(/\./g, ''));
+            if (isNaN(amount) || amount <= 0) return;
 
-        let html = `
+            const accounts = this.store.accounts;
+            const accNames = accounts.map((a, i) => `${i + 1}. ${a.name} ($${a.current_balance})`).join('\n');
+            const accIndex = prompt(`¿De qué cuenta sale el dinero?\n${accNames}`);
+            if (!accIndex) return;
+            const account = accounts[parseInt(accIndex) - 1];
+            if (!account) return;
+
+            // Auto-categorize
+            // Payment of Debt -> Spending/Flow Out -> Type: PAGO_DEUDA
+            // Savings -> Transfer to "Savings" (conceptually) -> Type: AHORRO
+            let txType = 'AHORRO';
+            let catId = 'cat_5'; // Ahorro default
+            let note = 'Abono a meta';
+
+            if (type === 'DEBT') {
+                txType = 'PAGO_DEUDA';
+                catId = 'cat_7'; // Deuda default
+                note = 'Pago abono a deuda';
+            }
+
+            this.store.addTransaction({
+                type: txType,
+                amount: amount,
+                date: new Date().toISOString().split('T')[0],
+                category_id: catId,
+                account_id: account.id,
+                goal_id: id,
+                note: note
+            });
+
+            alert('✅ Abono registrado correctamente como movimiento.');
+            this.render();
+        });
+    });
+
+    // Delete Handler
+    document.querySelectorAll('.delete-goal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (confirm('¿Borrar esta meta? Los movimientos históricos NO se borrarán.')) {
+                const id = e.target.closest('button').dataset.id;
+                this.store.deleteGoal(id);
+                this.render();
+            }
+        });
+    });
+}
+
+renderBudgetProgress() {
+    const budgets = this.store.config.budgets || {};
+    if (Object.keys(budgets).length === 0) return '';
+
+    // Safely get category breakdown
+    let breakdown = {};
+    try {
+        breakdown = this.store.getCategoryBreakdown();
+    } catch (e) { console.error('Error fetching breakdown', e); return ''; }
+
+    let html = `
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-header">
                      <h3>Seguimiento de Presupuesto Mensual 🔍</h3>
@@ -4196,31 +4303,31 @@ class UIManager {
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
         `;
 
-        Object.keys(budgets).forEach(catId => {
-            const limit = budgets[catId];
-            const cat = this.store.categories.find(c => c.id === catId);
+    Object.keys(budgets).forEach(catId => {
+        const limit = budgets[catId];
+        const cat = this.store.categories.find(c => c.id === catId);
 
-            // Skip invalid categories or zero limits
-            if (!cat || limit <= 0) return;
+        // Skip invalid categories or zero limits
+        if (!cat || limit <= 0) return;
 
-            const spent = breakdown[cat.name] || 0;
-            const percent = (spent / limit) * 100;
-            const remaining = limit - spent;
-            const exceeded = spent - limit;
+        const spent = breakdown[cat.name] || 0;
+        const percent = (spent / limit) * 100;
+        const remaining = limit - spent;
+        const exceeded = spent - limit;
 
-            // Directive Color Logic
-            let color = '#4CAF50'; // Green: On Track
-            let statusText = '✅ En orden';
+        // Directive Color Logic
+        let color = '#4CAF50'; // Green: On Track
+        let statusText = '✅ En orden';
 
-            if (percent >= 80 && percent <= 100) {
-                color = '#FF9800'; // Orange: Warning
-                statusText = '⚠️ Cuidado (80% usado)';
-            } else if (percent > 100) {
-                color = '#F44336'; // Red: Action Needed
-                statusText = `🚨 Excedido en ${this.formatCurrency(exceeded)}`;
-            }
+        if (percent >= 80 && percent <= 100) {
+            color = '#FF9800'; // Orange: Warning
+            statusText = '⚠️ Cuidado (80% usado)';
+        } else if (percent > 100) {
+            color = '#F44336'; // Red: Action Needed
+            statusText = `🚨 Excedido en ${this.formatCurrency(exceeded)}`;
+        }
 
-            html += `
+        html += `
                 <div class="budget-item" style="border-left: 3px solid ${color}; padding-left: 10px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
                         <strong>${cat.name}</strong>
@@ -4237,87 +4344,87 @@ class UIManager {
                     </div>
                     
                     ${percent > 100 ?
-                    `<div style="font-size: 0.75rem; color: #D32F2F; margin-top: 5px; background: #FFEBEE; padding: 4px; border-radius: 4px;">
+                `<div style="font-size: 0.75rem; color: #D32F2F; margin-top: 5px; background: #FFEBEE; padding: 4px; border-radius: 4px;">
                             💡 Acción: Reduce ${this.formatCurrency(exceeded)} en otros gastos para compensar.
                         </div>`
-                    : ''}
+                : ''}
                 </div>
             `;
-        });
+    });
 
-        html += `</div></div>`;
-        return html;
-    }
-    toggleAiProvider(val) {
-        document.getElementById('gemini-key-group').style.display = (val === 'gemini') ? 'block' : 'none';
-        document.getElementById('openai-key-group').style.display = (val === 'openai') ? 'block' : 'none';
+    html += `</div></div>`;
+    return html;
+}
+toggleAiProvider(val) {
+    document.getElementById('gemini-key-group').style.display = (val === 'gemini') ? 'block' : 'none';
+    document.getElementById('openai-key-group').style.display = (val === 'openai') ? 'block' : 'none';
 
-        const res = document.getElementById('connection-result');
-        if (res) res.innerHTML = ''; // Clear status
-    }
+    const res = document.getElementById('connection-result');
+    if (res) res.innerHTML = ''; // Clear status
+}
 
     async testAiConnection() {
-        // Find inputs directly based on active provider
-        const providerSelect = document.getElementById('ai-provider-select');
-        const provider = providerSelect ? providerSelect.value : 'gemini';
-        let apiKeyInput;
+    // Find inputs directly based on active provider
+    const providerSelect = document.getElementById('ai-provider-select');
+    const provider = providerSelect ? providerSelect.value : 'gemini';
+    let apiKeyInput;
 
-        if (provider === 'gemini') apiKeyInput = document.querySelector('input[name="gemini_api_key"]');
-        else apiKeyInput = document.querySelector('input[name="openai_api_key"]');
+    if (provider === 'gemini') apiKeyInput = document.querySelector('input[name="gemini_api_key"]');
+    else apiKeyInput = document.querySelector('input[name="openai_api_key"]');
 
-        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-        const statusEl = document.getElementById('connection-result');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+    const statusEl = document.getElementById('connection-result');
 
-        if (!apiKey) {
-            statusEl.innerHTML = '<span style="color:#d32f2f;">❌ Falta la API Key</span>';
-            return;
-        }
-
-        statusEl.innerHTML = '<span style="color:#1976d2;">⏳ Probando conexión...</span>';
-
-        // Save original config to restore if needed
-        if (!this.store.config) this.store.config = {};
-        const originalConfig = { ...this.store.config };
-
-        // 1. Temporarily update config in memory
-        this.store.config.ai_provider = provider;
-        if (provider === 'gemini') this.store.config.gemini_api_key = apiKey;
-        else this.store.config.openai_api_key = apiKey;
-
-        // 2. Re-init Advisor with this new temporary config
-        // Pass the STORE (not config) as expected by AIAdvisor constructor
-        this.aiAdvisor = new AIAdvisor(this.store);
-
-        try {
-            await this.aiAdvisor.checkConnection(apiKey);
-
-            // Success! Save for real.
-            this.store.saveSettings(this.store.config);
-            statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! Guardado.</span>';
-            setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32;">✅ Configuración lista</span>'; }, 2000);
-
-        } catch (error) {
-            console.error(error);
-            let msg = 'Error de conexión';
-
-            // Friendly Error Messages (v68.K)
-            if (error.message.includes('400') || error.message.includes('INVALID_KEY') || error.message.includes('API_KEY_INVALID')) {
-                msg = '❌ Llave incorrecta. Revisa que no le falten letras.';
-            } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
-                msg = '⏳ El sistema está ocupado. Intenta en 1 minuto.';
-            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                msg = '📡 Sin internet. Revisa tu conexión.';
-            } else if (error.message.includes('QUOTA_EXCEEDED')) {
-                msg = '🛑 Se acabó el saldo gratuito de tu llave hoy.';
-            } else {
-                msg = `❌ Error: ${error.message}`;
-            }
-
-            if (statusEl) statusEl.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">${msg}</span>`;
-
-            // Revert config on error to avoid breaking app state with bad key
-            this.store.config = originalConfig;
-            this.aiAdvisor = new AIAdvisor(this.store);
-        }
+    if (!apiKey) {
+        statusEl.innerHTML = '<span style="color:#d32f2f;">❌ Falta la API Key</span>';
+        return;
     }
+
+    statusEl.innerHTML = '<span style="color:#1976d2;">⏳ Probando conexión...</span>';
+
+    // Save original config to restore if needed
+    if (!this.store.config) this.store.config = {};
+    const originalConfig = { ...this.store.config };
+
+    // 1. Temporarily update config in memory
+    this.store.config.ai_provider = provider;
+    if (provider === 'gemini') this.store.config.gemini_api_key = apiKey;
+    else this.store.config.openai_api_key = apiKey;
+
+    // 2. Re-init Advisor with this new temporary config
+    // Pass the STORE (not config) as expected by AIAdvisor constructor
+    this.aiAdvisor = new AIAdvisor(this.store);
+
+    try {
+        await this.aiAdvisor.checkConnection(apiKey);
+
+        // Success! Save for real.
+        this.store.saveSettings(this.store.config);
+        statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! Guardado.</span>';
+        setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32;">✅ Configuración lista</span>'; }, 2000);
+
+    } catch (error) {
+        console.error(error);
+        let msg = 'Error de conexión';
+
+        // Friendly Error Messages (v68.K)
+        if (error.message.includes('400') || error.message.includes('INVALID_KEY') || error.message.includes('API_KEY_INVALID')) {
+            msg = '❌ Llave incorrecta. Revisa que no le falten letras.';
+        } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
+            msg = '⏳ El sistema está ocupado. Intenta en 1 minuto.';
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            msg = '📡 Sin internet. Revisa tu conexión.';
+        } else if (error.message.includes('QUOTA_EXCEEDED')) {
+            msg = '🛑 Se acabó el saldo gratuito de tu llave hoy.';
+        } else {
+            msg = `❌ Error: ${error.message}`;
+        }
+
+        if (statusEl) statusEl.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">${msg}</span>`;
+
+        // Revert config on error to avoid breaking app state with bad key
+        this.store.config = originalConfig;
+        this.aiAdvisor = new AIAdvisor(this.store);
+    }
+}
 }
