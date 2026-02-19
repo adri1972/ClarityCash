@@ -1465,12 +1465,18 @@ class UIManager {
             if (cat) topCats.unshift(cat);
         });
 
-        // Fallback if list is empty (user has no history yet)
-        if (topCats.length === 0) {
-            const defaultIds = ['cat_2', 'cat_ant', 'cat_3', 'cat_9', 'cat_rest', 'cat_10'];
-            defaultIds.forEach(id => {
-                const cat = this.store.categories.find(c => c.id === id);
-                if (cat) topCats.push(cat);
+        // FALLBACK & PADDING: Ensure we always show at least 6 buttons
+        const defaultPadIds = ['cat_2', 'cat_ant', 'cat_3', 'cat_9', 'cat_rest', 'cat_10', 'cat_personal'];
+
+        if (topCats.length < 6) {
+            defaultPadIds.forEach(padId => {
+                if (topCats.length >= 6) return; // Stop when we reach 6
+
+                // If it's not already in the list, add it
+                if (!topCats.find(c => c.id === padId)) {
+                    const cat = this.store.categories.find(c => c.id === padId);
+                    if (cat) topCats.push(cat);
+                }
             });
         }
 
@@ -4371,8 +4377,16 @@ class UIManager {
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
         `;
 
-        Object.keys(budgets).forEach(catId => {
-            const limit = budgets[catId];
+        // We must show progress for ANY category that either HAS A BUDGET or HAS SPENDING.
+        // Previously we only looped over Object.keys(budgets), missing unbudgeted spending entirely.
+        const categoriesToDisplay = new Set([
+            ...Object.keys(budgets),
+            ...Object.keys(breakdown).filter(catId => breakdown[catId] > 0)
+        ]);
+
+        categoriesToDisplay.forEach(catId => {
+            const limit = budgets[catId] || 0; // Might be undefined if unbudgeted
+            const spent = breakdown[catId] || 0;
             const cat = this.store.categories.find(c => c.id === catId);
 
             // Display if there is a limit OR if there is unbudgeted spending
@@ -4391,7 +4405,7 @@ class UIManager {
                 statusText = `🚨 Sin presupuesto: Gastaste ${this.formatCurrency(spent)}`;
             } else if (percent >= 80 && percent <= 100) {
                 color = '#FF9800'; // Orange: Warning
-                statusText = '⚠️ Cuidado (80% usado)';
+                statusText = `⚠️ Cuidado (80% usado)`;
             } else if (percent > 100) {
                 color = '#F44336'; // Red: Action Needed
                 statusText = `🚨 Te pasaste por ${this.formatCurrency(exceeded)}!`;
