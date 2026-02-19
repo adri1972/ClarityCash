@@ -492,7 +492,8 @@ REGLAS DE FORMATO:
             }
         } catch (error) {
             console.error('AI Scan Error:', error);
-            throw new Error('No se pudo leer el recibo. Intenta con mejor luz o recorta la imagen.');
+            const msg = error.message || 'Error desconocido';
+            throw new Error(`Aviso de IA: ${msg}`);
         }
     }
 

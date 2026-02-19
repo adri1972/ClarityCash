@@ -717,7 +717,18 @@ class UIManager {
         }
     }
 
-    smartRebalance(catId, amount) {
+    smartRebalance(catId, maxAmount) {
+        const cat = this.store.categories.find(c => c.id === catId);
+        const name = cat ? cat.name : catId;
+
+        const amountStr = prompt(`¿Cuánto separar para ${name}?\n(Faltan por asignar: $${this.formatNumberWithDots(maxAmount)})`, maxAmount);
+        if (amountStr === null) return; // Cancelled
+
+        let amount = parseFloat(amountStr.replace(/\D/g, ''));
+        if (isNaN(amount) || amount <= 0) return;
+
+        if (amount > maxAmount) amount = maxAmount;
+
         const input = document.querySelector(`input[name="budget_${catId}"]`);
         if (input) {
             const current = parseFloat(input.value.replace(/\D/g, '') || '0');
@@ -725,10 +736,25 @@ class UIManager {
             input.value = this.formatNumberWithDots(newVal);
             input.style.backgroundColor = '#dcfce7';
             setTimeout(() => input.style.backgroundColor = '#fff', 1000);
+
+            // Re-calculate the overall total
             this.updateBudgetTotal();
-            // Confirm to user
-            const cat = this.store.categories.find(c => c.id === catId);
-            alert(`✅ Se han asignado $${this.formatNumberWithDots(amount)} a "${cat ? cat.name : catId}".`);
+
+            // Check if there is still money left to automatically keep the picker open
+            const incomeInput = document.querySelector('input[name="monthly_income_target"]');
+            const incomeVal = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
+            const income = parseFloat(incomeVal) || 0;
+
+            let total = 0;
+            document.querySelectorAll('input[name^="budget_"]').forEach(inp => {
+                total += parseFloat(inp.value.replace(/\D/g, '') || '0');
+            });
+
+            const diff = income - total;
+            if (diff > 10) {
+                // Keep picker open with new remaining amount!
+                this.openRebalancePicker(diff);
+            }
         }
     }
 
@@ -1415,6 +1441,11 @@ class UIManager {
 
         // FORCE PRIORITY: Always include Food (cat_2) and Cravings/Coffee (cat_ant) at the start
         const priorityIds = ['cat_2', 'cat_ant'];
+
+        // Remove structural Fixed Expenses (Renting, Housing, Debt, etc.) since Quick Expenses are for mobile spontaneous purchases
+        const excludeGroups = ['VIVIENDA', 'FINANCIERO'];
+        topCats = topCats.filter(c => !excludeGroups.includes(c.group) && c.id !== 'cat_11');
+
         priorityIds.reverse().forEach(pid => {
             // Remove if already in list to avoid duplicates
             topCats = topCats.filter(c => c.id !== pid);
@@ -2236,9 +2267,14 @@ class UIManager {
         if (!ctx) return;
 
         // Filter by View Date
-        const breakdown = this.store.getCategoryBreakdown(this.viewDate.getMonth(), this.viewDate.getFullYear());
-        const labels = Object.keys(breakdown);
-        const data = Object.values(breakdown);
+        const breakdownUnfiltered = this.store.getCategoryBreakdown(this.viewDate.getMonth(), this.viewDate.getFullYear());
+
+        // Strip 0 values so they don't render or show 0% labels
+        const labelsToData = Object.entries(breakdownUnfiltered).filter(([_, val]) => val > 0);
+
+        // Format labels and truncate if too long because of small screens
+        const labels = labelsToData.map(([k, _]) => k.length > 18 ? k.substring(0, 18) + '...' : k);
+        const data = labelsToData.map(([_, v]) => v);
 
         if (this.currentChart) this.currentChart.destroy();
 
@@ -3491,7 +3527,7 @@ class UIManager {
                         <div class="form-group">
                             <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
                                 <span>Perfil de Gasto</span>
-                                <button type="button" id="profile-info-btn" class="btn-text" style="font-size: 0.8rem;">
+                                <button type="button" id="profile-info-btn" class="btn-text" onclick="window.ui.showWelcomeGuide()" style="font-size: 0.8rem;">
                                     <i data-feather="help-circle"></i> Ver Guía
                                 </button>
                             </label>
@@ -4328,11 +4364,10 @@ class UIManager {
             const limit = budgets[catId];
             const cat = this.store.categories.find(c => c.id === catId);
 
-            // Skip invalid categories or zero limits
-            if (!cat || limit <= 0) return;
+            // Display if there is a limit OR if there is unbudgeted spending
+            if (!cat || (limit <= 0 && spent <= 0)) return;
 
-            const spent = breakdown[cat.name] || 0;
-            const percent = (spent / limit) * 100;
+            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
             const remaining = limit - spent;
             const exceeded = spent - limit;
 
@@ -4340,12 +4375,15 @@ class UIManager {
             let color = '#4CAF50'; // Green: On Track
             let statusText = '✅ En orden';
 
-            if (percent >= 80 && percent <= 100) {
+            if (limit <= 0 && spent > 0) {
+                color = '#F44336'; // Red: Unbudgeted expense
+                statusText = `🚨 Sin presupuesto: Gastaste ${this.formatCurrency(spent)}`;
+            } else if (percent >= 80 && percent <= 100) {
                 color = '#FF9800'; // Orange: Warning
                 statusText = '⚠️ Cuidado (80% usado)';
             } else if (percent > 100) {
                 color = '#F44336'; // Red: Action Needed
-                statusText = `🚨 Excedido en ${this.formatCurrency(exceeded)}`;
+                statusText = `🚨 Te pasaste por ${this.formatCurrency(exceeded)}!`;
             }
 
             html += `
@@ -4430,15 +4468,15 @@ class UIManager {
 
             // Friendly Error Messages (v68.K)
             if (error.message.includes('400') || error.message.includes('INVALID_KEY') || error.message.includes('API_KEY_INVALID')) {
-                msg = '❌ Llave incorrecta. Revisa que no le falten letras.';
+                msg = `❌ Llave incorrecta. Detalle: ${error.message}`;
             } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
-                msg = '⏳ El sistema está ocupado. Intenta en 1 minuto.';
+                msg = `⏳ Servidor ocupado o cuota superada. Detalle: ${error.message}`;
             } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                msg = '📡 Sin internet. Revisa tu conexión.';
+                msg = `📡 Sin internet o error de red. Detalle: ${error.message}`;
             } else if (error.message.includes('QUOTA_EXCEEDED')) {
-                msg = '🛑 Se acabó el saldo gratuito de tu llave hoy.';
+                msg = `🛑 Se acabó el saldo de tu cuenta de IA. Detalle: ${error.message}`;
             } else {
-                msg = `❌ Error: ${error.message}`;
+                msg = `❌ Error API: ${error.message}`;
             }
 
             if (statusEl) statusEl.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">${msg}</span>`;
