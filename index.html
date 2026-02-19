@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.J (JSON Based) ---
+        // --- STABLE UPDATE ENGINE v68.N (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '68.J';
+            const CURRENT_VERSION = '68.N';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -39,6 +39,10 @@
 
                 document.getElementById('update-btn').onclick = () => {
                     toast.innerHTML = 'Limpiando sistema... 🧹';
+
+                    // Critical: Update local storage so we don't prompt again
+                    localStorage.setItem('cc_app_version', newVer);
+
                     // Nuke Cache
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.getRegistrations().then(regs => {
@@ -48,11 +52,9 @@
                     if ('caches' in window) {
                         caches.keys().then(names => {
                             for (let name of names) caches.delete(name);
-                            localStorage.setItem('cc_version', '68.M');
                             window.location.reload(true);
                         });
                     } else {
-                        localStorage.setItem('cc_app_version', newVer);
                         window.location.reload(true);
                     }
                 };
@@ -118,10 +120,9 @@
                     <h2 id="page-title">Resumen Financiero</h2>
                 </div>
                 <div class="actions" style="display: flex; gap: 0.5rem;">
-                    <button onclick="localStorage.removeItem('cc_app_version'); window.location.reload(true);"
-                        class="btn-text"
-                        style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px; border-radius: 12px;">🔄
-                        Forzar Reset</button>
+                    style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px;
+                    border-radius: 12px;">🔄
+                    Forzar Reset</button>
                     <button id="add-transaction-btn" class="btn btn-primary"><i data-feather="plus"></i> Nuevo
                         Movimiento</button>
                 </div>
@@ -214,7 +215,7 @@
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.M-HOTFIX</div>
+        v68.N-HOTFIX</div>
 </body>
 
 </html>
