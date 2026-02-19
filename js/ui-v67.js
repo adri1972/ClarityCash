@@ -275,27 +275,48 @@ class UIManager {
                         try {
                             const imageData = event.target.result;
 
-                            if (typeof Tesseract === 'undefined') {
-                                throw new Error('La librería Tesseract no se ha cargado. Revisa tu conexión a internet.');
+                            if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey()) {
+                                throw new Error('Debes configurar una API Key en Ajustes (Gemini u OpenAI) para usar el Escáner IA.');
                             }
 
-                            console.log('Iniciando reconocimiento...');
-                            const { data: { text } } = await Tesseract.recognize(
-                                imageData,
-                                'spa',
-                                {
-                                    logger: m => {
-                                        if (m.status === 'recognizing text') {
-                                            loadingDiv.textContent = `Leyendo texto... ${Math.round(m.progress * 100)}%`;
-                                        } else if (m.status === 'loading tesseract core') {
-                                            loadingDiv.textContent = 'Cargando motor OCR...';
-                                        }
-                                    }
-                                }
-                            );
+                            loadingDiv.textContent = 'Analizando recibo con IA...';
+                            const base64Data = imageData.split(',')[1];
+                            const mimeType = fileToProcess.type || 'image/jpeg';
 
-                            console.log('Texto Recibo:', text);
-                            this.processReceiptText(text);
+                            const extractedData = await this.aiAdvisor.scanReceipt(base64Data, mimeType);
+                            console.log('AI Receipt Data:', extractedData);
+
+                            const form = document.getElementById('transaction-form');
+                            if (!form) return;
+
+                            if (extractedData.amount) {
+                                document.getElementById('amount').value = this.formatNumberWithDots(extractedData.amount);
+                            }
+                            if (extractedData.merchant) {
+                                let noteStr = extractedData.merchant;
+                                if (extractedData.note && extractedData.note !== "null" && extractedData.note !== null) {
+                                    noteStr += ` - ${extractedData.note}`;
+                                }
+                                document.getElementById('note').value = noteStr.substring(0, 50);
+                            }
+
+                            if (extractedData.category && extractedData.category !== "null" && extractedData.category !== null) {
+                                const matchedCat = this.store.categories.find(c => c.name.toLowerCase().includes(extractedData.category.toLowerCase()));
+                                if (matchedCat) {
+                                    document.getElementById('category_id').value = matchedCat.id;
+                                    const catText = document.getElementById('category_text');
+                                    if (catText) catText.textContent = matchedCat.name;
+                                }
+                            }
+
+                            // GASTO by default
+                            const typeRadio = document.querySelector('input[name="type"][value="GASTO"]');
+                            if (typeRadio) typeRadio.checked = true;
+                            form.dispatchEvent(new Event('change', { bubbles: true }));
+
+                            setTimeout(() => {
+                                alert('✨ Recibo procesado por IA.\n\nVerifica que el monto y la categoría sean correctos antes de guardar.');
+                            }, 300);
 
                         } catch (err) {
                             console.error('Error OCR Logic:', err);
@@ -848,6 +869,9 @@ class UIManager {
                         Domina tus finanzas con inteligencia. Tu libertad financiera empieza con el primer registro.
                     </p>
                     
+                    <button onclick="window.showGuide()" style="width:100%; max-width: 280px; padding:16px; background:var(--bg-surface); color:var(--primary-color); border:2px solid var(--primary-color); border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; margin-bottom:12px; transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                        📖 Ver Guía de Inicio
+                    </button>
                     <button onclick="window.ui.openQuickExpense()" style="width:100%; max-width: 280px; padding:16px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; margin-bottom:20px; box-shadow: 0 8px 20px rgba(233,30,99,0.25); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                         ⚡ Registrar mi primer gasto
                     </button>
@@ -1430,9 +1454,7 @@ class UIManager {
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
                 <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-main);">⚡ Gasto Rápido</h3>
                 <div style="display:flex; gap:10px;">
-                    <button id="open-guide-btn" style="background:#E3F2FD; color:#1565C0; border:none; padding:6px 12px; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
-                        📘 Guía
-                    </button>
+                    <!-- Guía removed from here -->
                     <button id="close-quick-btn" style="background:rgba(0,0,0,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); font-size: 1.2rem;">&times;</button>
                 </div>
             </div>
@@ -1455,6 +1477,13 @@ class UIManager {
                             <span>${c.name}</span>
                         </button>
                     `).join('')}
+                </div>
+                
+                <div style="margin-bottom: 24px;">
+                    <p style="margin:0 0 8px; font-size:0.85rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">💳 Pago desde</p>
+                    <select id="quick-account-select" style="width:100%; padding:14px; border:1px solid var(--border-color); border-radius:16px; background:var(--bg-surface); font-size:1rem; font-weight:500; font-family: inherit; outline:none; color:var(--text-main); cursor:pointer;">
+                        ${this.store.accounts.map(a => `<option value="${a.id}">${a.name} (${this.formatCurrency(a.current_balance)})</option>`).join('')}
+                    </select>
                 </div>
                 
                 <button id="quick-save-btn" style="width:100%; padding:18px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:16px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow: 0 8px 20px rgba(233,30,99,0.3); opacity: 0.5; pointer-events: none; transition: opacity 0.3s;">
@@ -1534,8 +1563,9 @@ class UIManager {
             const catId = selectedCatId;
             const catName = this.store.categories.find(c => c.id === catId)?.name || '';
 
-            // Find accounting
-            const accountId = this.store.accounts.find(a => a.type === 'EFECTIVO')?.id || this.store.accounts[0]?.id || 'acc_1';
+            // Find accounting (Updated to use dropdown)
+            const acctSelect = document.getElementById('quick-account-select');
+            const accountId = acctSelect ? acctSelect.value : (this.store.accounts.find(a => a.type === 'EFECTIVO')?.id || this.store.accounts[0]?.id || 'acc_1');
 
             const txData = {
                 type: 'GASTO',
@@ -3868,6 +3898,9 @@ class UIManager {
                         }
                     });
 
+                    // We automatically save these generated budgets to the config so they persist immediately
+                    this.store.updateConfig({ budgets: { ...this.store.config.budgets, ...finalValues } });
+
                     // Update the live summary pill
                     this.updateBudgetTotal();
 
@@ -4388,8 +4421,8 @@ class UIManager {
 
             // Success! Save for real.
             this.store.saveSettings(this.store.config);
-            statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! Guardado.</span>';
-            setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32;">✅ Configuración lista</span>'; }, 2000);
+            statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! API Configurada.</span>';
+            setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ Motor de IA Conectado y Listo</span>'; }, 2500);
 
         } catch (error) {
             console.error(error);

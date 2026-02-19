@@ -407,7 +407,7 @@ REGLAS DE FORMATO:
             4. El formato de respuesta para 'amount' debe ser NUMBER (ej: 198514). Redondea a entero.
 
             Instrucciones para COMERCIO y CATEGORÍA:
-            1. Merchant: Busca el nombre en el logo o encabezado (Ej: "Notaría 7", "D1", "Exito").
+            1. Merchant: Busca el nombre visible en el logo o encabezado (Ej: "Notaría 7", "D1", "Exito"). MUY IMPORTANTE: Ignora por completo cualquier "NIT", "RUT" o "Número de Identificación Tributaria". Estas palabras o sus números NO son el nombre del negocio y NUNCA deben ir en el campo 'merchant' o 'amount'.
             2. Category:
                - Si es "Notaría" o trámites legales -> "Vivienda" (si parece escritura) o "Servicios".
                - Si es Mercado/Supermercado -> "Alimentación".
@@ -517,7 +517,7 @@ REGLAS DE FORMATO:
 
         // Personality: "Pazion" (Witty, Direct, Colombian/Latam slang friendly)
         const prompt = `
-            ACTÚA COMO: Un amigo financiero brutalmente honesto y con sentido del humor (estilo 'Pazion').
+            ACTÚA COMO: Un Coach financiero educativo, paciente y empático.
             CONTEXTO: El usuario acaba de registrar un GASTO nuevo y ha activado una alerta: [${triggerReason || 'N/A'}].
             
             DATOS DEL GASTO:
@@ -531,16 +531,17 @@ REGLAS DE FORMATO:
             - ALERTA ACTIVADA: ${triggerReason ? triggerReason : (isOverBudget ? 'SOBREGIRO' : 'Ninguna grave')}
             
             TU MISIÓN:
-            Genera una reacción CORTA (Máximo 140 caracteres) para enviarle una notificación push (Toast).
+            Genera una reacción educativa (Máximo 2-3 oraciones cortas) para enviarle una notificación push (Toast).
             
             REGLAS DE TONO:
-            - Si es un gasto innecesario (café, vicios, hormiga) → Sé sarcástico/gracioso. "Otro café? Tu cuenta bancaria llora ☕️"
-            - Si rompió el presupuesto → Regáñalo con cariño. "Te pasaste! Suelta la tarjeta 🛑"
-            - Si es un gasto alto → Alerta.
-            - Si es un gasto bien planeado o necesario → Felicita o da un dato curioso.
+            - Sé constructivo, amable y motivador. No uses sarcasmo pesado.
+            - Si es un gasto innecesario → Da un consejo rápido de ahorro constructivo.
+            - Si rompió el presupuesto → Anímalo a recomponerse ajustando otras categorías.
+            - Si es un gasto alto → Sugiere cómo amortizarlo o planearlo mejor.
+            - Si es un gasto necesario/bien planeado → Valida su buena gestión.
             - Usa emojis.
-            - Habla en español latino, casual.
-            - NO saludes. Ve al grano.
+            - Habla en español latino, claro, amigable y profesional.
+            - NO saludes. Ve al grano de manera directa pero suave.
             
             SALIDA ESPERADA:
             Solo el texto de la notificación.
