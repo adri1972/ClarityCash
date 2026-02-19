@@ -1432,19 +1432,30 @@ class UIManager {
         const catCounts = {};
         txs.forEach(t => { catCounts[t.category_id] = (catCounts[t.category_id] || 0) + 1; });
 
-        // Get historically top categories
+        // STRICT WHITELIST: Only spontaneous, fungible, on-the-go expenses
+        const spontaneousAllowedIds = [
+            'cat_2', // Alimentación
+            'cat_3', // Transporte
+            'cat_gasolina', // Gasolina
+            'cat_4', // Salud (Farmacia etc)
+            'cat_9', // Ocio
+            'cat_rest', // Restaurantes / Domicilios
+            'cat_personal', // Ropa / Cuidado Personal
+            'cat_vicios', // Alcohol / Tabaco
+            'cat_ant', // Café / Snacks
+            'cat_10' // Otros/Imprevistos
+        ];
+
+        // Get historically top categories that are ONLY in the whitelist
         let topCats = Object.entries(catCounts)
             .sort((a, b) => b[1] - a[1])
+            .filter(([id]) => spontaneousAllowedIds.includes(id)) // Apply Whitelist
             .slice(0, 6)
             .map(([id]) => this.store.categories.find(c => c.id === id))
             .filter(Boolean);
 
         // FORCE PRIORITY: Always include Food (cat_2) and Cravings/Coffee (cat_ant) at the start
         const priorityIds = ['cat_2', 'cat_ant'];
-
-        // Only exclude pure fixed commitments that are NEVER spontaneous (Mortgage, Debt, Renting)
-        const excludeBaseIds = ['cat_1', 'cat_7', 'cat_fin_5'];
-        topCats = topCats.filter(c => !excludeBaseIds.includes(c.id));
 
         priorityIds.reverse().forEach(pid => {
             // Remove if already in list to avoid duplicates
@@ -1454,9 +1465,9 @@ class UIManager {
             if (cat) topCats.unshift(cat);
         });
 
-        // Fallback if list is empty
+        // Fallback if list is empty (user has no history yet)
         if (topCats.length === 0) {
-            const defaultIds = ['cat_2', 'cat_ant', 'cat_3', 'cat_9'];
+            const defaultIds = ['cat_2', 'cat_ant', 'cat_3', 'cat_9', 'cat_rest', 'cat_10'];
             defaultIds.forEach(id => {
                 const cat = this.store.categories.find(c => c.id === id);
                 if (cat) topCats.push(cat);
