@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // --- STABLE UPDATE ENGINE v68.M (JSON Based) ---
+        // --- STABLE UPDATE ENGINE v68.J (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '68.M';
+            const CURRENT_VERSION = '68.J';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -48,7 +48,7 @@
                     if ('caches' in window) {
                         caches.keys().then(names => {
                             for (let name of names) caches.delete(name);
-                            localStorage.setItem('cc_version', '68.M');
+                            localStorage.setItem('cc_version', '68.J');
                             window.location.reload(true);
                         });
                     } else {
@@ -214,7 +214,7 @@
         }
     </script>
     <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v68.M-HOTFIX</div>
+        v68.J-HOTFIX</div>
 </body>
 
 </html>
