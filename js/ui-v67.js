@@ -1442,9 +1442,9 @@ class UIManager {
         // FORCE PRIORITY: Always include Food (cat_2) and Cravings/Coffee (cat_ant) at the start
         const priorityIds = ['cat_2', 'cat_ant'];
 
-        // Remove structural Fixed Expenses (Renting, Housing, Debt, etc.) since Quick Expenses are for mobile spontaneous purchases
-        const excludeGroups = ['VIVIENDA', 'FINANCIERO'];
-        topCats = topCats.filter(c => !excludeGroups.includes(c.group) && c.id !== 'cat_11');
+        // Only exclude pure fixed commitments that are NEVER spontaneous (Mortgage, Debt, Renting)
+        const excludeBaseIds = ['cat_1', 'cat_7', 'cat_fin_5'];
+        topCats = topCats.filter(c => !excludeBaseIds.includes(c.id));
 
         priorityIds.reverse().forEach(pid => {
             // Remove if already in list to avoid duplicates
