@@ -4468,13 +4468,13 @@ class UIManager {
 
             // Friendly Error Messages (v68.K)
             if (error.message.includes('400') || error.message.includes('INVALID_KEY') || error.message.includes('API_KEY_INVALID')) {
-                msg = `❌ Llave incorrecta. Detalle: ${error.message}`;
+                msg = `❌ Llave incorrecta. Detalle original: ${error.message}`;
             } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
-                msg = `⏳ Servidor ocupado o cuota superada. Detalle: ${error.message}`;
-            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                msg = `📡 Sin internet o error de red. Detalle: ${error.message}`;
+                msg = `🛑 Límite de la API alcanzado (Se te acabaron los tokens). Detalle original: ${error.message}`;
             } else if (error.message.includes('QUOTA_EXCEEDED')) {
-                msg = `🛑 Se acabó el saldo de tu cuenta de IA. Detalle: ${error.message}`;
+                msg = `🛑 Sin saldo. Haz upgrade de tu cuenta de API de Google/OpenAI. Detalle original: ${error.message}`;
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                msg = `📡 Sin internet o conexión bloqueada. Detalle original: ${error.message}`;
             } else {
                 msg = `❌ Error API: ${error.message}`;
             }
