@@ -1,5 +1,5 @@
 {
-    "version": "68.N",
-    "updatedAt": "2026-02-19T18:10:00Z",
-    "notes": "Hotfix: Auto-update engine repair and Quick Expense fix"
+    "version": "68.P",
+    "updatedAt": "2026-02-19T18:50:00Z",
+    "notes": "Hotfix: UI syntax, Quick Expense logic, and Budget display."
 }
