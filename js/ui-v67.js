@@ -1760,6 +1760,7 @@ class UIManager {
         // 1. Map Data
         let items = categories.map(c => {
             if (c.id === 'cat_fin_4') return null; // Quitar Tarjeta de Crédito del presupuesto
+            if (c.group === 'INGRESOS') return null; // Quitar ingresos
 
             const spent = breakdown[c.name] || 0;
             const limit = budgets[c.id] || 0;
@@ -1774,7 +1775,7 @@ class UIManager {
             return { ...c, spent, limit, percent, status };
         }).filter(i => i !== null);
 
-        // 2. Sort by Severity (Over budget first, then high spending)
+        // Sort by Severity inside groups
         items.sort((a, b) => {
             const aOver = (a.status === 'OVER' || a.status === 'OVER_UNBUDGETED');
             const bOver = (b.status === 'OVER' || b.status === 'OVER_UNBUDGETED');
@@ -1783,8 +1784,29 @@ class UIManager {
             return b.percent - a.percent;
         });
 
-        // 3. Show all tracked items (Removed the 5-item limit so the user gets a full overview)
-        const topItems = items;
+        const groups = {
+            'FIXED': '📌 Gastos Fijos (Compromisos)',
+            'AHORRO': '💰 Prioridad de Ahorro',
+            'NECESIDADES': 'Necesidades Básicas',
+            'VIVIENDA': 'Hogar y Servicios',
+            'FINANCIERO': 'Obligaciones Financieras',
+            'CRECIMIENTO': 'Educación y Desarrollo',
+            'ESTILO_DE_VIDA': 'Estilo de Vida',
+            'OTROS': 'Otros Gastos'
+        };
+
+        const fixedIds = ['cat_1', 'cat_viv_servicios', 'cat_viv_gas', 'cat_viv_net', 'cat_viv_cel', 'cat_viv_man', 'cat_fin_5', 'cat_fin_int'];
+
+        const groupedItems = {
+            'FIXED': items.filter(i => fixedIds.includes(i.id)),
+            'AHORRO': items.filter(i => i.id === 'cat_5'),
+            'NECESIDADES': items.filter(i => i.group === 'NECESIDADES' && !fixedIds.includes(i.id)),
+            'VIVIENDA': items.filter(i => i.group === 'VIVIENDA' && !fixedIds.includes(i.id)),
+            'FINANCIERO': items.filter(i => i.group === 'FINANCIERO' && !fixedIds.includes(i.id) && i.id !== 'cat_5'),
+            'CRECIMIENTO': items.filter(i => i.group === 'CRECIMIENTO' && !fixedIds.includes(i.id)),
+            'ESTILO_DE_VIDA': items.filter(i => i.group === 'ESTILO_DE_VIDA' && !fixedIds.includes(i.id)),
+            'OTROS': items.filter(i => i.group === 'OTROS' && !fixedIds.includes(i.id))
+        };
 
         let html = `
             <div class="details-card">
@@ -1792,17 +1814,16 @@ class UIManager {
                     <h4>Seguimiento de Presupuesto</h4>
                     <button class="btn-link" onclick="document.querySelector('[data-view=settings]').click()">Configurar</button>
                 </div>
-                <div class="budget-list-compact" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                <div class="budget-list-compact" style="max-height: 500px; overflow-y: auto; padding-right: 5px;">
         `;
 
-        if (topItems.length === 0) {
+        if (items.length === 0) {
             html += `<p class="empty-state">No hay gastos ni presupuestos activos este mes.</p>`;
         } else {
-            topItems.forEach(item => {
+            const renderItem = (item) => {
                 const barColor = (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') ? '#D32F2F' : (item.status === 'WARN' ? '#FFA000' : '#388E3C');
                 const width = Math.min(item.percent, 100);
 
-                // Alert styles
                 let rowStyle = '';
                 let alertIcon = '';
                 let overMsg = '';
@@ -1811,33 +1832,47 @@ class UIManager {
                     rowStyle = 'background: #FFEBEE; border-left: 4px solid #D32F2F; padding: 6px 8px; border-radius: 4px;';
                     alertIcon = '🚨 ';
                     if (item.status === 'OVER_UNBUDGETED') {
-                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">🚨 Gastaste ${this.formatCurrency(item.spent)} sin presupuesto!</div>`;
+                        overMsg = \`<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">🚨 Gastaste \${this.formatCurrency(item.spent)} sin presupuesto!</div>\`;
                     } else {
-                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por ${this.formatCurrency(item.spent - item.limit)}!</div>`;
+                        overMsg = \`<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por \${this.formatCurrency(item.spent - item.limit)}!</div>\`;
                     }
                 } else if (item.status === 'WARN') {
                     alertIcon = '⚠️ ';
                 }
 
-                html += `
-                    <div class="budget-row" style="${rowStyle} margin-bottom: 0.8rem; position: relative;">
+                return \`
+                    <div class="budget-row" style="\${rowStyle} margin-bottom: 0.8rem; position: relative;">
                         <div class="budget-info" style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                            <span class="cat-name" style="font-weight: 500; font-size: 0.9rem;">${alertIcon}${item.name}</span>
+                            <span class="cat-name" style="font-weight: 500; font-size: 0.9rem;">\${alertIcon}\${item.name}</span>
                             <span class="budget-vals text-muted" style="font-size: 0.8rem;">
-                                ${this.formatCurrency(item.spent)} 
-                                ${item.limit > 0 ? `/ <span style="font-weight:600;">${this.formatCurrency(item.limit)}</span>` : ''}
+                                \${this.formatCurrency(item.spent)} 
+                                \${item.limit > 0 ? \`/ <span style="font-weight:600;">\${this.formatCurrency(item.limit)}</span>\` : ''}
                             </span>
                         </div>
                         <div class="progress-track" style="height: 6px; background: #eee; border-radius: 3px; overflow: hidden;">
-                             <div class="progress-fill" style="width: ${width}%; background: ${barColor}; height: 100%;"></div>
+                             <div class="progress-fill" style="width: \${width}%; background: \${barColor}; height: 100%;"></div>
                         </div>
-                        ${overMsg}
+                        \${overMsg}
                     </div>
-                `;
+                \`;
+            };
+
+            Object.keys(groups).forEach(gKey => {
+                const groupItems = groupedItems[gKey];
+                if (groupItems && groupItems.length > 0) {
+                    html += \`
+                        <div style="margin-bottom: 1.2rem;">
+                            <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
+                                \${groups[gKey]}
+                            </h5>
+                            \${groupItems.map(renderItem).join('')}
+                        </div>
+                    \`;
+                }
             });
         }
 
-        html += `</div></div>`;
+        html += \`</div></div>\`;
         return html;
     }
 

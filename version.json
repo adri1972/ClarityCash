@@ -1,5 +1,5 @@
 {
-    "version": "68.R",
-    "updatedAt": "2026-02-19T19:25:00Z",
-    "notes": "Hotfix: UI adjustments for Piechart, Budget Overview, and Welcome Guide"
+    "version": "68.S",
+    "updatedAt": "2026-02-19T19:40:00Z",
+    "notes": "Redesign: Dashboard Budget Tracking widget now grouped by categories"
 }
