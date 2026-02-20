@@ -1765,9 +1765,10 @@ class UIManager {
             const limit = budgets[c.id] || 0;
             if (spent === 0 && limit === 0) return null; // Skip irrelevant
 
-            const percent = limit > 0 ? (spent / limit) * 100 : 0;
+            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
             let status = 'OK';
-            if (limit > 0 && percent > 100) status = 'OVER';
+            if (limit <= 0 && spent > 0) status = 'OVER_UNBUDGETED';
+            else if (limit > 0 && percent > 100) status = 'OVER';
             else if (limit > 0 && percent > 85) status = 'WARN';
 
             return { ...c, spent, limit, percent, status };
@@ -1775,8 +1776,10 @@ class UIManager {
 
         // 2. Sort by Severity (Over budget first, then high spending)
         items.sort((a, b) => {
-            if (a.status === 'OVER' && b.status !== 'OVER') return -1;
-            if (b.status === 'OVER' && a.status !== 'OVER') return 1;
+            const aOver = (a.status === 'OVER' || a.status === 'OVER_UNBUDGETED');
+            const bOver = (b.status === 'OVER' || b.status === 'OVER_UNBUDGETED');
+            if (aOver && !bOver) return -1;
+            if (bOver && !aOver) return 1;
             return b.percent - a.percent;
         });
 
@@ -1796,7 +1799,7 @@ class UIManager {
             html += `<p class="empty-state">No hay gastos ni presupuestos activos este mes.</p>`;
         } else {
             topItems.forEach(item => {
-                const barColor = item.status === 'OVER' ? '#D32F2F' : (item.status === 'WARN' ? '#FFA000' : '#388E3C');
+                const barColor = (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') ? '#D32F2F' : (item.status === 'WARN' ? '#FFA000' : '#388E3C');
                 const width = Math.min(item.percent, 100);
 
                 // Alert styles
@@ -1804,10 +1807,14 @@ class UIManager {
                 let alertIcon = '';
                 let overMsg = '';
 
-                if (item.status === 'OVER') {
+                if (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') {
                     rowStyle = 'background: #FFEBEE; border-left: 4px solid #D32F2F; padding: 6px 8px; border-radius: 4px;';
                     alertIcon = '🚨 ';
-                    overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por ${this.formatCurrency(item.spent - item.limit)}!</div>`;
+                    if (item.status === 'OVER_UNBUDGETED') {
+                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">🚨 Gastaste ${this.formatCurrency(item.spent)} sin presupuesto!</div>`;
+                    } else {
+                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por ${this.formatCurrency(item.spent - item.limit)}!</div>`;
+                    }
                 } else if (item.status === 'WARN') {
                     alertIcon = '⚠️ ';
                 }
@@ -2325,8 +2332,9 @@ class UIManager {
                                     return chart.data.labels.map((label, i) => {
                                         const value = dataset.data[i];
                                         const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        const pctText = pct > 0 ? `${pct}%` : '<1%';
                                         return {
-                                            text: `${label} (${pct}%)`,
+                                            text: `${label} (${pctText})`,
                                             fillStyle: dataset.backgroundColor[i],
                                             strokeStyle: 'transparent',
                                             hidden: false,
@@ -2343,7 +2351,8 @@ class UIManager {
                                 label: (context) => {
                                     const value = context.raw;
                                     const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-                                    return ` ${this.formatCurrency(value)} (${pct}%)`;
+                                    const pctText = pct > 0 ? `${pct}%` : '<1%';
+                                    return ` ${this.formatCurrency(value)} (${pctText})`;
                                 }
                             }
                         }
