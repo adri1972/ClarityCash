@@ -1783,8 +1783,8 @@ class UIManager {
             return b.percent - a.percent;
         });
 
-        // 3. Limit to Top 5 + Aggregated "Others"
-        const topItems = items.slice(0, 5);
+        // 3. Show all tracked items (Removed the 5-item limit so the user gets a full overview)
+        const topItems = items;
 
         let html = `
             <div class="details-card">
@@ -1792,7 +1792,7 @@ class UIManager {
                     <h4>Seguimiento de Presupuesto</h4>
                     <button class="btn-link" onclick="document.querySelector('[data-view=settings]').click()">Configurar</button>
                 </div>
-                <div class="budget-list-compact">
+                <div class="budget-list-compact" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
         `;
 
         if (topItems.length === 0) {
@@ -2296,8 +2296,8 @@ class UIManager {
         // Strip 0 values so they don't render or show 0% labels
         const labelsToData = Object.entries(breakdownUnfiltered).filter(([_, val]) => val > 0);
 
-        // Format labels and truncate if too long because of small screens
-        const labels = labelsToData.map(([k, _]) => k.length > 18 ? k.substring(0, 18) + '...' : k);
+        // Remove fixed truncation so full labels show. Since legend is now at bottom, they will fit.
+        const labels = labelsToData.map(([k, _]) => k);
         const data = labelsToData.map(([_, v]) => v);
 
         if (this.currentChart) this.currentChart.destroy();
@@ -2325,7 +2325,7 @@ class UIManager {
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'right',
+                            position: 'bottom',
                             labels: {
                                 generateLabels: (chart) => {
                                     const dataset = chart.data.datasets[0];
@@ -3551,12 +3551,12 @@ class UIManager {
                         </div>
 
                         <div class="form-group">
-                            <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
-                                <span>Perfil de Gasto</span>
-                                <button type="button" id="profile-info-btn" class="btn-text" onclick="window.ui.showWelcomeGuide()" style="font-size: 0.8rem;">
-                                    <i data-feather="help-circle"></i> Ver Guía
+                            <label>Perfil de Gasto</label>
+                            <div style="margin-bottom: 0.8rem;">
+                                <button type="button" class="btn btn-secondary" onclick="window.ui.showWelcomeGuide()" style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center; width: 100%; border: 1px solid #ccc; background: #f8f9fa; color: #333;">
+                                    <i data-feather="book-open"></i> Ver Guía de Inicio (Tutorial)
                                 </button>
-                            </label>
+                            </div>
                             <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
                                 <option value="CONSERVADOR" ${conf.spending_profile === 'CONSERVADOR' ? 'selected' : ''}>Conservador (Estricto)</option>
                                 <option value="BALANCEADO" ${conf.spending_profile === 'BALANCEADO' ? 'selected' : ''}>Balanceado</option>

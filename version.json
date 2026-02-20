@@ -1,5 +1,5 @@
 {
-    "version": "68.Q",
-    "updatedAt": "2026-02-19T19:05:00Z",
-    "notes": "Hotfix: Dashboard widget constraints logic + Piechart zero labels"
+    "version": "68.R",
+    "updatedAt": "2026-02-19T19:25:00Z",
+    "notes": "Hotfix: UI adjustments for Piechart, Budget Overview, and Welcome Guide"
 }
