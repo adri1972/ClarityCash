@@ -76,12 +76,12 @@
                 }
 
                 // 3. Mark Version
-                localStorage.setItem('cc_app_version', '68.U');
+                localStorage.setItem('cc_app_version', '68.V');
 
                 // 4. Force Reload to actual app bypassing caches
                 setTimeout(() => {
                     const bust = Date.now();
-                    window.location.href = 'index.html?v=68U&nocache=' + bust;
+                    window.location.href = 'index.html?v=68V&nocache=' + bust;
                 }, 1500);
 
             } catch (e) {

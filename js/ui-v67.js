@@ -1872,7 +1872,7 @@ class UIManager {
             });
         }
 
-        html += \`</div></div>\`;
+        html += `</div></div>`;
         return html;
     }
 

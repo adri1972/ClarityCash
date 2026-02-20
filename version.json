@@ -1,5 +1,5 @@
 {
-    "version": "68.U",
-    "updatedAt": "2026-02-19T19:50:00Z",
-    "notes": "Hotfix: Fix JS syntax error causing white screen on load"
+    "version": "68.V",
+    "updatedAt": "2026-02-19T20:05:00Z",
+    "notes": "Hotfix: Fix final trailing syntax error causing white screen on load!"
 }
