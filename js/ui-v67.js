@@ -947,7 +947,7 @@ class UIManager {
                 <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 16px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
                         <div>
-                            <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;' : 'background: #f5f5f5; color: #999;'}">
+                            <span id="ai-status-badge" style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;' : 'background: #f5f5f5; color: #999;'}">
                                 ${hasApiKey ? '✨ IA Generativa (Real)' : '⚡ Diagnóstico Automático'}
                             </span>
                             <div id="ai-diagnosis-content">
@@ -1205,31 +1205,38 @@ class UIManager {
     showFallbackDiagnosis(plan, container) {
         if (!container) return;
 
-        // Local "Fake AI" Logic
-        let insight = "Tu flujo de caja está equilibrado.";
-        let strategy = "Mantén el ritmo actual.";
-        let action = "Revisa tus metas de ahorro.";
+        // Change the badge to reflect offline mode so it doesn't contradict
+        const badge = document.getElementById('ai-status-badge');
+        if (badge) {
+            badge.innerText = '🤖 Modo Respaldo (Sin Conexión)';
+            badge.style.background = '#e2e8f0';
+            badge.style.color = '#475569';
+        }
+
+        // Local Math-based logic (Cleaned up to sound professional, not "bobada")
+        let insight = "Los gastos se encuetran dentro de los márgenes previstos.";
+        let strategy = "Prioridad: Completar el registro de transacciones pendientes.";
+        let action = "Monitorear la categoría con mayor gasto este mes.";
 
         if (plan.status === 'CRITICAL') {
-            insight = "⚠️ Estás gastando más de lo que ingresas. Esto es insostenible.";
-            strategy = "Corte drástico de gastos no esenciales (hormiga).";
-            action = "Audita tus suscripciones y cancela lo que no uses hoy.";
+            insight = "Déficit Detectado: La tasa de gasto actual supera los ingresos registrados.";
+            strategy = "Detener gastos no esenciales (Micro-transacciones y Ocio).";
+            action = "Revisar suscripciones activas y cancelar las innecesarias urgentemente.";
         } else if (plan.status === 'WARNING') {
-            insight = "⚠️ Estás al límite. Cualquier imprevisto te endeudará.";
-            strategy = "Prioriza crear un fondo de emergencia pequeño.";
-            action = "Intenta ahorrar el 1% de todo lo que entre esta semana.";
+            insight = "Margen Riesgoso: Acercándose al límite del presupuesto mensual.";
+            strategy = "Congelar grandes adquisiciones hasta el próximo corte.";
+            action = "Priorizar liquidez para asegurar el pago de gastos fijos.";
         } else if (plan.status === 'SURPLUS') {
-            insight = "✅ Tienes superávit. El dinero quieto pierde valor.";
-            strategy = "No subas tu nivel de vida, sube tu inversión.";
-            action = "Abre un CDT o cuenta de alto rendimiento con el excedente.";
+            insight = "Superávit de Liquidez: Disponibilidad de capital sin asignar.";
+            strategy = "Evitar la inflación del estilo de vida con los excedentes.";
+            action = "Asignar el dinero flotante a fondos de ahorro o deudas anticipadas.";
         }
 
         const fallbackHTML = `
-            <div style="border-left: 3px solid #ccc; padding-left: 10px; margin-top: 10px; color: #555;">
-                <p style="margin:0 0 5px; font-weight:bold;">🤖 Modo Respaldo (Sin Conexión):</p>
-                <p style="margin:0 0 5px;">• ${insight}</p>
-                <p style="margin:0 0 5px;">• 💡 Estrategia: ${strategy}</p>
-                <p style="margin:0;">• 👉 Acción: ${action}</p>
+            <div style="border-left: 3px solid #64748b; padding-left: 12px; margin-top: 8px; color: #334155; font-size: 0.9rem; line-height: 1.5;">
+                <div style="margin-bottom: 6px;"><strong>Análisis:</strong> ${insight}</div>
+                <div style="margin-bottom: 6px;"><strong>Estrategia:</strong> ${strategy}</div>
+                <div><strong>Acción:</strong> ${action}</div>
             </div>
         `;
 
@@ -4483,6 +4490,63 @@ class UIManager {
         html += `</div></div>`;
         return html;
     }
+
+    showModal(title, textHTML) {
+        // Create modal container
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.zIndex = '9999'; // Ensure it stays on top of settings
+
+        const content = document.createElement('div');
+        content.className = 'modal-content';
+        content.style.maxWidth = '400px';
+
+        const header = document.createElement('div');
+        header.className = 'modal-header';
+
+        const h3 = document.createElement('h3');
+        h3.innerText = title;
+        h3.style.margin = '0';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-modal';
+        closeBtn.innerHTML = '<i data-feather="x"></i>';
+        closeBtn.onclick = () => document.body.removeChild(modal);
+
+        header.appendChild(h3);
+        header.appendChild(closeBtn);
+
+        const body = document.createElement('div');
+        body.style.padding = '10px 0';
+        body.style.fontSize = '0.9rem';
+        body.style.lineHeight = '1.6';
+        body.style.color = 'var(--text-secondary)';
+        body.innerHTML = textHTML;
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+
+        document.body.appendChild(modal);
+
+        // Render feather icons
+        if (window.feather) {
+            window.feather.replace();
+        }
+
+        // Entrance animation
+        requestAnimationFrame(() => {
+            modal.classList.remove('hidden');
+        });
+
+        // Close on clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
+
     toggleAiProvider(val) {
         document.getElementById('gemini-key-group').style.display = (val === 'gemini') ? 'block' : 'none';
         document.getElementById('openai-key-group').style.display = (val === 'openai') ? 'block' : 'none';

@@ -1,5 +1,5 @@
 {
-    "version": "68.V",
-    "updatedAt": "2026-02-19T20:05:00Z",
-    "notes": "Hotfix: Fix final trailing syntax error causing white screen on load!"
+    "version": "68.Y",
+    "updatedAt": "2026-02-19T21:10:00Z",
+    "notes": "Hotfix: Add missing showModal logic so Profile Guide works in Settings."
 }

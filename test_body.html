@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        fetch('version.json').then(res => res.text()).then(data => {
+            console.log("Body exists?", !!document.body);
+        });
+    </script>
+</head>
+<body>
+    <h1>Test</h1>
+</body>
+</html>
