@@ -1,5 +1,5 @@
 {
-    "version": "68.T",
-    "updatedAt": "2026-02-19T19:45:00Z",
-    "notes": "Hotfix: Change Settings Guide button to explain profiles instead of Welcome Tutorial"
+    "version": "68.U",
+    "updatedAt": "2026-02-19T19:50:00Z",
+    "notes": "Hotfix: Fix JS syntax error causing white screen on load"
 }

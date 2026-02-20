@@ -1832,42 +1832,42 @@ class UIManager {
                     rowStyle = 'background: #FFEBEE; border-left: 4px solid #D32F2F; padding: 6px 8px; border-radius: 4px;';
                     alertIcon = '🚨 ';
                     if (item.status === 'OVER_UNBUDGETED') {
-                        overMsg = \`<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">🚨 Gastaste \${this.formatCurrency(item.spent)} sin presupuesto!</div>\`;
+                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">🚨 Gastaste ${this.formatCurrency(item.spent)} sin presupuesto!</div>`;
                     } else {
-                        overMsg = \`<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por \${this.formatCurrency(item.spent - item.limit)}!</div>\`;
+                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por ${this.formatCurrency(item.spent - item.limit)}!</div>`;
                     }
                 } else if (item.status === 'WARN') {
                     alertIcon = '⚠️ ';
                 }
 
-                return \`
-                    <div class="budget-row" style="\${rowStyle} margin-bottom: 0.8rem; position: relative;">
+                return `
+                    <div class="budget-row" style="${rowStyle} margin-bottom: 0.8rem; position: relative;">
                         <div class="budget-info" style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                            <span class="cat-name" style="font-weight: 500; font-size: 0.9rem;">\${alertIcon}\${item.name}</span>
+                            <span class="cat-name" style="font-weight: 500; font-size: 0.9rem;">${alertIcon}${item.name}</span>
                             <span class="budget-vals text-muted" style="font-size: 0.8rem;">
-                                \${this.formatCurrency(item.spent)} 
-                                \${item.limit > 0 ? \`/ <span style="font-weight:600;">\${this.formatCurrency(item.limit)}</span>\` : ''}
+                                ${this.formatCurrency(item.spent)} 
+                                ${item.limit > 0 ? `/ <span style="font-weight:600;">${this.formatCurrency(item.limit)}</span>` : ''}
                             </span>
                         </div>
                         <div class="progress-track" style="height: 6px; background: #eee; border-radius: 3px; overflow: hidden;">
-                             <div class="progress-fill" style="width: \${width}%; background: \${barColor}; height: 100%;"></div>
+                             <div class="progress-fill" style="width: ${width}%; background: ${barColor}; height: 100%;"></div>
                         </div>
-                        \${overMsg}
+                        ${overMsg}
                     </div>
-                \`;
+                `;
             };
 
             Object.keys(groups).forEach(gKey => {
                 const groupItems = groupedItems[gKey];
                 if (groupItems && groupItems.length > 0) {
-                    html += \`
+                    html += `
                         <div style="margin-bottom: 1.2rem;">
                             <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
-                                \${groups[gKey]}
+                                ${groups[gKey]}
                             </h5>
-                            \${groupItems.map(renderItem).join('')}
+                            ${groupItems.map(renderItem).join('')}
                         </div>
-                    \`;
+                    `;
                 }
             });
         }
