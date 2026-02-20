@@ -1,5 +1,5 @@
 {
-    "version": "68.S",
-    "updatedAt": "2026-02-19T19:40:00Z",
-    "notes": "Redesign: Dashboard Budget Tracking widget now grouped by categories"
+    "version": "68.T",
+    "updatedAt": "2026-02-19T19:45:00Z",
+    "notes": "Hotfix: Change Settings Guide button to explain profiles instead of Welcome Tutorial"
 }

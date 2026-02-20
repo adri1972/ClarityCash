@@ -3588,8 +3588,8 @@ class UIManager {
                         <div class="form-group">
                             <label>Perfil de Gasto</label>
                             <div style="margin-bottom: 0.8rem;">
-                                <button type="button" class="btn btn-secondary" onclick="window.ui.showWelcomeGuide()" style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center; width: 100%; border: 1px solid #ccc; background: #f8f9fa; color: #333;">
-                                    <i data-feather="book-open"></i> Ver Guía de Inicio (Tutorial)
+                                <button type="button" class="btn btn-secondary" onclick="window.ui.showModal('Guía de Perfiles', '<p><strong>Conservador:</strong> Prioriza la reducción de deudas y el ahorro rápido. Limita fuertemente los gastos de Estilo de Vida y Ocio.</p><p><strong>Balanceado:</strong> Busca un punto intermedio sano entre ahorrar, pagar deudas, y disfrutar la vida sin excederse.</p><p><strong>Flexible:</strong> Da mayor holgura a los gastos de estilo de vida, ideal para cuando no tienes deudas pesadas y quieres disfrutar tu liquidez.</p>')" style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center; width: 100%; border: 1px solid #ccc; background: #f8f9fa; color: #333;">
+                                    <i data-feather="book-open"></i> Ver Guía de Perfiles
                                 </button>
                             </div>
                             <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
