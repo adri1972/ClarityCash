@@ -184,10 +184,11 @@ class UIManager {
                         this.store.updateTransaction(editId, data);
                         alert('Movimiento actualizado correctamente.');
                     } else {
-                        this.store.addTransaction(data);
+                        const newTx = this.store.addTransaction(data);
                         // PROACTIVE AI: Trigger insight if it's an expense
                         if (data.type === 'GASTO') {
-                            this.triggerSpendingInsight(data);
+                            this.triggerSpendingInsight(newTx || data);
+                            this.checkAndPromptOverspend(newTx || data);
                         }
                     }
 
@@ -1631,10 +1632,11 @@ class UIManager {
                 note: `Gasto rápido: ${catName}`
             };
 
-            this.store.addTransaction(txData);
+            const newTx = this.store.addTransaction(txData);
 
-            // PROACTIVE AI: Trigger insight
-            setTimeout(() => this.triggerSpendingInsight(txData), 500);
+            // PROACTIVE AI: Trigger insight & Overspend Check
+            setTimeout(() => this.triggerSpendingInsight(newTx || txData), 500);
+            setTimeout(() => this.checkAndPromptOverspend(newTx || txData), 600);
 
             closeOverlay();
 
@@ -1932,6 +1934,117 @@ class UIManager {
 
     // --- PROACTIVE AI INSIGHTS ---
     // --- PROACTIVE AI INSIGHTS ---
+    checkAndPromptOverspend(txData) {
+        if (txData.type !== 'GASTO') return;
+
+        const catId = txData.category_id;
+        const budget = parseFloat(this.store.config.budgets[catId]) || 0;
+        if (budget <= 0) return; // No budget to exceed
+
+        // Calculate total spent in this month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+        const spent = this.store.transactions
+            .filter(t => t.category_id === catId && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
+            .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+        if (spent > budget) {
+            const excess = spent - budget;
+            this.showOverspendRebalanceModal(catId, excess);
+        }
+    }
+
+    showOverspendRebalanceModal(overspentCatId, excessParam) {
+        const cat = this.store.categories.find(c => c.id === overspentCatId);
+        const name = cat ? cat.name : 'la categoría';
+
+        // Find categories with surplus
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+        const surplusCats = [];
+        this.store.categories.forEach(c => {
+            if (c.id === overspentCatId) return;
+            const b = parseFloat(this.store.config.budgets[c.id]) || 0;
+            if (b > 0) {
+                const s = this.store.transactions
+                    .filter(t => t.category_id === c.id && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
+                    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                if (b - s > 0) surplusCats.push({ id: c.id, name: c.name, surplus: b - s });
+            }
+        });
+
+        // Filter surplus that can cover at least some part
+        if (surplusCats.length === 0) return; // No surplus categories
+
+        surplusCats.sort((a, b) => b.surplus - a.surplus);
+
+        let optionsHtml = surplusCats.map(c => `
+            <button type="button" onclick="window.ui.executeRebalance('${c.id}', '${overspentCatId}', ${excessParam})" 
+                    style="background: white; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left; width: 100%; display: flex; justify-content: space-between; margin-bottom: 8px; transition: transform 0.2s;"
+                    onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+                <span>${c.name}</span>
+                <span style="color: #4CAF50; font-weight: bold;">Sobra: $${this.formatNumberWithDots(c.surplus)}</span>
+            </button>
+        `).join('');
+
+        const modalHtml = `
+            <div style="text-align: center; margin-bottom: 15px;">
+                <span style="font-size: 3rem;">⚠️</span>
+                <p style="font-weight: 600; font-size: 1.1rem; margin-top: 10px; color: #D32F2F;">¡Presupuesto superado!</p>
+                <p style="color: #555; font-size: 0.9rem;">Te has pasado por <b>$${this.formatNumberWithDots(excessParam)}</b> en ${name}.</p>
+                <p style="color: #555; font-size: 0.9rem; margin-bottom: 15px;">¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?</p>
+            </div>
+            <div style="max-height: 250px; overflow-y: auto;">
+                ${optionsHtml}
+            </div>
+            <div style="margin-top: 15px; text-align: center;">
+                <button type="button" onclick="document.body.removeChild(this.closest('.modal'))" style="background: none; border: none; color: #888; text-decoration: underline; cursor: pointer;">Omitir por ahora</button>
+            </div>
+        `;
+
+        this.showModal('Rebalanceo Inteligente', modalHtml);
+    }
+
+    executeRebalance(fromCatId, toCatId, amount) {
+        const fromBudget = parseFloat(this.store.config.budgets[fromCatId]) || 0;
+        const toBudget = parseFloat(this.store.config.budgets[toCatId]) || 0;
+
+        let transferAmt = amount;
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+        const fromSpent = this.store.transactions
+            .filter(t => t.category_id === fromCatId && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
+            .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+        const surplus = fromBudget - fromSpent;
+        if (transferAmt > surplus) transferAmt = surplus;
+
+        this.store.config.budgets[fromCatId] = fromBudget - transferAmt;
+        this.store.config.budgets[toCatId] = toBudget + transferAmt;
+        this.store.saveSettings(this.store.config);
+
+        // Close modal gracefully
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(m => {
+            if (!m.classList.contains('hidden')) {
+                if (document.body.contains(m)) document.body.removeChild(m);
+            }
+        });
+
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:0.9rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2);';
+        toast.innerHTML = `✅ Transferencia exitosa: $${this.formatNumberWithDots(transferAmt)} movidos.`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+
+        this.render();
+    }
+
     async triggerSpendingInsight(tx) {
         if (!tx || tx.type !== 'GASTO') return;
 
@@ -3637,6 +3750,37 @@ class UIManager {
 
                 </div>
 
+                <!-- Mis Cuentas -->
+                <div class="card" style="margin-top: 2rem;">
+                    <h3>Mis Cuentas 💳</h3>
+                    <p class="text-secondary" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Administra tus medios de pago y saldos.
+                    </p>
+                    
+                    <div id="accounts-list" style="margin-bottom: 1.5rem;">
+                        ${this.renderAccountsList()}
+                    </div>
+
+                    <form id="account-form" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <input type="hidden" name="edit_acc_id" value="">
+                        <h4 id="acc-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #3b82f6;">Nueva Cuenta</h4>
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <input type="text" name="name" placeholder="Nombre (ej. Billetera Nequi)" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <select name="type" required style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                                <option value="EFECTIVO">Efectivo / Digital</option>
+                                <option value="BANCO">Cuenta Bancaria / Débito</option>
+                                <option value="CREDITO">Tarjeta de Crédito</option>
+                            </select>
+                            <input type="text" name="initial_balance" placeholder="Saldo ($)" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" title="Solo para cuentas nuevas. Déjalo en 0 si no aplica.">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                             <button type="submit" id="acc-submit-btn" class="btn btn-primary" style="flex: 1; background: #3b82f6;">+ Agregar</button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Column 2: Fixed Expenses & Recurring Incomes -->
                 <div>
                      <!-- RECURRING INCOMES -->
@@ -3829,7 +3973,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión ${localStorage.getItem('cc_app_version') || 'v68.J'} • Actualizar App 🔄
+                        Versión ${localStorage.getItem('cc_app_version') || 'v68.Z'} • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -4065,6 +4209,39 @@ class UIManager {
                     this.render();
                 }
             }
+
+            // Edit Account
+            if (target.classList.contains('edit-account') || target.closest('.edit-account')) {
+                const id = (target.dataset.id || target.closest('.edit-account').dataset.id);
+                const acc = this.store.accounts.find(a => a.id === id);
+                if (acc) {
+                    const form = document.getElementById('account-form');
+                    form.querySelector('[name="edit_acc_id"]').value = acc.id;
+                    form.querySelector('[name="name"]').value = acc.name;
+                    form.querySelector('[name="type"]').value = acc.type;
+                    form.querySelector('[name="initial_balance"]').value = acc.initial_balance ? acc.initial_balance.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.') : '';
+                    // Disable initial balance edit to avoid confusion if transactions exist
+                    form.querySelector('[name="initial_balance"]').readOnly = true;
+                    form.querySelector('[name="initial_balance"]').title = 'El saldo inicial no se puede editar después de crear la cuenta.';
+                    document.getElementById('acc-form-title').textContent = 'Editar Cuenta ✏️';
+                    document.getElementById('acc-submit-btn').textContent = 'Guardar Cambios';
+                    form.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+
+            // Delete Account
+            if (target.classList.contains('delete-account') || target.closest('.delete-account')) {
+                const id = (target.dataset.id || target.closest('.delete-account').dataset.id);
+                const txCount = this.store.transactions.filter(t => t.account_id === id).length;
+                if (txCount > 0) {
+                    alert(`⚠️ No se puede borrar esta cuenta porque tiene ${txCount} movimientos registrados. Para borrarla, primero elimina o transfiere sus movimientos.`);
+                    return;
+                }
+                if (confirm('¿Seguro que deseas borrar esta cuenta?')) {
+                    this.store.deleteAccount(id);
+                    this.render();
+                }
+            }
         };
 
         this.container.onsubmit = (e) => {
@@ -4150,6 +4327,26 @@ class UIManager {
                 }
                 this.render();
             }
+            if (formId === 'account-form') {
+                const formData = new FormData(e.target);
+                const editId = formData.get('edit_acc_id');
+                const amountRaw = formData.get('initial_balance');
+                const data = {
+                    name: formData.get('name'),
+                    type: formData.get('type')
+                };
+                if (!editId && amountRaw) {
+                    data.initial_balance = parseFloat(amountRaw.toString().replace(/\\./g, '')) || 0;
+                    data.current_balance = data.initial_balance;
+                }
+
+                if (editId) {
+                    this.store.updateAccount(editId, data);
+                } else {
+                    this.store.addAccount(data);
+                }
+                this.render();
+            }
         };
 
         // Feather icons replace
@@ -4173,6 +4370,32 @@ class UIManager {
         } catch (e) {
             window.location.reload();
         }
+    }
+
+    renderAccountsList() {
+        const list = this.store.accounts || [];
+        if (list.length === 0) return '';
+
+        return list.map(a => `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.95rem;">${a.name}</div>
+                    <div style="font-size: 0.85rem; color: #666;">
+                       ${a.type} • Saldo: ${this.formatCurrency(a.current_balance)}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-text edit-account" data-id="${a.id}" style="color: #2196F3;" title="Editar">
+                        <i data-feather="edit-2" style="width:18px;"></i>
+                    </button>
+                    ${a.id !== 'acc_1' && a.id !== 'acc_2' && a.id !== 'acc_tc_1' ? `
+                    <button class="btn-text delete-account" data-id="${a.id}" style="color: #999;" title="Borrar">
+                        <i data-feather="trash-2" style="width:18px;"></i>
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
     }
 
     renderFixedExpensesList() {

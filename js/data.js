@@ -19,8 +19,8 @@ const DEFAULT_DATA = {
     goals: [], // { id, type, name, target_amount, current_amount, deadline (date), status (ACTIVE, COMPLETED) }
     // B) Cuentas
     accounts: [
-        { id: 'acc_1', name: 'Billetera', type: 'EFECTIVO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
-        { id: 'acc_2', name: 'Cuenta Principal', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
+        { id: 'acc_1', name: 'Efectivo', type: 'EFECTIVO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
+        { id: 'acc_2', name: 'Cuenta con Tarjeta Débito', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
         { id: 'acc_tc_1', name: 'Tarjeta de Crédito', type: 'CREDITO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
     ],
     // C) Categorías
@@ -292,6 +292,15 @@ class Store {
         };
         this.data.transactions.push(newTx);
 
+        // Auto-deduct active debt
+        if (newTx.type === 'PAGO_DEUDA' && this.data.config.total_debt > 0) {
+            let debt = parseFloat(this.data.config.total_debt) || 0;
+            debt -= newTx.amount;
+            if (debt < 0) debt = 0;
+            this.data.config.total_debt = debt;
+            if (debt === 0) this.data.config.has_debts = false;
+        }
+
         // Update Account Balance
         this._updateAccountBalance(newTx.account_id, newTx.amount, newTx.type);
 
@@ -465,6 +474,36 @@ class Store {
     deleteGoal(id) {
         if (!this.data.goals) return;
         this.data.goals = this.data.goals.filter(g => g.id !== id);
+        this._save();
+    }
+
+    // --- Account Management ---
+    addAccount(account) {
+        if (!this.data.accounts) this.data.accounts = [];
+        const newAcc = {
+            ...account,
+            id: 'acc_' + Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            initial_balance: parseFloat(account.initial_balance) || 0,
+            current_balance: parseFloat(account.initial_balance) || 0,
+            created_at: new Date().toISOString()
+        };
+        this.data.accounts.push(newAcc);
+        this._save();
+        return newAcc;
+    }
+
+    updateAccount(id, updates) {
+        if (!this.data.accounts) return;
+        const index = this.data.accounts.findIndex(a => a.id === id);
+        if (index !== -1) {
+            this.data.accounts[index] = { ...this.data.accounts[index], ...updates };
+            this._save();
+        }
+    }
+
+    deleteAccount(id) {
+        if (!this.data.accounts) return;
+        this.data.accounts = this.data.accounts.filter(a => a.id !== id);
         this._save();
     }
 
