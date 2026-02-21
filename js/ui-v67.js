@@ -1604,9 +1604,11 @@ class UIManager {
         function checkForm() {
             const val = parseFloat(amountInput.value);
             if (val > 0 && selectedCatId) {
+                saveBtn.disabled = false;
                 saveBtn.style.opacity = '1';
                 saveBtn.style.pointerEvents = 'auto';
             } else {
+                saveBtn.disabled = true;
                 saveBtn.style.opacity = '0.5';
                 saveBtn.style.pointerEvents = 'none';
             }
