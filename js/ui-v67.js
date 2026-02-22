@@ -1435,6 +1435,13 @@ class UIManager {
     }
 
     openQuickExpense() {
+        // Safety check to prevent ghost overlays from piling up
+        const existing = document.getElementById('quick-expense-overlay');
+        if (existing) {
+            existing.remove();
+            console.log("Deleted ghost overlay");
+        }
+
         // --- 1. Get Top Categories + Force Priority (Coffee/Food) ---
         const txs = this.store.transactions.filter(t => t.type === 'GASTO');
         const catCounts = {};
@@ -1552,10 +1559,11 @@ class UIManager {
         document.body.appendChild(overlay);
 
         // --- Event Handlers ---
-        const amountInput = document.getElementById('quick-amount');
-        const saveBtn = document.getElementById('quick-save-btn');
-        const closeBtn = document.getElementById('close-quick-btn');
-        const catContainer = document.getElementById('quick-cats-container');
+        // Scoped to the current overlay to prevent ghost DOM selection
+        const amountInput = overlay.querySelector('#quick-amount');
+        const saveBtn = overlay.querySelector('#quick-save-btn');
+        const closeBtn = overlay.querySelector('#close-quick-btn');
+        const catContainer = overlay.querySelector('#quick-cats-container');
         let selectedCatId = null;
 
         // Auto-focus input
@@ -1622,7 +1630,7 @@ class UIManager {
             const catName = this.store.categories.find(c => c.id === catId)?.name || '';
 
             // Find accounting (Updated to use dropdown)
-            const acctSelect = document.getElementById('quick-account-select');
+            const acctSelect = overlay.querySelector('#quick-account-select');
             const accountId = acctSelect ? acctSelect.value : (this.store.accounts.find(a => a.type === 'EFECTIVO')?.id || this.store.accounts[0]?.id || 'acc_1');
 
             const txData = {
