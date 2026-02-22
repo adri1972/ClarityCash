@@ -1577,11 +1577,6 @@ class UIManager {
         closeBtn.addEventListener('click', closeOverlay);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
 
-        // Guide logic
-        const guideBtn = overlay.querySelector('#open-guide-btn');
-        guideBtn.addEventListener('click', () => {
-            this.openUserGuide();
-        });
         // Category Selection Logic
         catContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.quick-cat-btn');
