@@ -1,5 +1,5 @@
 {
-    "version": "68.Y",
-    "updatedAt": "2026-02-19T21:10:00Z",
-    "notes": "Hotfix: Add missing showModal logic so Profile Guide works in Settings."
+    "version": "68.AC",
+    "updatedAt": "2026-02-22T11:45:00Z",
+    "notes": "Hotfix: Eliminate Ghost DOM in Quick Expense and fix PWA Update Mechanism."
 }
