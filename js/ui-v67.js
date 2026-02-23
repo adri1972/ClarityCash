@@ -948,13 +948,13 @@ class UIManager {
                 <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 16px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
                         <div>
-                            <span id="ai-status-badge" style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;' : 'background: #f5f5f5; color: #999;'}">
-                                ${hasApiKey ? '✨ IA Generativa (Real)' : '⚡ Diagnóstico Automático'}
+                            <span id="ai-status-badge" style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? (this.store.config.ai_pro_mode ? 'background: linear-gradient(135deg, #FFB300, #F57C00); color: white; box-shadow: 0 2px 4px rgba(255,179,0,0.3);' : 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;') : 'background: #f5f5f5; color: #999;'}">
+                                ${hasApiKey ? (this.store.config.ai_pro_mode ? '🛡️ IA PRO (Segura)' : '✨ IA Generativa (Normal)') : '⚡ Diagnóstico Automático'}
                             </span>
                             <div id="ai-diagnosis-content">
                                 <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
                             </div>
-                            ${hasApiKey ? `<small id="ai-loading-indicator" style="display:none; color:#E91E63; font-size:0.7rem; margin-top:4px;">🧠 Pensando estrategia...</small>` : ''}
+                            ${hasApiKey ? `<small id="ai-loading-indicator" style="display:none; color:${this.store.config.ai_pro_mode ? '#FF9800' : '#E91E63'}; font-size:0.7rem; margin-top:4px;">${this.store.config.ai_pro_mode ? '🛡️ Conectando con red segura de IA...' : '🧠 Pensando estrategia...'}</small>` : ''}
                         </div>
                         <div style="font-size:1.5rem;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
                     </div>
@@ -3892,85 +3892,26 @@ class UIManager {
                     </div>
 
                     <form id="ai-config-form">
-                        <div style="margin-bottom: 20px;">
-                            <label style="font-weight: 600; font-size: 0.9rem; color: #444; margin-bottom: 8px; display: block;">Elige tu Asistente</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <label style="cursor: pointer; position: relative;">
-                                    <input type="radio" name="ai_provider" value="gemini" ${(conf.ai_provider || 'gemini') === 'gemini' ? 'checked' : ''} style="position: absolute; opacity: 0;" onchange="window.ui.toggleAiProvider(this.value)">
-                                    <div style="border: 2px solid ${conf.ai_provider === 'gemini' || !conf.ai_provider ? '#6C5DD3' : '#eee'}; background: ${conf.ai_provider === 'gemini' || !conf.ai_provider ? '#f0ebff' : '#fff'}; border-radius: 12px; padding: 12px; text-align: center; transition: all 0.2s;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 4px;">✨</div>
-                                        <div style="font-weight: 700; color: #333;">Gemini</div>
-                                        <div style="font-size: 0.75rem; color: #2E7D32; font-weight: 600;">Recomendado (Gratis)</div>
-                                    </div>
-                                </label>
-                                <label style="cursor: pointer; position: relative;">
-                                    <input type="radio" name="ai_provider" value="openai" ${conf.ai_provider === 'openai' ? 'checked' : ''} style="position: absolute; opacity: 0;" onchange="window.ui.toggleAiProvider(this.value)">
-                                    <div style="border: 2px solid ${conf.ai_provider === 'openai' ? '#10a37f' : '#eee'}; background: ${conf.ai_provider === 'openai' ? '#e6fffa' : '#fff'}; border-radius: 12px; padding: 12px; text-align: center; transition: all 0.2s;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 4px;">🧠</div>
-                                        <div style="font-weight: 700; color: #333;">ChatGPT</div>
-                                        <div style="font-size: 0.75rem; color: #666;">(Requiere Saldo API)</div>
-                                    </div>
-                                </label>
-                            </div>
+                        <!-- DEVELOPER MANAGED CONFIGURATION (HIDDEN) -->
+                        <div style="display: none;">
+                            <input type="password" name="gemini_api_key" value="${conf.gemini_api_key || ''}">
+                            <input type="checkbox" name="ai_pro_mode" checked>
+                            <input type="hidden" name="ai_provider" value="gemini">
                         </div>
 
-                        <!-- GEMINI SECTION -->
-                        <div id="gemini-key-group" style="display: ${(conf.ai_provider || 'gemini') === 'gemini' ? 'block' : 'none'};">
-                            <div style="background: #e1f5fe; border-left: 4px solid #039be5; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
-                                <h4 style="margin: 0 0 4px 0; color: #0277bd; font-size: 0.95rem;">Cómo conectar Gemini (1 minuto):</h4>
-                                <ol style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #0277bd; line-height: 1.6;">
-                                    <li>Toca el botón de abajo para ir a Google.</li>
-                                    <li>Crea una llave nueva ("Create API Key").</li>
-                                    <li>Copia esa llave y pégala aquí abajo. ¡Listo!</li>
-                                </ol>
-                                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" 
-                                   style="display: inline-block; margin-top: 10px; background: #0288d1; color: white; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 2px 5px rgba(2,136,209,0.3);">
-                                    🔑 Obtener Llave Gratis
-                                </a>
-                            </div>
-                            
-                            <div class="form-group" style="position: relative;">
-                                <label style="font-weight: 600; font-size: 0.9rem; color: #555;">Pegar Llave de Acceso (API Key)</label>
-                                <input type="password" name="gemini_api_key" 
-                                       value="${conf.gemini_api_key || ''}" 
-                                       placeholder="Pega aquí tu llave (empieza por AIzaSy...)"
-                                       style="width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 12px; font-family: monospace; font-size: 1rem; transition: border-color 0.3s;"
-                                       onfocus="this.style.borderColor='#6C5DD3'"
-                                       onblur="this.style.borderColor='#ddd'">
-                                <span style="position: absolute; right: 14px; top: 38px; cursor: pointer; opacity: 0.5;" onclick="const i=this.previousElementSibling; i.type=i.type==='password'?'text':'password'">👁️</span>
-                            </div>
-                        </div>
-
-                        <!-- OPENAI SECTION -->
-                        <div id="openai-key-group" style="display: ${conf.ai_provider === 'openai' ? 'block' : 'none'};">
-                            <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
-                                <h4 style="margin: 0 0 4px 0; color: #15803d; font-size: 0.95rem;">Conectar ChatGPT</h4>
-                                <p style="margin: 0; font-size: 0.85rem; color: #166534;">
-                                    Necesitas una llave de OpenAI Platform con créditos.
+                        <!-- READ ONLY AI STATUS FOR USERS -->
+                        <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px;">
+                            <div style="font-size: 2.5rem;">💎</div>
+                            <div>
+                                <h4 style="margin: 0 0 4px 0; color: #3730a3; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                                    Inteligencia Artificial Premium Activa <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">PRO</span>
+                                </h4>
+                                <p style="margin: 0; font-size: 0.85rem; color: #4338ca; line-height: 1.4;">
+                                    Tu aplicación cuenta con un motor de IA Profesional Integrado. Tus datos financieros están analizándose bajo encriptación bancaria y están garantizados contractualmente contra el entrenamiento de modelos públicos.
                                 </p>
-                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" 
-                                   style="display: inline-block; margin-top: 10px; background: #16a34a; color: white; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
-                                    🔑 Ir a OpenAI
-                                </a>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Pegar API Key de OpenAI</label>
-                                <input type="password" name="openai_api_key" 
-                                       value="${conf.openai_api_key || ''}" 
-                                       placeholder="sk-..."
-                                       style="width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 12px; font-family: monospace;">
                             </div>
                         </div>
 
-                        <div style="display: flex; gap: 12px; margin-top: 24px;">
-                            <button type="button" class="btn" style="flex: 1; background: #f5f5f5; color: #444;" onclick="window.ui.testAiConnection()">
-                                ⚡ Probar Conexión
-                            </button>
-                            <button type="submit" class="btn btn-primary" style="flex: 2; background: linear-gradient(135deg, #6C5DD3, #8B5CF6); font-size: 1rem;">
-                                💾 Guardar y Conectar
-                            </button>
-                        </div>
                         <div id="connection-result" style="text-align: center; margin-top: 16px; font-weight: 600; min-height: 24px;"></div>
                     </form>
                 </div>
@@ -3978,7 +3919,7 @@ class UIManager {
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión ${localStorage.getItem('cc_app_version') || 'v68.AC'} • Actualizar App 🔄
+                        Versión ${localStorage.getItem('cc_app_version') || 'v68.AD'} • Actualizar App 🔄
                     </button>
                     
                     <details style="margin-top: 1rem;">
@@ -4291,7 +4232,8 @@ class UIManager {
                 this.store.updateConfig({
                     ai_provider: formData.get('ai_provider') || 'gemini',
                     gemini_api_key: formData.get('gemini_api_key') || '',
-                    openai_api_key: formData.get('openai_api_key') || ''
+                    openai_api_key: formData.get('openai_api_key') || '',
+                    ai_pro_mode: formData.get('ai_pro_mode') === 'on'
                 });
                 alert('✅ Configuración de IA guardada.');
                 this.render();

@@ -140,6 +140,9 @@ class Store {
             if (data.config && !data.config.spending_profile) {
                 data.config.spending_profile = 'BALANCEADO';
             }
+            if (data.config && typeof data.config.ai_pro_mode === 'undefined') {
+                data.config.ai_pro_mode = false;
+            }
 
             // --- DATA MIGRATION: Fix Historical Transaction Types & Specific 6M Issue ---
             if (data.transactions) {

@@ -11,18 +11,22 @@ class AIAdvisor {
     }
 
     getProvider() {
-        const conf = this.store && this.store.config ? this.store.config : {};
-        return conf.ai_provider || 'gemini'; // 'gemini' or 'openai'
+        return 'gemini'; // Force Gemini as the only provider since dev is paying
     }
 
     getApiKey() {
-        const provider = this.getProvider();
-        const conf = this.store && this.store.config ? this.store.config : {};
+        // 🚨 DEVELOPER INSTRUCTION: PASTE YOUR PAID GOOGLE AI STUDIO / VERTEX AI KEY HERE 🚨
+        // IMPORTANT SECURITY WARNING: Since this is a client-side only app (no backend server),
+        // anyone who inspects the Network tab in their browser can theoretically see this key.
+        // To protect your billing account, you MUST go to Google Cloud Console and add HTTP Referrer restrictions
+        // to this API key so it can ONLY be used on your specific website domain (e.g., https://claritycash.com/*).
+        const DEVELOPER_API_KEY = "PASTE_YOUR_PAID_API_KEY_HERE";
 
-        if (provider === 'openai') {
-            return conf.openai_api_key || '';
-        }
-        return conf.gemini_api_key || '';
+        // Fallback for local testing if the developer still has their personal key saved
+        const conf = this.store && this.store.config ? this.store.config : {};
+        const localKey = conf.gemini_api_key || '';
+
+        return DEVELOPER_API_KEY !== "PASTE_YOUR_PAID_API_KEY_HERE" ? DEVELOPER_API_KEY : localKey;
     }
 
     hasApiKey() {

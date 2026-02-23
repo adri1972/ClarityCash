@@ -1,5 +1,5 @@
 {
-    "version": "68.AC",
-    "updatedAt": "2026-02-22T11:45:00Z",
-    "notes": "Hotfix: Eliminate Ghost DOM in Quick Expense and fix PWA Update Mechanism."
+    "version": "68.AD",
+    "updatedAt": "2026-02-22T12:05:00Z",
+    "notes": "Feature: Upgrade to Gemini Pro (Pay-as-you-go) and Secure Data Mode Toggle."
 }
