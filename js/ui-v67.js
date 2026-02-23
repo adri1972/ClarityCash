@@ -2046,7 +2046,7 @@ class UIManager {
 
         this.store.config.budgets[fromCatId] = fromBudget - transferAmt;
         this.store.config.budgets[toCatId] = toBudget + transferAmt;
-        this.store.saveSettings(this.store.config);
+        this.store.updateConfig(this.store.config);
 
         // Close modal gracefully
         const modals = document.querySelectorAll('.modal');
@@ -4800,7 +4800,7 @@ class UIManager {
             await this.aiAdvisor.checkConnection(apiKey);
 
             // Success! Save for real.
-            this.store.saveSettings(this.store.config);
+            this.store.updateConfig(this.store.config);
             statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! API Configurada.</span>';
             setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ Motor de IA Conectado y Listo</span>'; }, 2500);
 
