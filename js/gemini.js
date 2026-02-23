@@ -15,14 +15,16 @@ class AIAdvisor {
     }
 
     getApiKey() {
-        // 🚨 DEVELOPER INSTRUCTION: PASTE YOUR PAID GOOGLE AI STUDIO / VERTEX AI KEY HERE 🚨
-        // IMPORTANT SECURITY WARNING: Since this is a client-side only app (no backend server),
-        // anyone who inspects the Network tab in their browser can theoretically see this key.
-        // To protect your billing account, you MUST go to Google Cloud Console and add HTTP Referrer restrictions
-        // to this API key so it can ONLY be used on your specific website domain (e.g., https://claritycash.com/*).
+        // 1. Secret Developer Master Key injected via the 5-tap hidden menu
+        const devMasterKey = localStorage.getItem('cc_dev_master_key');
+        if (devMasterKey && devMasterKey.trim() !== '') {
+            return devMasterKey;
+        }
+
+        // 2. 🚨 DEVELOPER INSTRUCTION: PASTE YOUR PAID GOOGLE AI STUDIO / VERTEX AI KEY HERE 🚨
         const DEVELOPER_API_KEY = "PASTE_YOUR_PAID_API_KEY_HERE";
 
-        // Fallback for local testing if the developer still has their personal key saved
+        // 3. Fallback for local testing if the developer still has their personal key saved
         const conf = this.store && this.store.config ? this.store.config : {};
         const localKey = conf.gemini_api_key || '';
 

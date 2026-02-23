@@ -3597,6 +3597,30 @@ class UIManager {
         });
     }
 
+    revealDeveloperMenu() {
+        this.devMenuClicks = (this.devMenuClicks || 0) + 1;
+        if (this.devMenuClicks >= 5) {
+            this.devMenuClicks = 0; // reset
+            const currentKey = localStorage.getItem('cc_dev_master_key') || '';
+            const newKey = prompt('🤫 MODO DESARROLLADOR SECRETO 🤫\n\nPega aquí tu API Key Maestra de Gemini (Facturación Pay-as-you-go). Esto se guardará en tu navegador local y tus usuarios finales jamás lo verán.\n\nPara borrarla, déjalo en blanco.', currentKey);
+
+            if (newKey !== null) {
+                if (newKey.trim() === '') {
+                    localStorage.removeItem('cc_dev_master_key');
+                    alert('❌ Llave maestra eliminada del dispositivo.');
+                } else {
+                    localStorage.setItem('cc_dev_master_key', newKey.trim());
+                    alert('✅ Llave maestra guardada. La IA Premium está activa.');
+                }
+                // reinit advisor to pickup new key
+                if (this.aiAdvisor) this.aiAdvisor = new AIAdvisor(this.store);
+
+                // FORCE reload to ensure the new key is used across modules
+                window.location.reload();
+            }
+        }
+    }
+
     renderSettings() {
         this.pageTitle.textContent = 'Configuración ⚙️';
         const conf = this.store.config;
@@ -3901,7 +3925,7 @@ class UIManager {
 
                         <!-- READ ONLY AI STATUS FOR USERS -->
                         <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px;">
-                            <div style="font-size: 2.5rem;">💎</div>
+                            <div style="font-size: 2.5rem; cursor: pointer; user-select: none; transition: transform 0.2s;" onclick="this.style.transform='scale(0.9)'; setTimeout(()=>this.style.transform='scale(1)', 100); window.ui.revealDeveloperMenu();" title="Toca 5 veces para menú maestro">💎</div>
                             <div>
                                 <h4 style="margin: 0 0 4px 0; color: #3730a3; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
                                     Inteligencia Artificial Premium Activa <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">PRO</span>
