@@ -1965,6 +1965,12 @@ class UIManager {
         const cat = this.store.categories.find(c => c.id === overspentCatId);
         const name = cat ? cat.name : 'la categoría';
 
+        // IDENTIFY FIXED EXPENSES TO EXCLUDE THEM
+        const fixedFloor = {};
+        (this.store.config.fixed_expenses || []).forEach(fe => {
+            if (fe.category_id && fe.amount) fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+        });
+
         // Find categories with surplus
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -1973,6 +1979,8 @@ class UIManager {
         const surplusCats = [];
         this.store.categories.forEach(c => {
             if (c.id === overspentCatId) return;
+            if ((fixedFloor[c.id] || 0) > 0) return; // 🛡️ EXCLUDE FIXED EXPENSES
+
             const b = parseFloat(this.store.config.budgets[c.id]) || 0;
             if (b > 0) {
                 const s = this.store.transactions
@@ -1982,19 +1990,26 @@ class UIManager {
             }
         });
 
-        // Filter surplus that can cover at least some part
-        if (surplusCats.length === 0) return; // No surplus categories
-
-        surplusCats.sort((a, b) => b.surplus - a.surplus);
-
-        let optionsHtml = surplusCats.map(c => `
-            <button type="button" onclick="window.ui.executeRebalance('${c.id}', '${overspentCatId}', ${excessParam})" 
-                    style="background: white; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left; width: 100%; display: flex; justify-content: space-between; margin-bottom: 8px; transition: transform 0.2s;"
-                    onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
-                <span>${c.name}</span>
-                <span style="color: #4CAF50; font-weight: bold;">Sobra: $${this.formatNumberWithDots(c.surplus)}</span>
-            </button>
-        `).join('');
+        let optionsHtml = '';
+        if (surplusCats.length === 0) {
+            optionsHtml = `
+                <div style="background: #FFF3E0; border: 1px solid #FFCC80; padding: 12px; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0; font-size: 0.85rem; color: #E65100; font-weight: 500;">
+                        No tienes otras categorías flexibles con dinero disponible para cubrir este excedente en este momento.
+                    </p>
+                </div>
+            `;
+        } else {
+            surplusCats.sort((a, b) => b.surplus - a.surplus);
+            optionsHtml = surplusCats.map(c => `
+                <button type="button" onclick="window.ui.executeRebalance('${c.id}', '${overspentCatId}', ${excessParam})" 
+                        style="background: white; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left; width: 100%; display: flex; justify-content: space-between; margin-bottom: 8px; transition: transform 0.2s;"
+                        onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+                    <span>${c.name}</span>
+                    <span style="color: #4CAF50; font-weight: bold;">Sobra: $${this.formatNumberWithDots(c.surplus)}</span>
+                </button>
+            `).join('');
+        }
 
         const modalHtml = `
             <div style="text-align: center; margin-bottom: 15px;">
