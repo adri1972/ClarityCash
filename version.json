@@ -1,5 +1,5 @@
 {
-    "version": "68.AK",
-    "updatedAt": "2026-02-23T21:15:00Z",
-    "notes": "Hotfix: Added API Key suffix debugging to trace localhost vs github.io localstorage mismatch."
+    "version": "68.FINAL",
+    "updatedAt": "2026-02-23T21:45:00Z",
+    "notes": "Hotfix: Enforced v1 endpoint with base gemini-1.5-flash model and cache busting."
 }
