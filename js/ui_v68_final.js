@@ -623,9 +623,11 @@ class UIManager {
 
     checkPrivacyConsent() {
         if (this.store.config.ai_terms_accepted) return;
+        if (document.getElementById('privacy-modal-overlay')) return;
 
         // Custom Modal without a close button (Blocking)
         const modal = document.createElement('div');
+        modal.id = 'privacy-modal-overlay';
         modal.className = 'modal';
         modal.style.zIndex = '99999'; // Very high
         modal.innerHTML = `
@@ -664,10 +666,16 @@ class UIManager {
         document.body.appendChild(modal);
         if (window.feather) window.feather.replace();
 
-        document.getElementById('btn-accept-privacy').addEventListener('click', () => {
-            this.store.config.ai_terms_accepted = true;
-            this.store.updateConfig(this.store.config);
-            document.body.removeChild(modal);
+        modal.querySelector('#btn-accept-privacy').addEventListener('click', () => {
+            if (this.store && this.store.config) {
+                this.store.config.ai_terms_accepted = true;
+                if (typeof this.store.updateConfig === 'function') {
+                    this.store.updateConfig(this.store.config);
+                }
+            }
+            if (document.body.contains(modal)) {
+                document.body.removeChild(modal);
+            }
         });
     }
 
