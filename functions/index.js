@@ -6,7 +6,9 @@ const fetch = require('node-fetch');
  * Proxy Maestro de ClarityCash para Gemini
  * Evade bloqueos 404, CORS y de Red de Safari al canalizar las peticiones por Firebase.
  */
-exports.proxyGemini = functions.https.onRequest((req, res) => {
+exports.proxyGemini = functions.runWith({
+    serviceAccount: 'firebase-adminsdk-fbsvc@claritycash-e93ca.iam.gserviceaccount.com'
+}).https.onRequest((req, res) => {
     // Intercepta OPTIONS y las autoriza para CORS
     if (req.method === 'OPTIONS') {
         res.set('Access-Control-Allow-Methods', 'POST');
