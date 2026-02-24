@@ -2131,7 +2131,9 @@ class UIManager {
         try {
             const insightJson = await this.aiAdvisor.analyzeTransaction(tx);
 
-            if (insightJson && insightJson.alerta) {
+            // Renderiza siempre si hay respuesta, independientemente de si es alerta o no.
+            // Si no es alerta, es nivel bajito, pero el CFO está confirmando que el gasto está bien.
+            if (insightJson && insightJson.analisis_cfo) {
                 let icon = '💡';
                 let type = 'info';
 
@@ -2141,6 +2143,9 @@ class UIManager {
                 } else if (insightJson.nivel_riesgo === 3) {
                     icon = '⚠️';
                     type = 'warning';
+                } else if (insightJson.nivel_riesgo <= 2) {
+                    icon = '✅';
+                    type = 'success';
                 }
 
                 // Show the CFO text cleanly formatted

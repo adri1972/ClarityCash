@@ -55,11 +55,11 @@ class AIAdvisor {
             this.hormigaCache.count++;
             this.hormigaCache.time = now;
 
-            if (this.hormigaCache.count === 2) {
+            if (this.hormigaCache.count === 2 && this.hormigaCache.response) {
                 console.log("🤖 IA Caché: Usando análisis anterior para ahorrar tokens (Gasto repetido detectado localmente)");
                 return this.hormigaCache.response;
             }
-            // If hits 3+, hit API to trigger "Gasto Hormiga" cumulative logic in prompt
+            // If hits 3+, falls through to hit API to trigger "Gasto Hormiga" cumulative logic in prompt
         } else {
             this.hormigaCache = { key: cacheKey, count: 1, time: now, response: null };
         }
