@@ -2153,8 +2153,8 @@ class UIManager {
             }
         } catch (err) {
             console.error("AI Insight Pipeline Error:", err);
-            // Gentle user-friendly error fallback if requested, but better to fail silently 
-            // than spam the user if the network drops on an auto-trigger.
+            // Mostrar error crudo para Safari Debugging
+            this.showToast(`Error iOS: ${err.message || 'Promesa Fallida'}`, 'danger', '🐛');
         }
     }
 
@@ -2185,7 +2185,7 @@ class UIManager {
             padding: 12px 20px; 
             border-radius: 50px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-            z-index: 10002; 
+            z-index: 2147483647; 
             display: flex; 
             align-items: center; 
             gap: 10px; 
