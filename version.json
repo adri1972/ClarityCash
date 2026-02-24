@@ -1,5 +1,5 @@
 {
-    "version": "68.FINAL-5",
-    "updatedAt": "2026-02-23T22:27:00Z",
-    "notes": "Hotfix: Reverted API to v1beta while maintaining strictly purified formatting in response to iOS 404 block on v1."
+    "version": "68.FINAL-6",
+    "updatedAt": "2026-02-23T22:33:00Z",
+    "notes": "Hotfix: Deduced v1 schema is active for user key. Shifted to v1 API with purified JSON string payload."
 }
