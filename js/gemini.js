@@ -300,12 +300,10 @@ Esquema Obligatorio:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                system_instruction: { parts: [{ text: systemInstruction }] },
-                contents: [{ parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: `${systemInstruction}\n\n---\n\n${prompt}` }] }],
                 generationConfig: {
                     temperature: 0.2,
-                    max_output_tokens: 1024,
-                    response_mime_type: "application/json"
+                    maxOutputTokens: 1024
                 }
             })
         });
