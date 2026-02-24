@@ -616,6 +616,59 @@ class UIManager {
 
         this.updateUserProfileUI();
         if (window.feather) window.feather.replace();
+
+        // 🛡️ Trigger Privacy Check after rendering
+        this.checkPrivacyConsent();
+    }
+
+    checkPrivacyConsent() {
+        if (this.store.config.ai_terms_accepted) return;
+
+        // Custom Modal without a close button (Blocking)
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.zIndex = '99999'; // Very high
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; padding: 30px 20px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <span style="font-size: 3rem;">🛡️</span>
+                    <h2 style="margin: 10px 0 5px 0; color:var(--text-primary);">Aviso de Privacidad y Seguridad</h2>
+                    <p style="color:var(--text-secondary); font-size: 0.9rem; margin:0;">Clarity Cash + IA Premium</p>
+                </div>
+                
+                <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); max-height: 50vh; overflow-y: auto; padding-right: 10px; text-align: left;">
+                    <h4 style="color:#1e293b; margin-top:0;">1. Procesamiento Profesional de Datos</h4>
+                    <p>Clarity Cash utiliza la API de Google Gemini en su nivel empresarial (Pay-as-you-go). Esto garantiza que tus datos financieros y consultas no se utilizan para entrenar modelos de Inteligencia Artificial públicos. Tus movimientos son estrictamente confidenciales y procesados en un entorno seguro.</p>
+                    
+                    <h4 style="color:#1e293b;">2. Seguridad de la Información</h4>
+                    <ul style="padding-left: 20px; margin-bottom: 10px;">
+                        <li><b>Cifrado:</b> Toda comunicación entre la aplicación y el motor de análisis financiero está cifrada bajo protocolos de seguridad industrial.</li>
+                        <li><b>Anonimización:</b> Clarity Cash está diseñada para analizar comportamientos numéricos. Recomendamos no ingresar nombres reales, números de tarjeta o claves bancarias en las descripciones de los movimientos.</li>
+                    </ul>
+                    
+                    <h4 style="color:#1e293b;">3. Naturaleza del Asesoramiento</h4>
+                    <p>Los análisis y sugerencias proporcionados por la IA de Clarity Cash tienen un propósito informativo y educativo para la gestión de presupuestos. No constituyen asesoría financiera legalmente vinculante ni reemplazan el juicio de un profesional contable o financiero titulado.</p>
+                    
+                    <h4 style="color:#1e293b;">4. Control de Usuario</h4>
+                    <p>Tú mantienes el control total sobre tus datos. Puedes eliminar tu historial de análisis en cualquier momento desde los ajustes de la aplicación.</p>
+                </div>
+                
+                <div style="margin-top: 25px;">
+                    <button id="btn-accept-privacy" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s;">
+                        <span>Entendido y Acepto</span> <i data-feather="check-circle" style="width:18px;height:18px;"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (window.feather) window.feather.replace();
+
+        document.getElementById('btn-accept-privacy').addEventListener('click', () => {
+            this.store.config.ai_terms_accepted = true;
+            this.store.updateConfig(this.store.config);
+            document.body.removeChild(modal);
+        });
     }
 
     updateUserProfileUI() {
@@ -2066,93 +2119,37 @@ class UIManager {
     }
 
     async triggerSpendingInsight(tx) {
-        if (!tx || tx.type !== 'GASTO') return;
+        if (!tx) return;
 
-        // 1. Prepare Data
-        const category = this.store.categories.find(c => c.id === tx.category_id);
-        const catName = category ? category.name : 'esta categoría';
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-
-        // Calculate totals locally first
-        const monthlyTxs = this.store.transactions.filter(t => {
-            const d = new Date(t.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && t.type === 'GASTO';
-        });
-
-        const catTxs = monthlyTxs.filter(t => t.category_id === tx.category_id);
-        const catTotal = catTxs.reduce((sum, t) => sum + t.amount, 0);
-        const budgetLimit = this.store.config.budgets ? (this.store.config.budgets[tx.category_id] || 0) : 0;
-
-        // 2. Rule-Based Triggers (The "Logic Defined")
-        const totalExpense = monthlyTxs.reduce((sum, t) => sum + t.amount, 0);
-        const catCount = catTxs.length;
-
-        let trigger = null;
-        let defaultMsg = '';
-        let type = 'info';
-        let icon = '💡';
-
-        if (budgetLimit > 0 && catTotal > budgetLimit) {
-            trigger = 'OVER_BUDGET';
-            defaultMsg = `¡Ojo! Te pasaste del presupuesto de ${catName} por ${this.formatCurrency(catTotal - budgetLimit)}`;
-            type = 'danger';
-            icon = '🚨';
-        } else if (budgetLimit > 0 && catTotal > (budgetLimit * 0.8)) {
-            trigger = 'NEAR_BUDGET';
-            defaultMsg = `Cuidado, estás al 80% de tu límite para ${catName}`;
-            type = 'warning';
-            icon = '⚠️';
-        } else if (catTotal > (totalExpense * 0.3) && totalExpense > 0) {
-            trigger = 'HIGH_IMPACT';
-            defaultMsg = `${catName} se está llevando el 30% de tus gastos este mes.`;
-            type = 'warning';
-            icon = '📊';
-        } else if (category.id === 'cat_2' || category.id === 'cat_ant') { // Coffee or Antojo
-            if (catCount > 10) {
-                trigger = 'HIGH_FREQUENCY';
-                defaultMsg = `Vas ${catCount} veces en ${catName} este mes. ¿Cocinamos más?`;
-                type = 'info';
-                icon = '🍳';
-            }
+        // Auto-Trigger relies exclusively on AI if enabled and accepted
+        if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey() || !this.store.config.ai_terms_accepted) {
+            return;
         }
 
-        // Special check for high single expense in Antojo
-        if (!trigger && tx.amount > 50000 && category.id === 'cat_ant') {
-            trigger = 'EXPENSIVE_IMPULSE';
-            defaultMsg = `Un antojo de ${this.formatCurrency(tx.amount)}... ¡Disfrútalo, pero con moderación!`;
-            icon = '🍩';
-        }
+        console.log(`🤖 Auto-analizando movimiento: $${tx.amount}...`);
 
-        // 3. EXECUTE: AI or Default
-        if (trigger) {
-            // A. AI IS ENABLED -> Get "Real" Insight
-            if (this.aiAdvisor && this.aiAdvisor.hasApiKey()) {
-                console.log(`🤖 Triggered '${trigger}'. Asking AI...`);
-                this.showToast('🧠 Analizando...', 'thinking', '💭'); // Feedback
+        try {
+            const insightJson = await this.aiAdvisor.analyzeTransaction(tx);
 
-                // Pass the specific trigger context to AI
-                const insight = await this.aiAdvisor.getInstantInsight(tx, {
-                    catName,
-                    catTotal,
-                    budgetLimit,
-                    isOverBudget: trigger === 'OVER_BUDGET',
-                    triggerReason: trigger // Tell AI exactly why we are calling
-                });
+            if (insightJson && insightJson.alerta) {
+                let icon = '💡';
+                let type = 'info';
 
-                if (insight) {
-                    this.removeToast('thinking');
-                    this.showToast(insight, 'ai-success', '✨');
-                } else {
-                    // Fallback if AI fails net check
-                    this.removeToast('thinking');
-                    this.showToast(defaultMsg, type, icon);
+                if (insightJson.nivel_riesgo >= 4) {
+                    icon = '🚨';
+                    type = 'danger';
+                } else if (insightJson.nivel_riesgo === 3) {
+                    icon = '⚠️';
+                    type = 'warning';
                 }
+
+                // Show the CFO text cleanly formatted
+                this.showToast(insightJson.analisis_cfo, type, icon);
             }
-            // B. NO AI -> Use Default "Logic Defined" Message
-            else {
-                this.showToast(defaultMsg, type, icon);
-            }
+        } catch (err) {
+            console.error("AI Insight Pipeline Error:", err);
+            // Gentle user-friendly error fallback if requested, but better to fail silently 
+            // than spam the user if the network drops on an auto-trigger.
         }
     }
 

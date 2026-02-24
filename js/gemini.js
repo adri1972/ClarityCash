@@ -6,7 +6,7 @@
 class AIAdvisor {
     constructor(store) {
         this.store = store;
-        this.GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+        this.GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
         this.OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
     }
 
@@ -34,6 +34,90 @@ class AIAdvisor {
     hasApiKey() {
         return this.getApiKey().length > 10;
     }
+
+    /**
+     * AI Auto-Trigger Analysis on new transaction
+     * Includes "Gasto Hormiga" API-saving cache
+     */
+    async analyzeTransaction(tx) {
+        if (!this.store.config.ai_terms_accepted) return null;
+        const apiKey = this.getApiKey();
+        if (!apiKey || apiKey.length < 10) return null;
+
+        // "Gasto Hormiga" Pattern Cache Logic
+        // If the user logs the EXACT SAME amount and category consecutively within 5 minutes
+        const cacheKey = `${tx.amount}_${tx.category_id}`;
+        const now = Date.now();
+
+        if (!this.hormigaCache) this.hormigaCache = { key: '', count: 0, time: 0, response: null };
+
+        if (this.hormigaCache.key === cacheKey && (now - this.hormigaCache.time) < 5 * 60 * 1000) {
+            this.hormigaCache.count++;
+            this.hormigaCache.time = now;
+
+            if (this.hormigaCache.count === 2) {
+                console.log("🤖 IA Caché: Usando análisis anterior para ahorrar tokens (Gasto repetido detectado localmente)");
+                return this.hormigaCache.response;
+            }
+            // If hits 3+, hit API to trigger "Gasto Hormiga" cumulative logic in prompt
+        } else {
+            this.hormigaCache = { key: cacheKey, count: 1, time: now, response: null };
+        }
+
+        // Minimal Context Building
+        const dateObj = new Date(tx.date);
+        const month = dateObj.getMonth();
+        const year = dateObj.getFullYear();
+        const summary = this.store.getFinancialSummary(month, year);
+
+        const cat = this.store.categories.find(c => c.id === tx.category_id);
+        const catName = cat ? cat.name : 'Otra';
+        const budgetAmount = parseFloat(this.store.config.budgets?.[tx.category_id]) || 0;
+
+        const startOfMonth = new Date(year, month, 1).toISOString();
+        const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+        const spent = this.store.transactions
+            .filter(t => t.category_id === tx.category_id && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
+            .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+        const last3 = this.store.transactions
+            .filter(t => t.id !== tx.id)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 3);
+
+        const last3Str = last3.map(t => {
+            const c = this.store.categories.find(cat => cat.id === t.category_id);
+            return `- ${t.type}: $${t.amount} en ${c ? c.name : 'N/A'}`;
+        }).join('\\n');
+
+        const prompt = `NUEVO MOVIMIENTO REGISTRADO:
+- Monto: $${tx.amount}
+- Tipo: ${tx.type}
+- Categoría: ${catName}
+- Nota: ${tx.note || 'Sin nota'}
+- ADVERTENCIA INTERNA: Este mismo gasto exacto se ha registrado ${this.hormigaCache.count} veces en los últimos 5 minutos.
+
+CONTEXTO DEL MES:
+- Presupuesto total de ${catName}: $${budgetAmount}
+- Gastado hasta ahora en ${catName} (incluyendo este gasto): $${spent}
+- Balance Neto del Mes: $${summary.balance_net}
+
+ÚLTIMOS 3 MOVIMIENTOS HISTÓRICOS:
+${last3Str || 'Ninguno'}`;
+
+        try {
+            const rawText = await this._callGemini(apiKey, prompt);
+            const cleanText = rawText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+            const jsonResponse = JSON.parse(cleanText);
+
+            this.hormigaCache.response = jsonResponse;
+            return jsonResponse;
+        } catch (e) {
+            console.error("AI Auto-Analyze Error:", e);
+            throw new Error('Estamos analizando tus datos, un momento...');
+        }
+    }
+
 
     /**
      * Build financial context prompt from user data
@@ -199,12 +283,29 @@ REGLAS DE FORMATO:
     }
 
     async _callGemini(apiKey, prompt) {
+        const systemInstruction = `Eres un Analista Estratégico Senior y CFO Virtual. Tu misión es analizar cada transacción de Clarity Cash en milisegundos.
+Razonamiento: Si el gasto rompe una tendencia o pone en riesgo el presupuesto mensual, genera una alerta inmediata.
+Personalidad: Profesional, empática y técnica. No uses frases genéricas; usa datos.
+Formato de salida: Responde siempre en formato JSON para que la app pueda mostrar notificaciones visuales o actualizar gráficos automáticamente.
+Esquema Obligatorio:
+{
+  "alerta": boolean,
+  "categoria": string,
+  "analisis_cfo": string,
+  "nivel_riesgo": 1-5
+}`;
+
         const response = await fetch(`${this.GEMINI_URL}?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemInstruction }] },
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+                generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 1024,
+                    responseMimeType: "application/json"
+                }
             })
         });
 
@@ -218,7 +319,8 @@ REGLAS DE FORMATO:
         }
 
         const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return textResponse;
     }
 
     /**
