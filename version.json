@@ -1,5 +1,5 @@
 {
-    "version": "68.FINAL-3",
-    "updatedAt": "2026-02-23T22:00:00Z",
-    "notes": "Hotfix: Force-renamed core javascript files (gemini-core, ui-v68) and changed error emoji to bee to defeat absolute iOS Safari cache."
+    "version": "68.FINAL-4",
+    "updatedAt": "2026-02-23T22:04:00Z",
+    "notes": "Hotfix: Director override - File hashing to defeat absolute iOS Safari cache."
 }
