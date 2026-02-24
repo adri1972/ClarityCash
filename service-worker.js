@@ -1,8 +1,20 @@
-// ClarityCash Stable Service Worker v68.FINAL-2
-const CACHE_NAME = 'cc-stable-v68final2';
+// ClarityCash Stable Service Worker v68.FINAL-3
+const CACHE_NAME = 'cc-stable-v68final3';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll([
+                '/',
+                '/index.html',
+                '/css/styles.css',
+                '/js/app.js',
+                '/js/ui-v68.js',
+                '/js/gemini-core.js',
+            ]);
+        })
+    );
 });
 
 self.addEventListener('activate', (event) => {

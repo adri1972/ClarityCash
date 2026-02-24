@@ -2154,7 +2154,7 @@ class UIManager {
         } catch (err) {
             console.error("AI Insight Pipeline Error:", err);
             // Mostrar error crudo para Safari Debugging
-            this.showToast(`Error iOS: ${err.message || 'Promesa Fallida'}`, 'danger', '🐛');
+            this.showToast(`🐝 Error iOS: ${err.message || 'Promesa Fallida'}`, 'danger', '🐝');
         }
     }
 
