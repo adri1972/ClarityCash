@@ -24,7 +24,7 @@ jobs:
       - name: Configurar Motor Proxy
         working-directory: functions
         run: |
-          npm ci
+          npm install
 
       - name: Compilar Herramientas de Despliegue
         run: npm install -g firebase-tools
