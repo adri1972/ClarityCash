@@ -1,0 +1,49 @@
+name: Desplegar Backend ClarityCash (Firebase)
+
+on:
+  workflow_dispatch:
+    inputs:
+      projectId:
+        description: 'Nombre de tu Proyecto en Firebase (Ejem: claritycash-a1b2c)'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Desplegar a Producción
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Código
+        uses: actions/checkout@v4
+      
+      - name: Preparar Entorno NodeJS 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Configurar Motor Proxy
+        working-directory: functions
+        run: |
+          npm ci
+
+      - name: Compilar Herramientas de Despliegue
+        run: npm install -g firebase-tools
+
+      - name: Inyectar Llave Maestra (Gemini API Key)
+        run: |
+          # Firebase CLI leerá este .env al momento de empaquetar
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > functions/.env
+
+      - name: Autenticar Servidor con Google Cloud
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > sa.json
+
+      - name: Ejecutar Lanzamiento (Deploy)
+        run: |
+          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions --project ${{ inputs.projectId }} --force
+        
+      - name: Limpiar Rastros de Seguridad
+        if: always()
+        run: |
+          rm -f sa.json
+          rm -f functions/.env

@@ -15,24 +15,17 @@ class AIAdvisor {
     }
 
     getApiKey() {
-        // 1. Secret Developer Master Key injected via the 5-tap hidden menu
-        const devMasterKey = localStorage.getItem('cc_dev_master_key');
-        if (devMasterKey && devMasterKey.trim() !== '') {
-            return devMasterKey;
-        }
-
-        // 2. 🚨 DEVELOPER INSTRUCTION: PASTE YOUR PAID GOOGLE AI STUDIO / VERTEX AI KEY HERE 🚨
-        const DEVELOPER_API_KEY = "PASTE_YOUR_PAID_API_KEY_HERE";
-
-        // 3. Fallback for local testing if the developer still has their personal key saved
-        const conf = this.store && this.store.config ? this.store.config : {};
-        const localKey = conf.gemini_api_key || '';
-
-        return DEVELOPER_API_KEY !== "PASTE_YOUR_PAID_API_KEY_HERE" ? DEVELOPER_API_KEY : localKey;
+        // En la arquitectura v68.FINAL-8 (Firebase Proxy) la llave ya NO vive en el frontend.
+        // Siempre retornamos un código dummy para mantener la compatibilidad del UI,
+        // ya que la llave real ahora vive oculta en Google Cloud Secret Manager.
+        return "PROXY_ACTIVE_HIDDEN_KEY";
     }
 
     hasApiKey() {
-        return this.getApiKey().length > 10;
+        // Validación basada en si existe el Project ID configurado por la Directora 
+        const conf = this.store && this.store.config ? this.store.config : {};
+        const projectId = conf.firebase_project_id || '';
+        return projectId.length > 3;
     }
 
     /**
@@ -296,16 +289,29 @@ Esquema Obligatorio:
   "nivel_riesgo": 1-5
 }`;
 
-        const response = await fetch(`${this.GEMINI_URL}?key=${apiKey}`, {
+        // Determinar URL de enrutamiento basado en Arquitectura Proxy
+        const conf = this.store && this.store.config ? this.store.config : {};
+        const projectId = conf.firebase_project_id || '';
+        if (!projectId) {
+            throw new Error("PROXY_MISSING: Falta el Project ID de Firebase en Configuración.");
+        }
+
+        const PROXY_URL = `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`;
+
+        // Payload enviado al Proxy (el proxy se encarga de empaquetar en el JSON estricto de Google)
+        const proxyPayload = {
+            model: "gemini-1.0-pro",
+            contents: [{ parts: [{ text: `${systemInstruction}\n\n---\n\n${prompt}` }] }],
+            generationConfig: {
+                temperature: 0.2,
+                maxOutputTokens: 1024
+            }
+        };
+
+        const response = await fetch(PROXY_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `${systemInstruction}\n\n---\n\n${prompt}` }] }],
-                generationConfig: {
-                    temperature: 0.2,
-                    maxOutputTokens: 1024
-                }
-            })
+            body: JSON.stringify(proxyPayload)
         });
 
         if (!response.ok) {
@@ -314,6 +320,7 @@ Esquema Obligatorio:
 
             if (response.status === 400 || response.status === 403) throw new Error(`INVALID_KEY: ${errorMessage}`);
             if (response.status === 429) throw new Error('RATE_LIMIT');
+            if (response.status === 404) throw new Error(`PROXY_NOT_FOUND: Asegúrate de haber desplegado Firebase Functions. Detalle: ${response.statusText}`);
             throw new Error(`API_ERROR: ${errorMessage}`);
         }
 

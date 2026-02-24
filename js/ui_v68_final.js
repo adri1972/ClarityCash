@@ -3805,6 +3805,12 @@ class UIManager {
                                 <option value="EUR" ${conf.currency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
                             </select>
                         </div>
+
+                        <div class="form-group">
+                            <label style="color: #6366f1; font-weight: bold;">Identificador del Proyecto Firebase (Proxy IA)</label>
+                            <input type="text" name="firebase_project_id" value="${conf.firebase_project_id || ''}" placeholder="Ej: claritycash-a1b2c">
+                            <small style="color: #64748b; font-size: 0.75rem;">Requerido para rutear de forma segura las consultas al CFO hacia tu propio entorno de Google Cloud.</small>
+                        </div>
                         
                         <div class="form-group">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
