@@ -1,5 +1,5 @@
 {
-    "version": "68.FINAL-4",
-    "updatedAt": "2026-02-23T22:04:00Z",
-    "notes": "Hotfix: Director override - File hashing to defeat absolute iOS Safari cache."
+    "version": "68.FINAL-5",
+    "updatedAt": "2026-02-23T22:27:00Z",
+    "notes": "Hotfix: Reverted API to v1beta while maintaining strictly purified formatting in response to iOS 404 block on v1."
 }
