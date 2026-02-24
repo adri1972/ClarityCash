@@ -114,7 +114,7 @@ ${last3Str || 'Ninguno'}`;
             return jsonResponse;
         } catch (e) {
             console.error("AI Auto-Analyze Error:", e);
-            throw new Error('Estamos analizando tus datos, un momento...');
+            throw new Error(e.message || 'Error Desconocido al contactar Gemini API');
         }
     }
 

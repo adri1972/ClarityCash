@@ -1,5 +1,5 @@
 {
-    "version": "68.AE",
-    "updatedAt": "2026-02-23T19:30:00Z",
-    "notes": "Hotfix: iOS Safari Promise Debugging, Z-Index Override, and forced Auto-Update."
+    "version": "68.AF",
+    "updatedAt": "2026-02-23T19:35:00Z",
+    "notes": "Hotfix: Bubble up true API error strings (Rate Limit / Invalid Key) over generic fallbacks."
 }
