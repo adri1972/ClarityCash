@@ -40,7 +40,7 @@ jobs:
 
       - name: Ejecutar Lanzamiento (Deploy)
         run: |
-          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions --project ${{ inputs.projectId }} --force
+          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions --project ${{ inputs.projectId }} --force --debug
         
       - name: Limpiar Rastros de Seguridad
         if: always()
