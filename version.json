@@ -1,5 +1,5 @@
 {
-    "version": "68.AF",
-    "updatedAt": "2026-02-23T19:35:00Z",
-    "notes": "Hotfix: Bubble up true API error strings (Rate Limit / Invalid Key) over generic fallbacks."
+    "version": "68.AG",
+    "updatedAt": "2026-02-23T19:45:00Z",
+    "notes": "Hotfix: Corrected Gemini API Endpoint from 1.5-flash to 1.5-flash-latest to resolve model resolution error."
 }
