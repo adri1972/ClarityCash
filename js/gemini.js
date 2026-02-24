@@ -113,8 +113,9 @@ ${last3Str || 'Ninguno'}`;
             this.hormigaCache.response = jsonResponse;
             return jsonResponse;
         } catch (e) {
+            const keySuffix = apiKey ? apiKey.slice(-4) : 'NONE';
             console.error("AI Auto-Analyze Error:", e);
-            throw new Error(e.message || 'Error Desconocido al contactar Gemini API');
+            throw new Error(`[Key:...${keySuffix}] ${e.message || 'Error Desconocido al contactar Gemini API'}`);
         }
     }
 

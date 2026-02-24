@@ -1,5 +1,5 @@
 {
-    "version": "68.AJ",
-    "updatedAt": "2026-02-23T20:00:00Z",
-    "notes": "Hotfix: Applied snake_case payload structure (system_instruction, response_mime_type) for REST API compatibility."
+    "version": "68.AK",
+    "updatedAt": "2026-02-23T21:15:00Z",
+    "notes": "Hotfix: Added API Key suffix debugging to trace localhost vs github.io localstorage mismatch."
 }
