@@ -3638,6 +3638,35 @@ class UIManager {
         }
     }
 
+    async testListModels() {
+        if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey()) {
+            alert("No hay API Key configurada.");
+            return;
+        }
+        try {
+            const apiKey = this.aiAdvisor.getApiKey();
+            const btn = document.getElementById('btn-list-models');
+            if (btn) btn.textContent = 'Consultando...';
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const data = await response.json();
+
+            if (btn) btn.textContent = '🔍 DIAGNÓSTICO IA: Listar Modelos';
+
+            if (data.error) {
+                alert("Error ListModels: " + data.error.message);
+                return;
+            }
+
+            const models = data.models.map(m => m.name.replace('models/', '')).join('\\n');
+            alert(`Modelos Permitidos para esta Key:\\n\\n${models}`);
+        } catch (e) {
+            alert("Excepción: " + e.message);
+            const btn = document.getElementById('btn-list-models');
+            if (btn) btn.textContent = '🔍 DIAGNÓSTICO IA: Listar Modelos';
+        }
+    }
+
     renderSettings() {
         this.pageTitle.textContent = 'Configuración ⚙️';
         const conf = this.store.config;
@@ -3737,6 +3766,8 @@ class UIManager {
                 <!-- Column 1: Profile -->
                 <div class="card">
                     <h3>Perfil Financiero</h3>
+                    <button type="button" id="btn-list-models" onclick="window.ui.testListModels()" style="width:100%; padding:10px; background:#ffeb3b; color:#000; border:none; border-radius:8px; margin-bottom:15px; font-weight:bold; cursor:pointer;">🔍 DIAGNÓSTICO IA: Listar Modelos Permitidos</button>
+
                     <form id="settings-form">
                         <div class="form-group">
                             <label>Nombre de Usuario</label>

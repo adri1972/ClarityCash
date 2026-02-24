@@ -1,5 +1,5 @@
 {
-    "version": "68.FINAL-6",
-    "updatedAt": "2026-02-23T22:33:00Z",
-    "notes": "Hotfix: Deduced v1 schema is active for user key. Shifted to v1 API with purified JSON string payload."
+    "version": "68.FINAL-7",
+    "updatedAt": "2026-02-23T22:38:00Z",
+    "notes": "Hotfix: Downgrade to gemini-1.0-pro. Added UI button for listModels diagnostic."
 }
