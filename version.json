@@ -1,5 +1,5 @@
 {
-    "version": "68.AH",
-    "updatedAt": "2026-02-23T19:50:00Z",
-    "notes": "Hotfix: Move Gemini API from v1beta to v1 and revert model name to strict gemini-1.5-flash."
+    "version": "68.AI",
+    "updatedAt": "2026-02-23T19:55:00Z",
+    "notes": "Hotfix: Reverted to v1beta endpoint to support systemInstruction and JSON mimeType."
 }
