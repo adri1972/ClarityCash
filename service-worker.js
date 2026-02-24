@@ -1,5 +1,5 @@
-// ClarityCash Stable Service Worker v68.AI
-const CACHE_NAME = 'cc-stable-v68ai';
+// ClarityCash Stable Service Worker v68.AJ
+const CACHE_NAME = 'cc-stable-v68aj';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();

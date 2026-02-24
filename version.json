@@ -1,5 +1,5 @@
 {
-    "version": "68.AI",
-    "updatedAt": "2026-02-23T19:55:00Z",
-    "notes": "Hotfix: Reverted to v1beta endpoint to support systemInstruction and JSON mimeType."
+    "version": "68.AJ",
+    "updatedAt": "2026-02-23T20:00:00Z",
+    "notes": "Hotfix: Applied snake_case payload structure (system_instruction, response_mime_type) for REST API compatibility."
 }

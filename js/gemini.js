@@ -299,12 +299,12 @@ Esquema Obligatorio:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                systemInstruction: { parts: [{ text: systemInstruction }] },
+                system_instruction: { parts: [{ text: systemInstruction }] },
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     temperature: 0.2,
-                    maxOutputTokens: 1024,
-                    responseMimeType: "application/json"
+                    max_output_tokens: 1024,
+                    response_mime_type: "application/json"
                 }
             })
         });
