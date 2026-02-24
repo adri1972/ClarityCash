@@ -1,5 +1,5 @@
 {
-    "version": "68.AG",
-    "updatedAt": "2026-02-23T19:45:00Z",
-    "notes": "Hotfix: Corrected Gemini API Endpoint from 1.5-flash to 1.5-flash-latest to resolve model resolution error."
+    "version": "68.AH",
+    "updatedAt": "2026-02-23T19:50:00Z",
+    "notes": "Hotfix: Move Gemini API from v1beta to v1 and revert model name to strict gemini-1.5-flash."
 }
