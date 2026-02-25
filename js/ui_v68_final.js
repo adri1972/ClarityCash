@@ -2129,8 +2129,9 @@ class UIManager {
     async triggerSpendingInsight(tx) {
         if (!tx) return;
 
-        // Auto-Trigger relies exclusively on AI if enabled and accepted
-        if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey() || !this.store.config.ai_terms_accepted) {
+        // Auto-Trigger relies exclusively on AI if enabled and accepted (or if Pro Firebase is active)
+        const hasProProxy = this.store.config && this.store.config.firebase_project_id;
+        if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey() || (!hasProProxy && !this.store.config.ai_terms_accepted)) {
             return;
         }
 

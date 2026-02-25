@@ -1,5 +1,5 @@
-// ClarityCash Stable Service Worker v68.FINAL-10-PURGE
-const CACHE_NAME = 'cc-stable-v68final10-purge';
+// ClarityCash Stable Service Worker v68.FINAL-11-PURGE
+const CACHE_NAME = 'cc-stable-v68final11-purge';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
