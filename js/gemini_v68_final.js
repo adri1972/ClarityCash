@@ -33,7 +33,9 @@ class AIAdvisor {
      * Includes "Gasto Hormiga" API-saving cache
      */
     async analyzeTransaction(tx) {
-        if (!this.store.config.ai_terms_accepted) return null;
+        // En la versión PRO (Firebase), si hay un Project ID configurado se asume instalación consciente.
+        const conf = this.store && this.store.config ? this.store.config : {};
+        if (!conf.firebase_project_id && !conf.ai_terms_accepted) return null;
         const apiKey = this.getApiKey();
         if (!apiKey || apiKey.length < 10) return null;
 
