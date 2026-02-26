@@ -4882,17 +4882,30 @@ class UIManager {
     }
 
     async debugProxyConnection() {
-        alert("Iniciando prueba de conexión cruda con el proxy...");
+        const btn = document.getElementById('test-proxy-btn');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Probando...';
+        btn.disabled = true;
+
         try {
-            const conf = this.store && this.store.config ? this.store.config : {};
-            const projectId = conf.firebase_project_id || '';
+            // Auto-read from DOM if user forgot to click Save Profile
+            const inputEl = document.querySelector('input[name="firebase_project_id"]');
+            let projectId = '';
+
+            if (inputEl && inputEl.value.trim().length > 0) {
+                projectId = inputEl.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+                this.store.updateConfig({ firebase_project_id: projectId }); // Auto-save
+            } else {
+                const conf = this.store.config || {};
+                projectId = (conf.firebase_project_id || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+            }
+
             if (!projectId) {
-                alert("ERROR: El campo 'Identificador del Proyecto Firebase' está vacío en la configuración interna.");
+                alert("Por favor escribe tu Identificador de Proyecto Firebase arriba.");
                 return;
             }
 
             const PROXY_URL = `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`;
-            alert("Contactando URL: " + PROXY_URL);
+            alert("Intentando conectar con servidor proxy en:\n" + projectId);
 
             const proxyPayload = {
                 model: "gemini-2.5-flash",
