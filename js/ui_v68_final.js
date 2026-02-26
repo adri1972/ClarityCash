@@ -4296,7 +4296,8 @@ class UIManager {
                     spending_profile: formData.get('spending_profile'),
                     currency: formData.get('currency') || 'COP',
                     has_debts: formData.get('has_debts') === 'on',
-                    total_debt: parseFloat(rawDebt) || 0
+                    total_debt: parseFloat(rawDebt) || 0,
+                    firebase_project_id: formData.get('firebase_project_id') || ''
                 });
                 alert('✅ Perfil guardado correctamente.');
                 this.render();
