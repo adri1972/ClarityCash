@@ -6,7 +6,7 @@
 class AIAdvisor {
     constructor(store) {
         this.store = store;
-        this.GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+        this.GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
         this.OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
     }
 
@@ -302,7 +302,7 @@ Esquema Obligatorio:
 
         // Payload enviado al Proxy (el proxy se encarga de empaquetar en el JSON estricto de Google)
         const proxyPayload = {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ parts: [{ text: `${systemInstruction}\n\n---\n\n${prompt}` }] }],
             generationConfig: {
                 temperature: 0.2,

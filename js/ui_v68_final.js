@@ -4895,7 +4895,7 @@ class UIManager {
             alert("Contactando URL: " + PROXY_URL);
 
             const proxyPayload = {
-                model: "gemini-2.0-flash",
+                model: "gemini-2.5-flash",
                 contents: [{ parts: [{ text: "Prueba de conexión. Responde OK." }] }]
             };
 

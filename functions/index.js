@@ -37,7 +37,7 @@ exports.proxyGemini = functions.runWith({
             const payload = req.body;
 
             // Modelo de respaldo definido por la directiva
-            let modelName = payload.model || "gemini-2.0-flash";
+            let modelName = payload.model || "gemini-2.5-flash";
 
             if (payload.action === 'list') {
                 const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
