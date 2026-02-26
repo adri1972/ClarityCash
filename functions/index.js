@@ -39,6 +39,13 @@ exports.proxyGemini = functions.runWith({
             // Modelo de respaldo definido por la directiva
             let modelName = payload.model || "gemini-1.5-flash";
 
+            if (payload.action === 'list') {
+                const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+                const listResponse = await fetch(listUrl);
+                const listData = await listResponse.json();
+                return res.status(200).json(listData);
+            }
+
             // Preparamos payload oficial (A Gemini no le gusta el campo model extra)
             const googlePayload = { ...payload };
             delete googlePayload.model;
