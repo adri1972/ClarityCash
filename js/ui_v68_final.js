@@ -4000,6 +4000,9 @@ class UIManager {
                         </div>
 
                         <div id="connection-result" style="text-align: center; margin-top: 16px; font-weight: 600; min-height: 24px;"></div>
+                        <button type="button" onclick="window.ui.debugProxyConnection()" style="margin-top: 10px; width: 100%; padding: 12px; background: #3730a3; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
+                            🔌 Forzar Prueba de Conexión Proxy
+                        </button>
                     </form>
                 </div>
 
@@ -4874,6 +4877,48 @@ class UIManager {
             // Revert config on error to avoid breaking app state with bad key
             this.store.config = originalConfig;
             this.aiAdvisor = new AIAdvisor(this.store);
+        }
+    }
+
+    async debugProxyConnection() {
+        alert("Iniciando prueba de conexión cruda con el proxy...");
+        try {
+            const conf = this.store && this.store.config ? this.store.config : {};
+            const projectId = conf.firebase_project_id || '';
+            if (!projectId) {
+                alert("ERROR: El campo 'Identificador del Proyecto Firebase' está vacío en la configuración interna.");
+                return;
+            }
+
+            const PROXY_URL = `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`;
+            alert("Contactando URL: " + PROXY_URL);
+
+            const proxyPayload = {
+                model: "gemini-1.0-pro",
+                contents: [{ parts: [{ text: "Prueba de conexión. Responde OK." }] }]
+            };
+
+            const response = await fetch(PROXY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(proxyPayload)
+            });
+
+            if (!response.ok) {
+                let errText = "Error desconocido";
+                try {
+                    const errJson = await response.json();
+                    errText = JSON.stringify(errJson);
+                } catch (e) {
+                    errText = await response.text();
+                }
+                alert(`FALLO DE RED [${response.status}]: ${errText}`);
+            } else {
+                const data = await response.json();
+                alert(`CONEXIÓN EXITOSA: ${JSON.stringify(data).substring(0, 50)}...`);
+            }
+        } catch (e) {
+            alert("EXCEPCIÓN CRÍTICA PROXY: " + e.message);
         }
     }
 }
