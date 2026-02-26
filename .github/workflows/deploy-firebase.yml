@@ -1,12 +1,16 @@
 name: Desplegar Backend ClarityCash (Firebase)
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       projectId:
         description: 'Nombre de tu Proyecto en Firebase (Ejem: claritycash-a1b2c)'
         required: true
         type: string
+        default: 'claritycash-e93ca'
 
 jobs:
   deploy:
@@ -40,7 +44,7 @@ jobs:
 
       - name: Ejecutar Lanzamiento (Deploy)
         run: |
-          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions --project ${{ inputs.projectId }} --force --debug
+          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions --project claritycash-e93ca --force --debug
         
       - name: Limpiar Rastros de Seguridad
         if: always()
