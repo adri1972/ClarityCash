@@ -37,7 +37,7 @@ exports.proxyGemini = functions.runWith({
             const payload = req.body;
 
             // Modelo de respaldo definido por la directiva
-            let modelName = payload.model || "gemini-1.0-pro";
+            let modelName = payload.model || "gemini-1.5-flash";
 
             // Preparamos payload oficial (A Gemini no le gusta el campo model extra)
             const googlePayload = { ...payload };
