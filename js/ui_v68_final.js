@@ -4000,7 +4000,7 @@ class UIManager {
                         </div>
 
                         <div id="connection-result" style="text-align: center; margin-top: 16px; font-weight: 600; min-height: 24px;"></div>
-                        <button type="button" onclick="window.ui.debugProxyConnection()" style="margin-top: 10px; width: 100%; padding: 12px; background: #3730a3; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
+                        <button id="test-proxy-btn" type="button" onclick="window.ui.debugProxyConnection()" style="margin-top: 10px; width: 100%; padding: 12px; background: #3730a3; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
                             🔌 Forzar Prueba de Conexión Proxy
                         </button>
                     </form>
