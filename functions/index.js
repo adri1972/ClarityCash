@@ -11,6 +11,7 @@ exports.proxyGemini = functions.runWith({
 }).https.onRequest((req, res) => {
     // Intercepta OPTIONS y las autoriza para CORS
     if (req.method === 'OPTIONS') {
+        res.set('Access-Control-Allow-Origin', '*');
         res.set('Access-Control-Allow-Methods', 'POST');
         res.set('Access-Control-Allow-Headers', 'Content-Type');
         res.set('Access-Control-Max-Age', '3600');
