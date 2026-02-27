@@ -418,9 +418,7 @@ Esquema Obligatorio:
         }
 
         const apiKey = this.getApiKey();
-        const provider = this.getProvider();
 
-        // 1. Define Persona & Strategy based on Problem Type
         let role = "Analista Estratégico Senior";
         let strategy = "Analiza la situación con rigor y da directrices claras, no consejos suaves.";
 
@@ -429,71 +427,23 @@ Esquema Obligatorio:
             strategy = "El usuario está en DÉFICIT. Su casa financiera está en llamas. Tu objetivo es apagar el fuego con medidas de choque inmediatas. Prioriza liquidez y supervivencia.";
         } else if (context.problem === 'WARNING') {
             role = "Coach de Hábitos y Ahorro";
-            strategy = "El usuario vive al día (paycheck to paycheck). Su riesgo es alto ante cualquier imprevisto. Tu objetivo es despertarlo y encontrar fugas de dinero para crear un colchón de seguridad.";
+            strategy = "El usuario vive al día. Su riesgo es alto ante cualquier imprevisto. Tu objetivo es despertarlo y encontrar fugas de dinero para crear un colchón de seguridad.";
         } else if (context.problem === 'SURPLUS') {
             role = "Gestor de Patrimonio e Inversiones";
-            strategy = "El usuario tiene dinero extra (Superávit). Tu objetivo es que NO se lo gaste en tonterías. Sugiérele estrategias de crecimiento (Inversión, Fondo de Emergencia o Prepago de deuda inteligente).";
+            strategy = "El usuario tiene dinero extra (Superávit). Tu objetivo es que NO se lo gaste en tonterías. Sugiérele estrategias de crecimiento.";
         }
 
         const prompt = `
             ROL: ${role}
             ESTRATEGIA: ${strategy}
-            
             DIAGNÓSTICO DEL PACIENTE (DATOS REALES):
             ${context.full_context}
             
-            TU MISIÓN:
-            Genera un diagnóstico estratégico corto. NO repitas los números obvios que ya vio el usuario ("Gastaste X más").
-            En su lugar, enfócate en el SIGNIFICADO y la SOLUCIÓN.
-            
-            ESTRUCTURA DE RESPUESTA:
-            1. 🧠 EL INSIGHT: Una frase contundente sobre su comportamiento. (Ej: "Estás financiando tu estilo de vida con deuda, cuidado.")
-            2. 🛠️ LA ESTRATEGIA: Una recomendación de alto nivel.
-            3. 👉 ACCIÓN INMEDIATA: Algo que pueda hacer ya mismo.
-            
-            REGLAS DE ORO:
-            1. Sé quirúrgico. Ve a la yugular del problema.
-            2. Tono: Analista Estratégico Senior (Directo, riguroso, sin complacencia).
-            3. REGLA DE REBALANCEO: Si hay excesos, sugiere recortar en este orden estricto: 1. Ocio, 2. Alcohol/Tabaco, 3. Café/Snacks.
-            4. PROTECCIÓN DE INTOCABLES: Prohibido sugerir desviar fondos de Gastos Fijos, Deudas o Ahorro.
-            5. Usa emojis con moderación.
-            6. Máximo 400 caracteres.
-            
-            FORMATO: Texto plano.
+            TU MISIÓN: Genera un diagnóstico estratégico corto de máximo 400 caracteres.
         `;
 
         try {
-            let text = "";
-            if (provider === 'openai') {
-                const response = await fetch(this.OPENAI_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify({
-                        model: "gpt-4o-mini", // Use mini for speed/availability
-                        messages: [{ role: "user", content: prompt }],
-                        max_tokens: 300
-                    })
-                });
-
-                if (!response.ok) {
-                    const errErr = await response.json();
-                    throw new Error(`OpenAI Error: ${errErr.error?.message || response.statusText}`);
-                }
-
-                const data = await response.json();
-                text = data.choices[0].message.content;
-            } else {
-                const url = `${this.GEMINI_URL}?key=${apiKey}`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-                text = data.candidates[0].content.parts[0].text;
-            }
-            return text;
+            return await this._callGemini(apiKey, prompt);
         } catch (error) {
             console.error(error);
             throw error;
@@ -535,110 +485,37 @@ Esquema Obligatorio:
      */
     async scanReceipt(base64Data, mimeType = 'image/jpeg') {
         if (!this.hasApiKey()) {
-            throw new Error('Primero configura tu API Key en Ajustes ⚙️ para usar el escáner inteligente.');
+            throw new Error('Primero configura tu API Key en Ajustes para recibir consejos personalizados.');
         }
 
-        const provider = this.getProvider();
         const apiKey = this.getApiKey();
-
-        const prompt = `
-            Actúa como un experto en extracción de datos de facturas y recibos (OCR Inteligente) para Colombia/Latam.
-            Analiza la imagen adjunta y extrae la información en formato JSON estricto.
-            
-            Instrucciones CRITICAS para MONTO (Amount):
-            1. Busca el "TOTAL A PAGAR", "TOTAL A CANCELAR", "A PAGAR" o "NETO".
-            2. IMPORTANTE: EL MONTO DEBE SER UN VALOR MONETARIO REAL. Ignora números largos de "Resolución", "Autorización", "CUFE", "Factura No", "NIT" o "Teléfono".
-            3. Si ves un número gigante (como 187640...), ES UN CÓDIGO, NO EL PRECIO. El precio real suele tener separadores de miles (ej: 198.514).
-            4. El formato de respuesta para 'amount' debe ser NUMBER (ej: 198514). Redondea a entero.
-
-            Instrucciones para COMERCIO y CATEGORÍA:
-            1. Merchant: Busca el nombre visible en el logo o encabezado (Ej: "Notaría 7", "D1", "Exito"). MUY IMPORTANTE: Ignora por completo cualquier "NIT", "RUT" o "Número de Identificación Tributaria". Estas palabras o sus números NO son el nombre del negocio y NUNCA deben ir en el campo 'merchant' o 'amount'.
-            2. Category:
-               - Si es "Notaría" o trámites legales -> "Vivienda" (si parece escritura) o "Servicios".
-               - Si es Mercado/Supermercado -> "Alimentación".
-               - Si es Gasolinera -> "Transporte".
-               - Si es Restaurante -> "Restaurantes".
-
-            Formato JSON de respuesta (solo el objeto):
-            {
-                "date": "YYYY-MM-DD",
-                "amount": number (El valor limpio. JAMÁS pongas el número de autorización),
-                "merchant": "Nombre del Negocio",
-                "category": "Categoría Sugerida",
-                "note": "Breve descripción (ej: 'Derechos Notariales' o 'Escrituración')"
-            }
-            
-            Si algún dato no es visible o claro, usa null.
-        `;
+        const prompt = `Extrae datos de factura en JSON: date, amount (number), merchant, category, note.`;
 
         try {
-            if (provider === 'openai') {
-                if (!mimeType.startsWith('image/')) throw new Error('OpenAI solo soporta imágenes (JPG/PNG). Para PDFs usa Gemini.');
-                // OpenAI Vision (GPT-4o / GPT-4-turbo)
-                const response = await fetch(this.OPENAI_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: "gpt-4o",
-                        messages: [
-                            {
-                                role: "user",
-                                content: [
-                                    { type: "text", text: prompt },
-                                    {
-                                        type: "image_url",
-                                        image_url: {
-                                            "url": `data:${mimeType};base64,${base64Data}`
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        max_tokens: 300
-                    })
-                });
+            const conf = this.store && this.store.config ? this.store.config : {};
+            const projectId = conf.firebase_project_id || '';
+            const PROXY_URL = `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`;
 
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-                const text = data.choices[0].message.content;
-                return JSON.parse(text.replace(/```json|```/g, '').trim());
+            const response = await fetch(PROXY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: mimeType, data: base64Data } }
+                        ]
+                    }]
+                })
+            });
 
-            } else {
-                // Gemini Vision (1.5 Flash / 2.0 Flash)
-                // URL usually has :generateContent?key=API_KEY
-                const url = `${this.GEMINI_URL}?key=${apiKey}`;
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                {
-                                    inline_data: {
-                                        mime_type: mimeType,
-                                        data: base64Data
-                                    }
-                                }
-                            ]
-                        }]
-                    })
-                });
-
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-
-                const text = data.candidates[0].content.parts[0].text;
-                return JSON.parse(text.replace(/```json|```/g, '').trim());
-            }
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            const text = data.candidates[0].content.parts[0].text;
+            return JSON.parse(text.replace(/```json|```/g, '').trim());
         } catch (error) {
             console.error('AI Scan Error:', error);
-            const msg = error.message || 'Error desconocido';
-            throw new Error(`Aviso de IA: ${msg}`);
+            throw new Error(`Aviso de IA: ${error.message}`);
         }
     }
 
