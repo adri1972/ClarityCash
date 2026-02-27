@@ -741,9 +741,11 @@ class UIManager {
             const el = document.querySelector(item.s);
             if (el) {
                 if (isAuth) {
-                    el.style.display = item.d;
                     el.style.removeProperty('display'); // Clear inline to let CSS or defaults take over
-                    el.style.display = item.d; // Re-set to ensure it's visible if it was hidden in HTML
+                    // Only force inline display for elements that need it, let CSS handle sidebar & overlay
+                    if (item.s !== '.sidebar-overlay' && item.s !== '.sidebar') {
+                        el.style.display = item.d;
+                    }
                 } else {
                     el.style.setProperty('display', 'none', 'important');
                 }
