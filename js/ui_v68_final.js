@@ -1446,6 +1446,21 @@ class UIManager {
             });
         }
 
+        // 6. WEEKLY AUDIT: Prompt user to see their Strategy Report
+        const weekKey = `${new Date().getFullYear()}-W${String(Math.ceil(((new Date() - new Date(new Date().getFullYear(), 0, 1)) / 86400000 + new Date(new Date().getFullYear(), 0, 1).getDay() + 1) / 7)).padStart(2, '0')}`;
+        const cachedVerdict = localStorage.getItem('cc_cfo_verdict');
+        const hasVerdictThisWeek = cachedVerdict && JSON.parse(cachedVerdict).week === weekKey;
+
+        if (!hasVerdictThisWeek) {
+            nudges.push({
+                emoji: '📊',
+                title: 'Tu Auditoría Semanal está lista',
+                msg: '¿Cómo va tu disciplina financiera? Mira el veredicto del CFO esta semana.',
+                action: 'Ver Auditoría →',
+                onclick: "window.ui.navigate('strategy')"
+            });
+        }
+
         // RENDER
         if (nudges.length === 0) return '';
 
@@ -2417,17 +2432,14 @@ class UIManager {
         setTimeout(() => toast.remove(), 3000);
 
         // Track event para el Veredicto Semanal del CFO
-        const SACRIFICE_IDS = ['cat_9', 'cat_vicios', 'cat_ant'];
-        if (SACRIFICE_IDS.includes(fromCatId)) {
-            const fromCat = this.store.categories.find(c => c.id === fromCatId);
-            const toCat = this.store.categories.find(c => c.id === toCatId);
-            this.trackWeeklyEvent('rebalance', {
-                fromCat: fromCat?.name || fromCatId,
-                toCat: toCat?.name || toCatId,
-                fromCatId, toCatId,
-                amount: transferAmt
-            });
-        }
+        const fromCat = this.store.categories.find(c => c.id === fromCatId);
+        const toCat = this.store.categories.find(c => c.id === toCatId);
+        this.trackWeeklyEvent('rebalance', {
+            fromCat: fromCat?.name || fromCatId,
+            toCat: toCat?.name || toCatId,
+            fromCatId, toCatId,
+            amount: transferAmt
+        });
 
         this.render();
     }
