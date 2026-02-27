@@ -425,10 +425,29 @@
             document.getElementById('guide-dots').innerHTML = dots;
         };
 
-        // Auto-show on first visit
+        // Auto-show SOLO a usuarios nuevos (sin datos previos)
         window.addEventListener('load', () => {
             if (!localStorage.getItem('cc_guide_seen')) {
-                setTimeout(() => window.showGuide(), 1500);
+                // Verificar si el usuario ya tiene datos guardados (transacciones o configuración de ingresos)
+                let isExistingUser = false;
+                try {
+                    const storeRaw = localStorage.getItem('claritystore_v5');
+                    if (storeRaw) {
+                        const store = JSON.parse(storeRaw);
+                        const hasTxs = store.transactions && store.transactions.length > 0;
+                        const hasIncome = store.config && store.config.monthly_income > 0;
+                        const hasFixed = store.config && store.config.fixed_expenses && store.config.fixed_expenses.length > 0;
+                        if (hasTxs || hasIncome || hasFixed) isExistingUser = true;
+                    }
+                } catch (e) { }
+
+                if (isExistingUser) {
+                    // Usuario existente: marcar la guía como vista sin mostrarla
+                    localStorage.setItem('cc_guide_seen', 'true');
+                } else {
+                    // Usuario nuevo: mostrar la guía
+                    setTimeout(() => window.showGuide(), 1500);
+                }
             }
         });
     </script>
