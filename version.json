@@ -1,5 +1,5 @@
 {
-    "version": "69.MULTI-3",
-    "updatedAt": "2026-02-27T10:00:00Z",
-    "notes": "Fix: Proper Firebase Hosting configuration and robust cache-busting for mobile devices."
+    "version": "69.MULTI-4",
+    "updatedAt": "2026-02-27T13:00:00Z",
+    "notes": "Fix: UIManager Singleton pattern to prevent duplicate event listeners breaking navigation."
 }

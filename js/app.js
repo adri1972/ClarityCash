@@ -5,36 +5,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Mostrar loading inicial si es necesario
     console.log('🚀 Clarity Cash: Initializing Multi-User Engine...');
 
-    // 2. Escuchar cambios de autenticación
+    // 2. Setup Global UI (Instalar listeners UNA SOLA VEZ)
+    // Inicializamos con un Store temporal para que UI funcione (Login)
+    let store = new Store();
+    let advisor = new FinancialAdvisor(store);
+    let aiAdvisor = new AIAdvisor(store);
+    const ui = new UIManager(store, advisor, aiAdvisor);
+    window.ui = ui;
+    window.store = store;
+
+    // 3. Escuchar cambios de autenticación
     auth.onAuthStateChanged(async (user) => {
         if (!user) {
             console.log('👤 No session found. Redirecting to Login...');
-            // Inicializar UI mínima para renderizar el Login
-            const store = new Store();
-            const advisor = new FinancialAdvisor(store);
-            const aiAdvisor = new AIAdvisor(store);
-            const ui = new UIManager(store, advisor, aiAdvisor);
-            window.ui = ui;
+            // Mostrar login (usando el Store temporal)
             ui.currentView = 'login';
-            ui.render(); // Use unified render to apply 'no-auth' class
+            ui.render();
         } else {
             console.log('✅ User authenticated:', user.email);
 
-            // 3. Inicializar Store con el UID del usuario
-            const store = new Store();
-            window.store = store; // Global access
+            // Crear un Store definitivo para el usuario conectado
+            store = new Store();
+            window.store = store;
+
+            // Actualizar dependencias de la UI (sin reinstanciar UIManager para no duplicar listeners)
+            advisor = new FinancialAdvisor(store);
+            aiAdvisor = new AIAdvisor(store);
+            ui.store = store;
+            ui.advisor = advisor;
+            ui.aiAdvisor = aiAdvisor;
 
             try {
                 // El Store ahora se inicializa desde Firestore
                 await store.init(user.uid);
 
-                // 4. Inicializar Módulos con el Store ya cargado
-                const advisor = new FinancialAdvisor(store);
-                const aiAdvisor = new AIAdvisor(store);
-                const ui = new UIManager(store, advisor, aiAdvisor);
-                window.ui = ui;
-
-                // 5. Renderizar Dashboard
+                // Renderizar Dashboard
+                ui.currentView = 'dashboard';
                 ui.render();
 
                 // Feather Icons

@@ -79,8 +79,8 @@ class Store {
             // 1. Obtener Configuración
             const configDoc = await db.collection('users').doc(uid).get();
 
-            if (!configDoc.exists) {
-                // Posible usuario nuevo o primera vez
+            if (!configDoc.exists || (configDoc.data() && !configDoc.data().migrationCompleted)) {
+                // Posible usuario nuevo o primera vez, o migración incompleta
                 await this._checkAndPerformMigration();
             } else {
                 this.data.config = { ...DEFAULT_DATA.config, ...configDoc.data() };
@@ -118,44 +118,76 @@ class Store {
      * MIGRACIÓN: De LocalStorage a Firestore
      */
     async _checkAndPerformMigration() {
+        // Doble verificación: si ya se migró, evitar ejecutar de nuevo.
+        const configDoc = await db.collection('users').doc(this.uid).get();
+        if (configDoc.exists && configDoc.data() && configDoc.data().migrationCompleted) {
+            console.log("Migration: Ya fue completada previamente.");
+            this.data.config = { ...DEFAULT_DATA.config, ...configDoc.data() };
+            return;
+        }
+
         const localRaw = localStorage.getItem('clarity_cash_data_v2');
         if (!localRaw) {
             console.log("Migration: No local data to migrate. Creating defaults in Cloud.");
-            await this._saveConfig(DEFAULT_DATA.config);
+            const defaultConfig = { ...DEFAULT_DATA.config, migrationCompleted: true };
+            await this._saveConfig(defaultConfig);
             return;
         }
 
         try {
             const localData = JSON.parse(localRaw);
-            console.log("🚛 Migration: Moving localStorage data to Firestore...");
+            console.log("🚛 Migration: Moving localStorage data to Firestore via Batches...");
 
-            // Subir Config
-            const config = { ...localData.config, migrationCompleted: true };
-            await this._saveConfig(config);
+            // Config will be added at the end
+            const newConfig = { ...localData.config, migrationCompleted: true, updated_at: new Date().toISOString() };
 
-            // Subir Batch de Cuentas, Categorías, Metas y Transacciones
-            // (Usamos promesas paralelas para velocidad)
-            const tasks = [];
+            const operations = [];
 
             if (localData.accounts) {
-                localData.accounts.forEach(a => tasks.push(db.collection('users').doc(this.uid).collection('accounts').doc(a.id).set(a)));
+                localData.accounts.forEach(a => operations.push({
+                    ref: db.collection('users').doc(this.uid).collection('accounts').doc(a.id || Date.now().toString() + Math.random().toString(36).substr(2, 5)),
+                    data: a
+                }));
             }
             if (localData.categories) {
-                localData.categories.forEach(c => tasks.push(db.collection('users').doc(this.uid).collection('categories').doc(c.id).set(c)));
+                localData.categories.forEach(c => operations.push({
+                    ref: db.collection('users').doc(this.uid).collection('categories').doc(c.id || Date.now().toString() + Math.random().toString(36).substr(2, 5)),
+                    data: c
+                }));
             }
             if (localData.goals) {
-                localData.goals.forEach(g => tasks.push(db.collection('users').doc(this.uid).collection('goals').doc(g.id).set(g)));
+                localData.goals.forEach(g => operations.push({
+                    ref: db.collection('users').doc(this.uid).collection('goals').doc(g.id || Date.now().toString() + Math.random().toString(36).substr(2, 5)),
+                    data: g
+                }));
             }
             if (localData.transactions) {
-                // Nota: Si hay miles, esto podría fallar. Pero usualmente son cientos.
-                localData.transactions.forEach(t => tasks.push(db.collection('users').doc(this.uid).collection('transactions').doc(t.id).set(t)));
+                localData.transactions.forEach(t => operations.push({
+                    ref: db.collection('users').doc(this.uid).collection('transactions').doc(t.id || Date.now().toString() + Math.random().toString(36).substr(2, 5)),
+                    data: t
+                }));
             }
 
-            await Promise.all(tasks);
+            // Agregamos el documento de configuración al final para que solo se marque completado si todas las operaciones fueron registradas
+            operations.push({
+                ref: db.collection('users').doc(this.uid),
+                data: newConfig
+            });
+
+            // Procesamos las operaciones en lotes de 500 (límite de Firestore)
+            const BATCH_SIZE = 500;
+            for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+                const batch = db.batch();
+                const chunk = operations.slice(i, i + BATCH_SIZE);
+                chunk.forEach(op => batch.set(op.ref, op.data, { merge: true }));
+                await batch.commit();
+            }
+
             console.log("✅ Migration: Complete. Cleaning localStorage.");
             localStorage.setItem('cc_migrated_backup', localRaw); // Backup por si acaso
             localStorage.removeItem('clarity_cash_data_v2');
 
+            // Actualizamos los datos locales solo si no hubo error
             this.data = localData;
             this.data.config.migrationCompleted = true;
 
