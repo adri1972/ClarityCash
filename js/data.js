@@ -58,6 +58,7 @@ class Store {
     constructor() {
         this.uid = null;
         this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        this.data.config.fixed_expenses = this.data.config.fixed_expenses || [];
         this.unsubscribe = null;
     }
 
@@ -353,7 +354,44 @@ class Store {
 
     // Helper for Strategy Report tracking (remains local for session, but could be cloudified)
     trackWeeklyEvent(type, data) {
-        // ... similar logic as before, just save in cc_weekly_events in localStorage for now
-        // or we could cloudify this too. For now let's keep it simple to avoid infinite latency.
+        // ... similar logic as before
+    }
+
+    processFixedExpenses(month, year) {
+        if (!this.data.config.fixed_expenses) this.data.config.fixed_expenses = [];
+        const fixed = this.data.config.fixed_expenses;
+        fixed.forEach(fe => {
+            const exists = this.data.transactions.find(t =>
+                t.category_id === fe.category_id &&
+                t.amount === fe.amount &&
+                (() => {
+                    const d = new Date(t.date);
+                    return d.getMonth() === month && d.getFullYear() === year;
+                })()
+            );
+        });
+    }
+
+    getHistorySummary(monthsCount = 6) {
+        const history = [];
+        const now = new Date();
+        const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+        for (let i = 0; i < monthsCount; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const m = d.getMonth();
+            const y = d.getFullYear();
+
+            const summary = this.getFinancialSummary(m, y);
+
+            history.unshift({
+                month: m,
+                year: y,
+                label: monthNames[m],
+                income: summary.income,
+                expenses: summary.expenses
+            });
+        }
+        return history;
     }
 }
