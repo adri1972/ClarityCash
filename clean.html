@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpieza Profunda - ClarityCash</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            background: #f8fafc;
+            color: #1e293b;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, .1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #E91E63;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="spinner"></div>
+    <h1>Limpiando Caché... ☢️</h1>
+    <p>Estamos forzando una actualización completa para corregir los botones. Serás redirigido en un momento.</p>
+
+    <script>
+        async function runNuclearCleanup() {
+            console.log('☢️ Running Nuclear Cleanup...');
+
+            // 1. Unregister all Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                    console.log('SW Unregistered');
+                }
+            }
+
+            // 2. Delete all Caches
+            if ('caches' in window) {
+                const names = await caches.keys();
+                for (let name of names) {
+                    await caches.delete(name);
+                    console.log('Cache Deleted:', name);
+                }
+            }
+
+            // 3. Clear LocalStorage and SessionStorage
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('Storage Cleared');
+
+            // 4. Force reload index.html with cache-buster
+            setTimeout(() => {
+                window.location.href = 'index.html?force_reset=' + Date.now();
+            }, 1000);
+        }
+
+        runNuclearCleanup().catch(err => {
+            console.error('Cleanup failed:', err);
+            window.location.href = 'index.html?error_reset=' + Date.now();
+        });
+    </script>
+</body>
+
+</html>

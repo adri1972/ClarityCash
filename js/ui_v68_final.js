@@ -614,13 +614,15 @@ class UIManager {
         const user = auth.currentUser;
         if (!user) {
             // Si no hay usuario, forzamos login o registro
-            document.getElementById('app').classList.add('no-auth'); // Clase para ocultar sidebar
+            document.body.classList.add('no-auth'); // Clase para ocultar sidebar y otros elementos
+            this.toggleAuthElements(false);
             if (this.currentView === 'register') this.renderRegister();
             else this.renderLogin();
             return;
         }
 
-        document.getElementById('app').classList.remove('no-auth');
+        document.body.classList.remove('no-auth');
+        this.toggleAuthElements(true);
 
         try {
             switch (this.currentView) {
@@ -719,6 +721,44 @@ class UIManager {
         } else {
             if (nameEl) nameEl.textContent = 'Sin Sesión';
             if (statusEl) statusEl.textContent = 'Inicia sesión';
+        }
+    }
+
+    /**
+     * Hides or shows UI elements based on auth state (Redundant with CSS but for security/cache reasons)
+     */
+    toggleAuthElements(isAuth) {
+        const selectors = [
+            { s: '.sidebar', d: 'flex' },
+            { s: '.sidebar-overlay', d: 'block' },
+            { s: '#quick-expense-container', d: 'flex' },
+            { s: '#quick-expense-fab', d: 'flex' },
+            { s: '.top-bar .actions', d: 'flex' },
+            { s: '#help-fab', d: 'flex' }
+        ];
+
+        selectors.forEach(item => {
+            const el = document.querySelector(item.s);
+            if (el) {
+                if (isAuth) {
+                    el.style.display = item.d;
+                    el.style.removeProperty('display'); // Clear inline to let CSS or defaults take over
+                    el.style.display = item.d; // Re-set to ensure it's visible if it was hidden in HTML
+                } else {
+                    el.style.setProperty('display', 'none', 'important');
+                }
+            }
+        });
+
+        // Specific fix for "Nuevo Movimiento" button if targeted directly
+        const addBtn = document.getElementById('add-transaction-btn');
+        if (addBtn) {
+            if (isAuth) {
+                addBtn.style.display = 'inline-flex';
+                addBtn.style.removeProperty('display');
+            } else {
+                addBtn.style.setProperty('display', 'none', 'important');
+            }
         }
     }
 
@@ -1673,6 +1713,10 @@ class UIManager {
     }
 
     openQuickExpense() {
+        if (!auth.currentUser) {
+            this.navigate('login');
+            return;
+        }
         // Safety check to prevent ghost overlays from piling up
         const existing = document.getElementById('quick-expense-overlay');
         if (existing) {

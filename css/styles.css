@@ -60,20 +60,22 @@ body {
     height: 100%;
 }
 
-/* Ocultar sidebar si no hay sesión */
-#app.no-auth .sidebar,
-#app.no-auth .sidebar-overlay,
-#app.no-auth #quick-expense-fab,
-#app.no-auth .actions {
+/* Ocultar elementos si no hay sesión */
+body.no-auth .sidebar,
+body.no-auth .sidebar-overlay,
+body.no-auth #quick-expense-container,
+body.no-auth #quick-expense-fab,
+body.no-auth .actions,
+body.no-auth #help-fab {
     display: none !important;
 }
 
-#app.no-auth .main-content {
+body.no-auth .main-content {
     margin-left: 0 !important;
     width: 100%;
 }
 
-#app.no-auth .content-container {
+body.no-auth .content-container {
     padding-bottom: 2rem;
 }
 

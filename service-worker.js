@@ -1,5 +1,5 @@
 // ClarityCash Stable Service Worker v69.MULTI-USER
-const CACHE_NAME = 'cc-multi-v69-01';
+const CACHE_NAME = 'cc-multi-v69-03';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();

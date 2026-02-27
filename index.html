@@ -5,7 +5,7 @@
     <script>
         // --- STABLE UPDATE ENGINE v68.Y (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '68.Y';
+            const CURRENT_VERSION = '69.MULTI-3';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -64,10 +64,27 @@
                     }
 
                     // 3. Force navigate with Cache-Busting parameter to defeat GitHub Pages CDN
-                    window.location.href = window.location.pathname + '?nocache=' + Date.now();
+                    // 3. Force navigate with Cache-Busting parameter
+                    const finalUrl = window.location.pathname + '?v=' + newVer + '&t=' + Date.now();
+                    window.location.href = finalUrl;
                 };
             }
         })();
+
+        // --- NUCLEAR CLEANER: Kill old Zombies ---
+        window.nuclearReset = async function () {
+            console.log('☢️ Running Nuclear Reset...');
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let r of regs) await r.unregister();
+            }
+            if ('caches' in window) {
+                const names = await caches.keys();
+                for (let n of names) await caches.delete(n);
+            }
+            localStorage.removeItem('cc_app_version');
+            window.location.href = window.location.pathname + '?reset=' + Date.now();
+        };
     </script>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -80,7 +97,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=68K">
+    <link rel="stylesheet" href="css/styles.css?v=v69.3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -92,9 +109,9 @@
     </script>
 </head>
 
-<body>
+<body class="no-auth">
     <div id="app">
-        <aside class="sidebar">
+        <aside class="sidebar" style="display: none;">
             <div class="brand">
                 <img src="assets/logo.png" alt="ClarityCash" style="width:40px; height:40px; border-radius:10px;">
                 <h1>ClarityCash</h1>
@@ -117,7 +134,7 @@
             </div>
         </aside>
 
-        <div class="sidebar-overlay"
+        <div class="sidebar-overlay" style="display: none;"
             onclick="document.querySelector('.sidebar').classList.remove('open'); this.classList.remove('active');">
         </div>
 
@@ -129,10 +146,9 @@
                             data-feather="menu"></i></button>
                     <h2 id="page-title">Resumen Financiero</h2>
                 </div>
-                <div class="actions" style="display: flex; gap: 0.5rem;">
-                    <button onclick="localStorage.removeItem('cc_app_version'); window.location.reload(true);"
-                        class="btn-text" style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px;
-                    border-radius: 12px;">🔄
+                <div class="actions" style="display: none; gap: 0.5rem;">
+                    <button onclick="window.nuclearReset()" class="btn-text" style="font-size: 0.7rem; color: #E91E63; border: 1px solid #E91E63; padding: 4px 8px;
+                    border-radius: 12px;">☢️
                         Forzar Reset</button>
                     <button id="add-transaction-btn" class="btn btn-primary"><i data-feather="plus"></i> Nuevo
                         Movimiento</button>
@@ -146,7 +162,7 @@
         </main>
     </div>
 
-    <div id="quick-expense-container" style="position:fixed; bottom:85px; right:15px; z-index:999;">
+    <div id="quick-expense-container" style="position:fixed; bottom:85px; right:15px; z-index:999; display: none;">
         <button id="quick-expense-fab" onclick="window.ui.openQuickExpense()" class="fab-pulse"
             style="height:56px; padding:0 24px; border-radius:28px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; font-size:1rem; font-weight:700; cursor:pointer; box-shadow:0 8px 25px rgba(233,30,99,0.3); display:flex; align-items:center; gap:8px;">
             <i data-feather="zap" style="width:20px; height:20px;"></i> Gasto Rápido
@@ -381,7 +397,7 @@
                background: linear-gradient(135deg, #E91E63, #9C27B0); color: white;
                border: none; border-radius: 50%; font-size: 1.3rem; cursor: pointer;
                box-shadow: 0 4px 15px rgba(233,30,99,0.4); z-index: 900;
-               display: flex; align-items: center; justify-content: center;
+               display: none; align-items: center; justify-content: center;
                transition: transform 0.2s;">
         ?
     </button>
@@ -463,23 +479,24 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <script src="js/firebase-config.js?v=v69multi"></script>
-    <script src="js/auth.js?v=v69multi"></script>
-    <script src="js/data.js?v=v69multi"></script>
-    <script src="js/advisor.js?v=v69multi"></script>
-    <script src="js/gemini_v68_final.js?v=v69multi"></script>
-    <script src="js/ui_v68_final.js?v=v68final18"></script>
-    <script src="js/strategy_report_v68.js?v=v68final18"></script>
-    <script src="js/app.js?v=v68final18"></script>
+    <script src="js/firebase-config.js?v=v69.3"></script>
+    <script src="js/auth.js?v=v69.3"></script>
+    <script src="js/data.js?v=v69.3"></script>
+    <script src="js/advisor.js?v=v69.3"></script>
+    <script src="js/gemini_v68_final.js?v=v69.3"></script>
+    <script src="js/ui_v68_final.js?v=v69.3"></script>
+    <script src="js/strategy_report_v68.js?v=v69.3"></script>
+    <script src="js/app.js?v=v69.3"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=68AD').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v69.3').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
-    <div style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#ccc; z-index:9999; pointer-events:none;">
-        v69.MULTI-USER</div>
+    <div
+        style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#E91E63; z-index:9999; pointer-events:none; font-weight:bold;">
+        v69.MULTI-3</div>
 </body>
 
 </html>

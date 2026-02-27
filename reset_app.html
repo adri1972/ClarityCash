@@ -86,10 +86,15 @@
                     log('Cache clear failed: ' + e.message);
                 }
 
+                // 3. Clear Storage
+                localStorage.clear();
+                sessionStorage.clear();
+                log('Storage Cleared');
+
                 status.textContent = "✅ ¡Listo! Redirigiendo a la nueva versión...";
                 status.style.color = "#4CAF50";
 
-                // 3. Redirect back to index.html with a timestamp to force fresh load
+                // 4. Redirect back to index.html with a timestamp to force fresh load
                 setTimeout(() => {
                     // Force a new URL to bypass browser cache
                     window.location.href = 'index.html?t=' + Date.now();

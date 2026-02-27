@@ -1,5 +1,5 @@
 {
-    "version": "69.MULTI-1",
-    "updatedAt": "2026-02-26T21:55:00Z",
-    "notes": "Feature: Real Multi-User support with Firebase Auth and Firestore. Automated migration from local data."
+    "version": "69.MULTI-3",
+    "updatedAt": "2026-02-27T10:00:00Z",
+    "notes": "Fix: Proper Firebase Hosting configuration and robust cache-busting for mobile devices."
 }

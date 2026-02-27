@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const aiAdvisor = new AIAdvisor(store);
             const ui = new UIManager(store, advisor, aiAdvisor);
             window.ui = ui;
-            ui.renderLogin(); // Forzar vista de login
+            ui.currentView = 'login';
+            ui.render(); // Use unified render to apply 'no-auth' class
         } else {
             console.log('✅ User authenticated:', user.email);
 
