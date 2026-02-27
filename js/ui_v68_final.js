@@ -1016,19 +1016,46 @@ class UIManager {
                     </div>
                 </div>
 
-                <!-- Diagnosis Banner (Simplified) -->
-                <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 16px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
+                <!-- Diagnosis Banner (Hero Card Rediseñada) -->
+                <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 20px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-                        <div>
-                            <span id="ai-status-badge" style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 6px; ${hasApiKey ? (this.store.config.ai_pro_mode ? 'background: linear-gradient(135deg, #FFB300, #F57C00); color: white; box-shadow: 0 2px 4px rgba(255,179,0,0.3);' : 'background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;') : 'background: #f5f5f5; color: #999;'}">
-                                ${hasApiKey ? (this.store.config.ai_pro_mode ? '🛡️ IA PRO (Segura)' : '✨ IA Generativa (Normal)') : '⚡ Diagnóstico Automático'}
-                            </span>
-                            <div id="ai-diagnosis-content">
-                                <h3 style="margin:4px 0 0; font-size:1.1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
-                            </div>
-                            ${hasApiKey ? `<small id="ai-loading-indicator" style="display:none; color:${this.store.config.ai_pro_mode ? '#FF9800' : '#E91E63'}; font-size:0.7rem; margin-top:4px;">${this.store.config.ai_pro_mode ? '🛡️ Conectando con red segura de IA...' : '🧠 Pensando estrategia...'}</small>` : ''}
+                        <div style="flex: 1;">
+
+                            ${(() => {
+                // Leer caché del último análisis de movimiento
+                let cachedInsight = null;
+                try { cachedInsight = JSON.parse(localStorage.getItem('cc_last_ai_insight')); } catch (e) { }
+
+                const minutesAgo = cachedInsight ? Math.round((Date.now() - cachedInsight.ts) / 60000) : null;
+                const timeLabel = minutesAgo !== null ? (minutesAgo < 1 ? 'Ahora mismo' : minutesAgo < 60 ? `Hace ${minutesAgo} min` : `Hace ${Math.round(minutesAgo / 60)} h`) : null;
+
+                // Risk color
+                const riskColors = { danger: '#D32F2F', warning: '#E65100', success: '#2E7D32', info: '#1565C0' };
+                const riskBg = { danger: '#FFEBEE', warning: '#FFF3E0', success: '#E8F5E9', info: '#E3F2FD' };
+
+                if (cachedInsight && cachedInsight.text) {
+                    return `
+                                        <div style="display:flex; align-items:center; gap: 8px; margin-bottom: 8px;">
+                                            <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 3px 8px; border-radius: 12px; background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;">✨ Último Análisis IA</span>
+                                            <span style="font-size:0.65rem; color: var(--text-secondary);">${timeLabel}</span>
+                                        </div>
+                                        <div style="background: ${riskBg[cachedInsight.type] || '#E3F2FD'}; border-left: 3px solid ${riskColors[cachedInsight.type] || '#1565C0'}; border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 0.9rem; color: ${riskColors[cachedInsight.type] || '#1565C0'}; line-height: 1.5;">
+                                            ${cachedInsight.icon} ${cachedInsight.text}
+                                        </div>
+                                    `;
+                } else if (hasApiKey) {
+                    return `
+                                        <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 3px 8px; border-radius: 12px; background: #f0f0f0; color: #888; display:inline-block; margin-bottom:6px;">⚡ IA Lista</span>
+                                        <p style="margin: 4px 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height:1.4;">El análisis aparece aquí la próxima vez que registres un gasto.</p>
+                                    `;
+                } else {
+                    return `
+                                        <h3 style="margin:4px 0 0; font-size:1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
+                                    `;
+                }
+            })()}
                         </div>
-                        <div style="font-size:1.5rem;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
+                        <div style="font-size:1.5rem; margin-left: 8px;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
                     </div>
 
                     <!-- FINANCIAL HEALTH BAR (SEMAPHORE) -->
@@ -1217,13 +1244,9 @@ class UIManager {
         this.renderHistoryChart(); // Bar Chart
         if (window.feather) window.feather.replace();
 
-        // Trigger AI Insight if needed
+        // Trigger AI Insight if needed (for budget advice cards only)
         this.processAIAdvice(plan);
-
-        // EXTRA: If API Key exists, fetch REAL diagnosis asynchronously
-        if (hasApiKey) {
-            this.fetchRealAIDiagnosis(plan);
-        }
+        // NOTE: No llamamos fetchRealAIDiagnosis aqui. El hero usa el caché del ultimo movimiento.
     }
 
     async fetchRealAIDiagnosis(plan) {
@@ -2337,6 +2360,15 @@ class UIManager {
 
                 // Show the CFO text cleanly formatted
                 this.showToast(insightJson.analisis_cfo, type, icon);
+
+                // === GUARDAR EN CACÍE DEL DASHBOARD (sin costo extra) ===
+                localStorage.setItem('cc_last_ai_insight', JSON.stringify({
+                    text: insightJson.analisis_cfo,
+                    risk: insightJson.nivel_riesgo,
+                    type: type,
+                    icon: icon,
+                    ts: Date.now() // timestamp para mostrar "Hace X min"
+                }));
             }
         } catch (err) {
             console.error("AI Insight Pipeline Error:", err);
