@@ -2327,7 +2327,7 @@ class UIManager {
                 const interestCost = Math.round(txData.amount * 0.025);
                 interestToast.innerHTML = `
                     <div style="font-weight:700; margin-bottom:6px;">💳 Inteligencia de Costo</div>
-                    Die Deuda registrada. Recuerda que esto te costará aproximadamente <b>${this.formatCurrency(interestCost)}</b> en intereses (2.5% mensual). ¿Quieres que prioricemos el pago este mes?
+                    Deuda registrada. En Colombia, las tarjetas cobran entre <b>1.5% y 3% mensual</b> en intereses (según tu banco y tipo de tarjeta). ¿Quieres que prioricemos el pago este mes?
                     <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
                         <button onclick="this.closest('.ai-toast').remove(); window.ui.navigate('budgets')" style="background:#E65100; color:white; border:none; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Sí, priorizar</button>
                         <button onclick="this.closest('.ai-toast').remove()" style="background:none; border:1px solid #FFCC80; color:#E65100; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Ahora no</button>
