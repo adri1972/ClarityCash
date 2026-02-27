@@ -713,7 +713,7 @@ class UIManager {
             if (nameEl) nameEl.textContent = user.email.split('@')[0];
             if (statusEl) {
                 statusEl.innerHTML = `${user.emailVerified ? 'Cuenta Verificada ✅' : 'Sin verificar ✉️'} <br>
-                <button onclick="auth.signOut()" style="background:none; border:none; color:#E91E63; font-size:0.75rem; text-decoration:underline; cursor:pointer; padding:0; margin-top:4px;">Cerrar Sesión</button>`;
+                <button onclick="window.authService.logout()" style="background:none; border:none; color:#E91E63; font-size:0.75rem; text-decoration:underline; cursor:pointer; padding:0; margin-top:4px;">Cerrar Sesión</button>`;
             }
             if (avatarEl) avatarEl.textContent = user.email[0].toUpperCase();
         } else {
