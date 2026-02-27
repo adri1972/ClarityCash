@@ -2292,18 +2292,37 @@ class UIManager {
     }
 
     resolveNegativeBalance(action, txData, fallbackAccountId, editId) {
-        // Cerrar el modal actual
-        const modal = document.querySelector('.modal-overlay');
-        if (modal) document.body.removeChild(modal);
+        // Cerrar el modal de Intervención IA (es un div.modal dinámico, no .modal-overlay)
+        const modals = document.querySelectorAll('.modal:not(#transaction-modal):not(#guide-modal)');
+        modals.forEach(m => {
+            if (!m.classList.contains('hidden') && document.body.contains(m)) {
+                document.body.removeChild(m);
+            }
+        });
 
         if (action === 'ERROR') {
-            // Reabrir el modal de transacción para que el usuario pueda corregirlo
-            if (this._pendingTxModal) {
-                this._pendingTxModal.classList.remove('hidden');
-            } else {
-                // Fallback: abrir el modal de nueva transacción
-                const txModal = document.getElementById('transaction-modal');
-                if (txModal) txModal.classList.remove('hidden');
+            // Reabrir el formulario de transacción pre-llenado para que el usuario corrija
+            const txModal = document.getElementById('transaction-modal');
+            if (txModal) {
+                txModal.classList.remove('hidden');
+                // Restaurar los valores en el formulario si hay datos
+                if (txData) {
+                    const form = txModal.querySelector('#transaction-form');
+                    if (form) {
+                        if (txData.amount) {
+                            const amtInput = form.querySelector('[name="amount"]');
+                            if (amtInput) amtInput.value = txData.amount;
+                        }
+                        if (txData.type) {
+                            const radio = form.querySelector(`[name="type"][value="${txData.type}"]`);
+                            if (radio) { radio.checked = true; this.populateSelects(txData.type); }
+                        }
+                        if (txData.account_id) {
+                            const accSelect = form.querySelector('[name="account_id"]');
+                            if (accSelect) accSelect.value = txData.account_id;
+                        }
+                    }
+                }
             }
             return;
         }
