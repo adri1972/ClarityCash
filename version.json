@@ -1,5 +1,5 @@
 {
-    "version": "68.FINAL-8",
-    "updatedAt": "2026-02-23T23:05:00Z",
-    "notes": "Architecture Shift: Gemini API calls now securely routed through Firebase Cloud Functions Proxy. API Key removed from client side."
+    "version": "68.FINAL-9",
+    "updatedAt": "2026-02-26T20:19:00Z",
+    "notes": "Fix: onboarding guide now only shows to new users. Fix double quotes in AI modals. Fix 'Fue un error' button."
 }
