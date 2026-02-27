@@ -887,4 +887,75 @@ Esquema Obligatorio:
             return `"Te has pasado por $${excessAmount.toLocaleString()} en ${catName}. ¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?"`;
         }
     }
+
+    /**
+     * WEEKLY CFO VERDICT — Diagnóstico Estratégico Semanal
+     */
+    async getWeeklyCFOVerdict(weeklyData) {
+        const apiKey = this.config.gemini_api_key || this.config.openai_api_key;
+        if (!apiKey) throw new Error('No API key configured');
+
+        const systemPrompt = `Actúa como Analista Estratégico Senior (CFO). Emite el Veredicto Semanal bajo estas reglas ESTRICTAS:
+
+TONO: Profesional, directo, sin complacencia. Sin emojis decorativos. Sin markdown.
+
+ESCENARIO DE ÉXITO (0 rebalanceos, 0 incidentes, intocables blindados):
+→ Emite un Reconocimiento Profesional breve destacando la eficiencia operativa y la protección del patrimonio.
+
+ESCENARIO DE RIESGO (rebalanceos > 0 o incidentes > 0):
+→ Identifica el "Sesgo de Gasto" específico (ej: "Estás canibalizando tu Ocio para financiar mala planeación en Alimentación").
+→ Si la desviación de capital supera el 15% del presupuesto variable, propón un ajuste técnico concreto para el próximo mes.
+
+DATOS A ANALIZAR: ${JSON.stringify(weeklyData)}
+
+FORMATO: Máximo 4 líneas. Sin bullet points. Texto corrido. Sin saludos.`;
+
+        try {
+            let text = '';
+            const proxyUrl = this.config.firebase_project_id
+                ? `https://us-central1-${this.config.firebase_project_id}.cloudfunctions.net/geminiProxy`
+                : null;
+
+            if (proxyUrl) {
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: systemPrompt, maxTokens: 200 })
+                });
+                if (!response.ok) throw new Error('Proxy Error');
+                const data = await response.json();
+                text = data.result || data.text || '';
+            } else if (this.config.ai_provider === 'openai' && this.config.openai_api_key) {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.config.openai_api_key}` },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [{ role: 'user', content: systemPrompt }],
+                        max_tokens: 200, temperature: 0.6
+                    })
+                });
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                text = data.choices[0].message.content;
+            } else {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: systemPrompt }] }],
+                        generationConfig: { maxOutputTokens: 200, temperature: 0.6 }
+                    })
+                });
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                text = data.candidates[0].content.parts[0].text;
+            }
+            return text.trim();
+        } catch (error) {
+            console.error('Weekly CFO Verdict Error:', error);
+            throw error;
+        }
+    }
 }

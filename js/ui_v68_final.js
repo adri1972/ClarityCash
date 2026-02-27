@@ -618,6 +618,7 @@ class UIManager {
                 case 'insights': this.renderInsightsPage(); break;
                 case 'goals': this.renderGoals(); break;
                 case 'settings': this.renderSettings(); break;
+                case 'strategy': this.renderStrategyReport(); break;
                 default: this.renderDashboard();
             }
         } catch (err) {
@@ -2312,6 +2313,12 @@ class UIManager {
             // Refrescar vista actual
             this.render();
 
+            // Registrar incidente semanal
+            this.trackWeeklyEvent('intervention', {
+                account: (this.store.accounts.find(a => a.id === txData.account_id))?.name || 'cuenta',
+                amount: txData.amount
+            });
+
             // Toast 1: Confirmación de registro
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:1rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;';
@@ -2417,7 +2424,44 @@ class UIManager {
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
 
+        // Track event para el Veredicto Semanal del CFO
+        const SACRIFICE_IDS = ['cat_9', 'cat_vicios', 'cat_ant'];
+        if (SACRIFICE_IDS.includes(fromCatId)) {
+            const fromCat = this.store.categories.find(c => c.id === fromCatId);
+            const toCat = this.store.categories.find(c => c.id === toCatId);
+            this.trackWeeklyEvent('rebalance', {
+                fromCat: fromCat?.name || fromCatId,
+                toCat: toCat?.name || toCatId,
+                fromCatId, toCatId,
+                amount: transferAmt
+            });
+        }
+
         this.render();
+    }
+
+    // ─── Helper: registrar eventos semanales en localStorage ───────────────
+    trackWeeklyEvent(type, data) {
+        const d = new Date();
+        const y = d.getFullYear();
+        const start = new Date(y, 0, 1);
+        const week = Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+        const weekKey = `${y}-W${String(week).padStart(2, '0')}`;
+
+        let events = { week: weekKey, rebalances: [], interventions: [] };
+        try {
+            const raw = localStorage.getItem('cc_weekly_events');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                // Si cambió la semana, reset
+                events = parsed.week === weekKey ? parsed : events;
+            }
+        } catch (e) { }
+
+        if (type === 'rebalance') events.rebalances.push({ ...data, ts: Date.now() });
+        if (type === 'intervention') events.interventions.push({ ...data, ts: Date.now() });
+
+        localStorage.setItem('cc_weekly_events', JSON.stringify(events));
     }
 
     async triggerSpendingInsight(tx) {
@@ -4811,6 +4855,18 @@ class UIManager {
                 </div>
             `;
         }).join('');
+    }
+
+    renderStrategyReport() {
+        this.pageTitle.textContent = 'Auditoría Semanal 📊';
+        if (typeof StrategyReport === 'undefined') {
+            this.container.innerHTML = '<div style="padding:2rem; color:#999;">Módulo no cargado.</div>';
+            return;
+        }
+        const report = new StrategyReport(this.container, this.store, this.aiAdvisor);
+        window.strategyReport = report;
+        report.render();
+        if (window.feather) window.feather.replace();
     }
 
     renderGoals() {
