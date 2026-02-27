@@ -430,10 +430,10 @@
         // Auto-show SOLO a usuarios nuevos (sin datos previos)
         window.addEventListener('load', () => {
             if (!localStorage.getItem('cc_guide_seen')) {
-                // Verificar si el usuario ya tiene datos guardados (transacciones o configuración de ingresos)
+                // Verificar si el usuario ya tiene datos (clave real del store)
                 let isExistingUser = false;
                 try {
-                    const storeRaw = localStorage.getItem('claritystore_v5');
+                    const storeRaw = localStorage.getItem('clarity_cash_data_v2');
                     if (storeRaw) {
                         const store = JSON.parse(storeRaw);
                         const hasTxs = store.transactions && store.transactions.length > 0;
