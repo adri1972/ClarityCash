@@ -2219,8 +2219,7 @@ class UIManager {
         if (modal) document.body.removeChild(modal);
 
         if (action === 'ERROR') {
-            // No hacemos nada, que el usuario arregle el form. Si vino por QuickExpense, abrirá el normal.
-            alert("Corrija el monto o seleccione la cuenta correcta.");
+            // Modal ya cerrado. El usuario simplemente corrige el formulario.
             return;
         }
 
