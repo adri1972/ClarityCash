@@ -83,7 +83,10 @@
                 for (let n of names) await caches.delete(n);
             }
             localStorage.removeItem('cc_app_version');
-            window.location.href = window.location.pathname + '?reset=' + Date.now();
+
+            // Bypass fetch cache
+            const finalUrl = window.location.pathname.replace(/\/$/, '') + '?reset=' + Date.now();
+            window.location.replace(finalUrl);
         };
     </script>
     <meta charset="UTF-8">
@@ -131,6 +134,12 @@
             <div class="user-profile">
                 <div class="avatar">YO</div>
                 <div class="info"><span class="name">Mi Espacio</span><span class="status">Modo Seguro 🛡️</span></div>
+            </div>
+            <div style="padding: 1rem; border-top: 1px solid #eee; text-align: center;">
+                <button onclick="window.nuclearReset()" class="btn"
+                    style="width: 100%; background: #FFEBEE; color: #D32F2F; border: 1px solid #FFCDD2; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;">
+                    <i data-feather="refresh-cw" style="width: 14px; height: 14px;"></i> Forzar Actualización
+                </button>
             </div>
         </aside>
 
