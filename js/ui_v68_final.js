@@ -2278,12 +2278,15 @@ class UIManager {
         try {
             const aiText = await this.aiAdvisor.getNegativeBalanceInsight(txData, account, this.store.categories);
             if (aiText && document.getElementById('negative-balance-ai-text')) {
-                document.getElementById('negative-balance-ai-text').innerHTML = `"${aiText}"`;
+                // Limpiar comillas extra que devuelve el modelo
+                const clean = aiText.replace(/^"+|"+$/g, '').trim();
+                document.getElementById('negative-balance-ai-text').textContent = clean;
             }
         } catch (error) {
             console.error("Failed fetching dynamic AI negative balance alert", error);
             if (document.getElementById('negative-balance-ai-text')) {
-                document.getElementById('negative-balance-ai-text').innerHTML = `"Oye, estás intentando registrar un gasto de <b>${this.formatCurrency(txData.amount)}</b> desde la cuenta <b>${account.name}</b>, pero esa cuenta solo tiene <b>${this.formatCurrency(account.current_balance)}</b>.<br><br>Los activos NO pueden ser negativos. ¿De dónde salió realmente este dinero?"`;
+                document.getElementById('negative-balance-ai-text').textContent =
+                    `Estás intentando registrar $${this.formatNumberWithDots(txData.amount)} desde ${account.name}, pero esa cuenta solo tiene $${this.formatNumberWithDots(account.current_balance)}. Los activos NO pueden ser negativos.`;
             }
         }
     }
@@ -2294,7 +2297,14 @@ class UIManager {
         if (modal) document.body.removeChild(modal);
 
         if (action === 'ERROR') {
-            // Modal ya cerrado. El usuario simplemente corrige el formulario.
+            // Reabrir el modal de transacción para que el usuario pueda corregirlo
+            if (this._pendingTxModal) {
+                this._pendingTxModal.classList.remove('hidden');
+            } else {
+                // Fallback: abrir el modal de nueva transacción
+                const txModal = document.getElementById('transaction-modal');
+                if (txModal) txModal.classList.remove('hidden');
+            }
             return;
         }
 
