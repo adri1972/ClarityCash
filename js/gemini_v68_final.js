@@ -102,15 +102,37 @@ ${last3Str || 'Ninguno'}`;
 
         try {
             const rawText = await this._callGemini(apiKey, prompt);
-            const cleanText = rawText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+
+            // 1. Clean the response thoroughly
+            let cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+            // 2. Extract only the JSON part (find first { and last })
+            const firstBrace = cleanText.indexOf('{');
+            const lastBrace = cleanText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+                cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+            }
+
+            // 3. One more check: sanitize unescaped newlines inside strings that might break parsing
+            cleanText = cleanText.replace(/\n/g, '\\n').replace(/\r/g, '');
+            // Let JSON.parse handle it now, but first revert the strictly necessary ones for structure
+            cleanText = cleanText.replace(/\\n"/g, '"').replace(/"\\n/g, '"').replace(/,\s*\\n/g, ',').replace(/\{\s*\\n/g, '{').replace(/\[\s*\\n/g, '[').replace(/\\n\s*\}/g, '}').replace(/\\n\s*\]/g, ']');
+
             const jsonResponse = JSON.parse(cleanText);
 
             this.hormigaCache.response = jsonResponse;
             return jsonResponse;
         } catch (e) {
             const keySuffix = apiKey ? apiKey.slice(-4) : 'NONE';
-            console.error("AI Auto-Analyze Error:", e);
-            throw new Error(`[Key:...${keySuffix}] ${e.message || 'Error Desconocido al contactar Gemini API'}`);
+            console.error("AI Auto-Analyze Error (JSON Parse Failed):", e);
+            // Si falla el parseo, devolver un objeto mínimo seguro para no romper la UI
+            return {
+                is_hormiga: false,
+                is_overbudget: false,
+                is_alert: true,
+                trigger_reason: "Error procesando IA",
+                advice_text: "Hubo un error interpretando mi análisis. Revisa tu presupuesto manualmente."
+            };
         }
     }
 
@@ -164,7 +186,7 @@ ${last3Str || 'Ninguno'}`;
 
         const currency = conf.currency || 'COP';
 
-        return `Eres ClarityCoach, un asesor financiero personal certificado. Tu trabajo NO es solo analizar números, sino PROTEGER al usuario de errores financieros y GUIARLO hacia sus metas. Piensa como un coach que genuinamente se preocupa por su cliente.
+        return `Eres ClarityCoach, un Analista Estratégico Senior y CFO Virtual. Tu trabajo NO es solo analizar números, sino PROTEGER al usuario de errores financieros y GUIARLO hacia sus metas con rigor. Piensa como un consultor directo que señala riesgos sin complacencia.
 
 DATOS FINANCIEROS DE ${monthNames[month]} ${year}:
 
@@ -228,7 +250,12 @@ Da 3-4 acciones MUY CONCRETAS para esta semana. No genéricas. Ejemplos:
 - ¿Qué categoría subió más? ¿Cuál bajó?
 - Felicítalo si mejoró, o motívalo si no.
 
-⚠️ PREVENCIÓN DE DEUDA
+⚠️ PREVENCIÓN DE DEUDA Y REBALANCEO (REGLAS ESTRICTAS):
+- PROTECCIÓN DE INTOCABLES: NUNCA sugieras usar dinero destinado a Gastos Fijos, Deudas o Ahorro para cubrir gastos variables. Esto está estrictamente prohibido.
+- REGLA DE REBALANCEO (LA ESCALERA DE SACRIFICIO): Ante cualquier exceso de gasto en una categoría, debes sugerir "coger dinero" de otras categorías en este orden estricto:
+  1. Ocio
+  2. Alcohol/Tabaco
+  3. Café/Snacks
 - Si NO tiene deuda: felicítalo y recuérdale mantener un fondo de emergencia (3-6 meses de gastos)
 - Si SÍ tiene deuda: prioriza el pago. Sugiere método avalancha (pagar primero la más cara) o bola de nieve (la más pequeña primero). Da un plan con montos.
 
@@ -394,8 +421,8 @@ Esquema Obligatorio:
         const provider = this.getProvider();
 
         // 1. Define Persona & Strategy based on Problem Type
-        let role = "Asesor Financiero Personal";
-        let strategy = "Analiza la situación y da consejos prácticos.";
+        let role = "Analista Estratégico Senior";
+        let strategy = "Analiza la situación con rigor y da directrices claras, no consejos suaves.";
 
         if (context.problem && context.problem.includes('DEFICIT')) {
             role = "Experto en Crisis y Reestructuración de Deudas";
@@ -426,9 +453,11 @@ Esquema Obligatorio:
             
             REGLAS DE ORO:
             1. Sé quirúrgico. Ve a la yugular del problema.
-            2. Tono: Consultor Senior (Serio pero cercano).
-            3. Usa emojis con moderación.
-            4. Máximo 400 caracteres.
+            2. Tono: Analista Estratégico Senior (Directo, riguroso, sin complacencia).
+            3. REGLA DE REBALANCEO: Si hay excesos, sugiere recortar en este orden estricto: 1. Ocio, 2. Alcohol/Tabaco, 3. Café/Snacks.
+            4. PROTECCIÓN DE INTOCABLES: Prohibido sugerir desviar fondos de Gastos Fijos, Deudas o Ahorro.
+            5. Usa emojis con moderación.
+            6. Máximo 400 caracteres.
             
             FORMATO: Texto plano.
         `;
@@ -632,9 +661,9 @@ Esquema Obligatorio:
         const provider = this.getProvider();
         const { catName, catTotal, budgetLimit, isOverBudget, triggerReason } = categoryParams;
 
-        // Personality: "Pazion" (Witty, Direct, Colombian/Latam slang friendly)
+        // Personality: Strategic Senior Analyst (Direct, strict, risk-aware)
         const prompt = `
-            ACTÚA COMO: Un Coach financiero educativo, paciente y empático.
+            ACTÚA COMO: Un Analista Estratégico Senior y CFO Virtual. Eres directo, riguroso y señalas riesgos sin complacencia.
             CONTEXTO: El usuario acaba de registrar un GASTO nuevo y ha activado una alerta: [${triggerReason || 'N/A'}].
             
             DATOS DEL GASTO:
@@ -650,15 +679,15 @@ Esquema Obligatorio:
             TU MISIÓN:
             Genera una reacción educativa (Máximo 2-3 oraciones cortas) para enviarle una notificación push (Toast).
             
-            REGLAS DE TONO:
-            - Sé constructivo, amable y motivador. No uses sarcasmo pesado.
-            - Si es un gasto innecesario → Da un consejo rápido de ahorro constructivo.
-            - Si rompió el presupuesto → Anímalo a recomponerse ajustando otras categorías.
-            - Si es un gasto alto → Sugiere cómo amortizarlo o planearlo mejor.
-            - Si es un gasto necesario/bien planeado → Valida su buena gestión.
-            - Usa emojis.
-            - Habla en español latino, claro, amigable y profesional.
-            - NO saludes. Ve al grano de manera directa pero suave.
+            REGLAS DE TONO Y LÓGICA:
+            - Sé directo y profesional. Elimina la complacencia. No uses sarcasmo.
+            - Si es un gasto innecesario → Señala el riesgo para sus finanzas y aplica la "Escalera de Sacrificio": sugiere recortar primero de Ocio, luego Alcohol/Tabaco, y luego Café/Snacks para compensarlo.
+            - Si rompió el presupuesto → Da una directriz clara de ajuste inmediato. PROHIBIDO sugerir tocar Ahorros, Gastos Fijos o pago de Deudas.
+            - Si es un gasto alto → Señala con firmeza el impacto si no fue planeado.
+            - Si es un gasto necesario/bien planeado → Valídalo de forma breve y técnica.
+            - Usa emojis con moderación.
+            - Habla en español profesional y directo.
+            - NO saludes. Ve al grano inmediatamente.
             
             SALIDA ESPERADA:
             Solo el texto de la notificación.
@@ -705,6 +734,157 @@ Esquema Obligatorio:
         } catch (error) {
             console.error("Instant Insight Error:", error);
             return null; // Silent fail
+        }
+    }
+
+    /**
+     * REACTIVE AI: Negative Balance Intervention
+     * Called when the user attempts a transaction that drops balance below zero.
+     */
+    async getNegativeBalanceInsight(tx, account, categories) {
+        if (!this.hasApiKey()) {
+            return `"Oye, estás intentando registrar un gasto de $${tx.amount.toLocaleString()} desde la cuenta ${account.name}, pero esa cuenta solo tiene $${account.current_balance.toLocaleString()}. Los activos NO pueden ser negativos. ¿De dónde salió realmente este dinero?"`;
+        }
+
+        const apiKey = this.getApiKey();
+        const provider = this.getProvider();
+        const catName = categories.find(c => c.id === tx.category_id)?.name || 'Otra';
+
+        const prompt = `
+            ACTÚA COMO: Un Analista Estratégico Senior y CFO Virtual. Eres directo, riguroso y señalas riesgos sin complacencia.
+            CONTEXTO: El usuario está intentando registrar un gasto que dejará su cuenta en NEGATIVO (números rojos), lo cual es financieramente imposible para el activo seleccionado (no es tarjeta de crédito).
+            
+            DATOS DEL INTENTO DE GASTO:
+            - Monto intentado: $${tx.amount.toLocaleString()}
+            - Categoría del gasto: ${catName}
+            - Cuenta Origen: ${account.name} (Saldo real disponible: $${account.current_balance.toLocaleString()})
+            - Déficit generado: $${Math.abs(account.current_balance - tx.amount).toLocaleString()}
+            
+            TU MISIÓN:
+            Escribe el texto de intervención (2-3 oraciones como máximo) para detener al usuario.
+            
+            REGLAS DE TONO Y LÓGICA:
+            1. Señala el error matemático/lógico (no se puede gastar más de lo que hay en esa cuenta).
+            2. Aplica la "Jerarquía de Sacrificio" si es relevante: Si este gasto fue en Ocio, Alcohol/Tabaco, o Café/Snacks, cuestiona la necesidad del mismo frente al déficit.
+            3. Pregunta "¿De dónde salió realmente este dinero? ¿Es una deuda que no has registrado?".
+            4. Sé muy directo, como un auditor financiero. Elimina la complacencia.
+            5. Habla en español profesional. No saludes. Letra normal sin formato markdown. Usa máximo un emoji.
+            
+            SALIDA ESPERADA:
+            Solo el texto de la intervención.
+        `;
+
+        try {
+            let text = "";
+            if (provider === 'openai') {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini",
+                        messages: [{ role: "user", content: prompt }],
+                        max_tokens: 150,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                text = data.choices[0].message.content;
+            } else {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 150, temperature: 0.7 }
+                    })
+                });
+
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                text = data.candidates[0].content.parts[0].text;
+            }
+            return text.replace(/"/g, '').trim();
+
+        } catch (error) {
+            console.error("Negative Insight Error:", error);
+            return `"Oye, estás intentando registrar un gasto de $${tx.amount.toLocaleString()} desde la cuenta ${account.name}, pero esa cuenta solo tiene $${account.current_balance.toLocaleString()}. Los activos NO pueden ser negativos. ¿De dónde salió realmente este dinero?"`;
+        }
+    }
+
+    /**
+     * REACTIVE AI: Overbudget / Rebalance Intervention
+     */
+    async getOverbudgetInsight(catName, excessAmount, surplusCats) {
+        if (!this.hasApiKey()) {
+            return `"Te has pasado por $${excessAmount.toLocaleString()} en ${catName}. ¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?"`;
+        }
+
+        const apiKey = this.getApiKey();
+        const provider = this.getProvider();
+
+        let surplusText = "No tienes categorías con saldo a favor.";
+        if (surplusCats && surplusCats.length > 0) {
+            surplusText = surplusCats.map(c => `- ${c.name}: Sobra $${c.surplus.toLocaleString()}`).join('\n');
+        }
+
+        const prompt = `
+            ACTÚA COMO: Un Analista Estratégico Senior y CFO Virtual. Riguroso y directo.
+            CONTEXTO: El usuario acaba de registrar un gasto que rompió su presupuesto mensual en la categoría "${catName}" por un exceso de $${excessAmount.toLocaleString()}.
+            
+            OPCIONES DE REBALANCEO DISPONIBLES (Categorías que aún tienen dinero):
+            ${surplusText}
+            
+            TU MISIÓN:
+            Escribe un mensaje de intervención corto (2-3 líneas) para mostrarle en un popup de "Rebalanceo de Presupuesto".
+            
+            REGLAS DE LÓGICA (JERARQUÍA DE SACRIFICIO):
+            1. Reprende profesionalmente el exceso en "${catName}".
+            2. Revisa la lista de OPCIONES DE REBALANCEO. Si ves "Ocio", "Alcohol/Tabaco" o "Café/Snacks" en esa lista, DEBES EXIGIR que saque el dinero de allí para cubrir el exceso. Ese es el orden estricto de sacrificio.
+            3. Si no están esas categorías superfluas, pregúntale de cuál categoría vital prefiere "robar" el dinero para tapar el hueco.
+            4. Tono directo, sin complacencia. NADA de markdown.
+            
+            SALIDA ESPERADA:
+            Solo el texto del mensaje.
+        `;
+
+        try {
+            let text = "";
+            if (provider === 'openai') {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini",
+                        messages: [{ role: "user", content: prompt }],
+                        max_tokens: 150,
+                        temperature: 0.7
+                    })
+                });
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                text = data.choices[0].message.content;
+            } else {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 150, temperature: 0.7 }
+                    })
+                });
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                text = data.candidates[0].content.parts[0].text;
+            }
+            return text.replace(/"/g, '').trim();
+
+        } catch (error) {
+            console.error("Overbudget Insight Error:", error);
+            return `"Te has pasado por $${excessAmount.toLocaleString()} en ${catName}. ¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?"`;
         }
     }
 }

@@ -180,6 +180,17 @@ class UIManager {
                     }
 
                     const editId = formData.get('edit_tx_id');
+
+                    // --- BLOQUEO DE NEGATIVOS ---
+                    if (data.type === 'GASTO' || data.type === 'AHORRO' || data.type === 'INVERSION') {
+                        const account = this.store.accounts.find(a => a.id === data.account_id);
+                        if (account && (account.current_balance - data.amount < 0) && account.type !== 'CREDITO') {
+                            // Intervene!
+                            this.showNegativeBalanceIntervention(data, account, editId, form, txModal, categoryGroup);
+                            return; // Stop execution
+                        }
+                    }
+
                     if (editId) {
                         this.store.updateTransaction(editId, data);
                         alert('Movimiento actualizado correctamente.');
@@ -1698,6 +1709,14 @@ class UIManager {
                 note: `Gasto rápido: ${catName}`
             };
 
+            // --- BLOQUEO DE NEGATIVOS (QUICK EXPENSE) ---
+            const account = this.store.accounts.find(a => a.id === accountId);
+            if (account && (account.current_balance - amount < 0) && account.type !== 'CREDITO') {
+                closeOverlay(); // Close quick overlay first
+                this.showNegativeBalanceIntervention(txData, account, null, null, null, null);
+                return; // Stop execution
+            }
+
             const newTx = this.store.addTransaction(txData);
 
             // PROACTIVE AI: Trigger insight & Overspend Check
@@ -2032,36 +2051,41 @@ class UIManager {
             if (fe.category_id && fe.amount) fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
         });
 
+        // JERARQUÍA DE SACRIFICIO ESTRICTA: Solo se puede robar de estas 3 categorías, EN ESTE ORDEN.
+        const SACRIFICE_ORDER = ['cat_9', 'cat_vicios', 'cat_ant']; // Ocio → Alcohol/Tabaco → Café/Snacks
+
         // Find categories with surplus
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
         const surplusCats = [];
-        this.store.categories.forEach(c => {
-            if (c.id === overspentCatId) return;
-            if ((fixedFloor[c.id] || 0) > 0) return; // 🛡️ EXCLUDE FIXED EXPENSES
+        SACRIFICE_ORDER.forEach(catId => {
+            if (catId === overspentCatId) return; // Don't suggest taking from the same overspent category
+            const c = this.store.categories.find(cat => cat.id === catId);
+            if (!c) return;
 
-            const b = parseFloat(this.store.config.budgets[c.id]) || 0;
+            const b = parseFloat(this.store.config.budgets?.[catId]) || 0;
             if (b > 0) {
                 const s = this.store.transactions
-                    .filter(t => t.category_id === c.id && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
+                    .filter(t => t.category_id === catId && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
                     .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-                if (b - s > 0) surplusCats.push({ id: c.id, name: c.name, surplus: b - s });
+                if (b - s > 0) surplusCats.push({ id: catId, name: c.name, surplus: b - s });
             }
         });
 
         let optionsHtml = '';
         if (surplusCats.length === 0) {
             optionsHtml = `
-                <div style="background: #FFF3E0; border: 1px solid #FFCC80; padding: 12px; border-radius: 8px; text-align: center;">
-                    <p style="margin: 0; font-size: 0.85rem; color: #E65100; font-weight: 500;">
-                        No tienes otras categorías flexibles con dinero disponible para cubrir este excedente en este momento.
+                <div style="background: #FFF3E0; border: 1px solid #FFCC80; padding: 15px; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 5px 0; font-size: 0.95rem; color: #E65100; font-weight: 700;">⚠️ Sin margen de maniobra</p>
+                    <p style="margin: 0; font-size: 0.85rem; color: #555;">
+                        No queda dinero disponible en Ocio, Alcohol/Tabaco ni Café/Snacks (las únicas fuentes de sacrificio válidas). Ese déficit de <b>$${this.formatNumberWithDots(excessParam)}</b> es un riesgo financiero real.
                     </p>
                 </div>
             `;
         } else {
-            surplusCats.sort((a, b) => b.surplus - a.surplus);
+            // Already sorted by SACRIFICE_ORDER — no re-sort needed
             optionsHtml = surplusCats.map(c => `
                 <button type="button" onclick="window.ui.executeRebalance('${c.id}', '${overspentCatId}', ${excessParam})" 
                         style="background: white; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; text-align: left; width: 100%; display: flex; justify-content: space-between; margin-bottom: 8px; transition: transform 0.2s;"
@@ -2076,8 +2100,17 @@ class UIManager {
             <div style="text-align: center; margin-bottom: 15px;">
                 <span style="font-size: 3rem;">⚠️</span>
                 <p style="font-weight: 600; font-size: 1.1rem; margin-top: 10px; color: #D32F2F;">¡Presupuesto superado!</p>
-                <p style="color: #555; font-size: 0.9rem;">Te has pasado por <b>$${this.formatNumberWithDots(excessParam)}</b> en ${name}.</p>
-                <p style="color: #555; font-size: 0.9rem; margin-bottom: 15px;">¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?</p>
+                
+                <div style="background: #FFF3E0; border-left: 4px solid #FF9800; padding: 12px; text-align: left; margin: 15px 0; border-radius: 4px;">
+                    <p style="font-weight: bold; margin: 0 0 5px 0; font-size: 0.9rem; color: #E65100;">Análisis de IA:</p>
+                    <p id="overbudget-ai-text" style="margin: 0; color: #444; font-size: 0.9rem; line-height: 1.4;">
+                        <span style="color: #888; display: flex; align-items: center; gap: 8px;">
+                            <i style="animation: spin 1s linear infinite;" class="fas fa-circle-notch"></i> Evaluando impacto de este gasto...
+                        </span>
+                    </p>
+                </div>
+                
+                <p style="color: #555; font-size: 0.9rem; margin-bottom: 15px;">¿De qué categoría podemos sacar dinero sobrante para cubrir el exceso de <b>$${this.formatNumberWithDots(excessParam)}</b>?</p>
             </div>
             <div style="max-height: 250px; overflow-y: auto;">
                 ${optionsHtml}
@@ -2088,6 +2121,152 @@ class UIManager {
         `;
 
         this.showModal('Rebalanceo Inteligente', modalHtml);
+
+        // Fetch AI dynamic message
+        this.fetchOverbudgetAIInfo(name, excessParam, surplusCats);
+    }
+
+    async fetchOverbudgetAIInfo(catName, excessAmount, surplusCats) {
+        const textElement = document.getElementById('overbudget-ai-text');
+        if (!textElement) return;
+
+        try {
+            const aiText = await this.aiAdvisor.getOverbudgetInsight(catName, excessAmount, surplusCats);
+            if (aiText && document.getElementById('overbudget-ai-text')) {
+                document.getElementById('overbudget-ai-text').innerHTML = `"${aiText}"`;
+            }
+        } catch (error) {
+            console.error("Failed fetching dynamic AI overbudget alert", error);
+            if (document.getElementById('overbudget-ai-text')) {
+                document.getElementById('overbudget-ai-text').innerHTML = `"Te has pasado por $${excessAmount.toLocaleString()} en ${catName}. ¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?"`;
+            }
+        }
+    }
+
+    // --- BLOQUEO DE NEGATIVOS Y RESOLUCIÓN ---
+    showNegativeBalanceIntervention(txData, account, editId, form, txModal, categoryGroup) {
+        // Encontrar cuenta de crédito como fallback
+        const creditAccount = this.store.accounts.find(a => a.type === 'CREDITO');
+
+        const modalHtml = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 3rem;">🛑</span>
+                <p style="font-weight: 700; font-size: 1.2rem; margin-top: 10px; color: #D32F2F;">¡ALERTA DE DESCUADRE!</p>
+                <div style="background: #FAFAFA; border-left: 4px solid #D32F2F; padding: 15px; text-align: left; margin: 15px 0; border-radius: 4px;">
+                    <p style="font-weight: bold; margin: 0 0 5px 0; font-size: 0.95rem;">Análisis de IA:</p>
+                    <p id="negative-balance-ai-text" style="margin: 0; color: #444; font-size: 0.9rem; line-height: 1.4;">
+                        <span style="color: #888; display: flex; align-items: center; gap: 8px;">
+                            <i style="animation: spin 1s linear infinite;" class="fas fa-circle-notch"></i> Evaluando impacto de este gasto...
+                        </span>
+                    </p>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+                ${creditAccount ? `
+                    <button type="button" onclick="window.ui.resolveNegativeBalance('DEBT', ${JSON.stringify(txData).replace(/"/g, '&quot;')}, '${creditAccount.id}', ${editId ? `'${editId}'` : 'null'})"
+                            style="background: #FCE4EC; border: 1px solid #E91E63; color: #C2185B; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;"
+                            onmouseover="this.style.background='#F8BBD0'" onmouseout="this.style.background='#FCE4EC'">
+                        <span>💳 Es Deuda. Lo pagué con ${creditAccount.name}</span>
+                        <span>→</span>
+                    </button>
+                ` : `
+                    <div style="background: #FFE0B2; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #E65100;">
+                        No tienes una Tarjeta de Crédito configurada para asumir este gasto como deuda.
+                    </div>
+                `}
+                
+                <button type="button" onclick="window.ui.resolveNegativeBalance('ERROR', null, null, null)"
+                        style="background: #FFF; border: 1px solid #DDD; color: #555; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;"
+                        onmouseover="this.style.background='#F5F5F5'" onmouseout="this.style.background='#FFF'">
+                    <span>❌ Fue un error. Déjame corregirlo</span>
+                    <span>→</span>
+                </button>
+            </div>
+        `;
+
+        // Guardamos las referencias de Form por si fue un error y el usuario corrige
+        this._pendingTxForm = form;
+        this._pendingTxModal = txModal;
+        this._pendingTxCatGroup = categoryGroup;
+
+        this.showModal('Intervención IA', modalHtml);
+
+        // Call AI dynamically
+        this.fetchNegativeBalanceAIInfo(txData, account);
+    }
+
+    async fetchNegativeBalanceAIInfo(txData, account) {
+        const textElement = document.getElementById('negative-balance-ai-text');
+        if (!textElement) return;
+
+        try {
+            const aiText = await this.aiAdvisor.getNegativeBalanceInsight(txData, account, this.store.categories);
+            if (aiText && document.getElementById('negative-balance-ai-text')) {
+                document.getElementById('negative-balance-ai-text').innerHTML = `"${aiText}"`;
+            }
+        } catch (error) {
+            console.error("Failed fetching dynamic AI negative balance alert", error);
+            if (document.getElementById('negative-balance-ai-text')) {
+                document.getElementById('negative-balance-ai-text').innerHTML = `"Oye, estás intentando registrar un gasto de <b>${this.formatCurrency(txData.amount)}</b> desde la cuenta <b>${account.name}</b>, pero esa cuenta solo tiene <b>${this.formatCurrency(account.current_balance)}</b>.<br><br>Los activos NO pueden ser negativos. ¿De dónde salió realmente este dinero?"`;
+            }
+        }
+    }
+
+    resolveNegativeBalance(action, txData, fallbackAccountId, editId) {
+        // Cerrar el modal actual
+        const modal = document.querySelector('.modal-overlay');
+        if (modal) document.body.removeChild(modal);
+
+        if (action === 'ERROR') {
+            // No hacemos nada, que el usuario arregle el form. Si vino por QuickExpense, abrirá el normal.
+            alert("Corrija el monto o seleccione la cuenta correcta.");
+            return;
+        }
+
+        if (action === 'DEBT' && txData && fallbackAccountId) {
+            // Cambiar la cuenta a la tarjeta de crédito
+            txData.account_id = fallbackAccountId;
+
+            if (editId) {
+                this.store.updateTransaction(editId, txData);
+                alert('Movimiento actualizado asumiéndolo como deuda.');
+            } else {
+                const newTx = this.store.addTransaction(txData);
+                if (txData.type === 'GASTO') {
+                    this.triggerSpendingInsight(newTx || txData);
+                    this.checkAndPromptOverspend(newTx || txData);
+                }
+            }
+
+            // Limpiar form si existía
+            if (this._pendingTxForm) {
+                this._pendingTxForm.reset();
+                const hiddenId = this._pendingTxForm.querySelector('input[name="edit_tx_id"]');
+                if (hiddenId) hiddenId.value = '';
+                const btn = this._pendingTxForm.querySelector('button[type="submit"]');
+                if (btn) btn.innerHTML = '+ Agregar Movimiento';
+                if (this._pendingTxCatGroup) this._pendingTxCatGroup.style.display = 'block';
+            }
+            if (this._pendingTxModal) {
+                this._pendingTxModal.classList.add('hidden');
+            }
+
+            // Refrescar vista actual
+            this.render();
+
+            // Success Feedback
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:1rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;';
+            toast.innerHTML = `✅ Resuelto. Registrado en Crédito.`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Limpiamos las variables temporales
+        this._pendingTxForm = null;
+        this._pendingTxModal = null;
+        this._pendingTxCatGroup = null;
     }
 
     executeRebalance(fromCatId, toCatId, amount) {
