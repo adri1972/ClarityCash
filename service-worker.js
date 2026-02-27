@@ -1,5 +1,5 @@
-// ClarityCash Stable Service Worker v68.FINAL-18-PURGE
-const CACHE_NAME = 'cc-stable-v68final19-purge';
+// ClarityCash Stable Service Worker v69.MULTI-USER
+const CACHE_NAME = 'cc-multi-v69-01';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -10,6 +10,9 @@ self.addEventListener('install', (event) => {
                 '/index.html',
                 '/css/styles.css',
                 '/js/app.js',
+                '/js/firebase-config.js',
+                '/js/auth.js',
+                '/js/data.js',
                 '/js/ui_v68_final.js',
                 '/js/gemini_v68_final.js',
             ]);

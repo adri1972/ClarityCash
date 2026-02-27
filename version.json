@@ -1,5 +1,5 @@
 {
-    "version": "68.FINAL-9",
-    "updatedAt": "2026-02-26T20:19:00Z",
-    "notes": "Fix: onboarding guide now only shows to new users. Fix double quotes in AI modals. Fix 'Fue un error' button."
+    "version": "69.MULTI-1",
+    "updatedAt": "2026-02-26T21:55:00Z",
+    "notes": "Feature: Real Multi-User support with Firebase Auth and Firestore. Automated migration from local data."
 }

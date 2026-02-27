@@ -60,6 +60,23 @@ body {
     height: 100%;
 }
 
+/* Ocultar sidebar si no hay sesión */
+#app.no-auth .sidebar,
+#app.no-auth .sidebar-overlay,
+#app.no-auth #quick-expense-fab,
+#app.no-auth .actions {
+    display: none !important;
+}
+
+#app.no-auth .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+}
+
+#app.no-auth .content-container {
+    padding-bottom: 2rem;
+}
+
 /* Sidebar */
 .sidebar {
     width: 260px;
