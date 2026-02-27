@@ -1,13 +1,14 @@
 // CONFIGURACIÓN MAESTRA DE FIREBASE
-// Proyecto: claritycash-e93ca
+// Proyecto: claritycash-e93ca - ACTIVADO ✅
 
 const firebaseConfig = {
-    apiKey: "REPLACE_WITH_YOUR_FIREBASE_API_KEY", // El usuario debe completar esto o lo buscaremos
+    apiKey: "AIzaSyCxFOkfwLBXwl_LRGCIkDj7ynu7u78qVvU",
     authDomain: "claritycash-e93ca.firebaseapp.com",
     projectId: "claritycash-e93ca",
-    storageBucket: "claritycash-e93ca.appspot.com",
-    messagingSenderId: "REPLACE_WITH_SENDER_ID",
-    appId: "REPLACE_WITH_APP_ID"
+    storageBucket: "claritycash-e93ca.firebasestorage.app",
+    messagingSenderId: "1025747176522",
+    appId: "1:1025747176522:web:cbaf63f774bc088f7e2ab3",
+    measurementId: "G-G1V6719RKQ"
 };
 
 // Inicializar Firebase
