@@ -2136,11 +2136,21 @@ class UIManager {
         let optionsHtml = '';
         if (surplusCats.length === 0) {
             optionsHtml = `
-                <div style="background: #FFF3E0; border: 1px solid #FFCC80; padding: 15px; border-radius: 8px; text-align: center;">
+                <div style="background: #FFF3E0; border: 1px solid #FFCC80; padding: 15px; border-radius: 12px; text-align: center;">
                     <p style="margin: 0 0 5px 0; font-size: 0.95rem; color: #E65100; font-weight: 700;">⚠️ Sin margen de maniobra</p>
-                    <p style="margin: 0; font-size: 0.85rem; color: #555;">
-                        No queda dinero disponible en Ocio, Alcohol/Tabaco ni Café/Snacks (las únicas fuentes de sacrificio válidas). Ese déficit de <b>$${this.formatNumberWithDots(excessParam)}</b> es un riesgo financiero real.
+                    <p style="margin: 0 0 14px 0; font-size: 0.85rem; color: #555; line-height: 1.5;">
+                        No queda saldo en Ocio, Alcohol ni Café. El déficit de <b>$${this.formatNumberWithDots(excessParam)}</b> en <b>${name}</b> queda registrado. Necesitas ajustar tu presupuesto para el mes que viene.
                     </p>
+                    <div style="display:flex; gap:8px; justify-content:center;">
+                        <button type="button" onclick="document.body.removeChild(this.closest('.modal')); document.querySelector('[data-view=settings]').click()" 
+                            style="background:#E91E63; color:white; border:none; padding:10px 16px; border-radius:20px; font-weight:700; font-size:0.85rem; cursor:pointer;">
+                            Ajustar Presupuesto
+                        </button>
+                        <button type="button" onclick="document.body.removeChild(this.closest('.modal'))" 
+                            style="background:none; border:2px solid #FFCC80; color:#E65100; padding:10px 16px; border-radius:20px; font-weight:600; font-size:0.85rem; cursor:pointer;">
+                            Entendido, seguir
+                        </button>
+                    </div>
                 </div>
             `;
         } else {
@@ -2174,9 +2184,13 @@ class UIManager {
             <div style="max-height: 250px; overflow-y: auto;">
                 ${optionsHtml}
             </div>
+            ${surplusCats.length > 0 ? `
             <div style="margin-top: 15px; text-align: center;">
-                <button type="button" onclick="document.body.removeChild(this.closest('.modal'))" style="background: none; border: none; color: #888; text-decoration: underline; cursor: pointer;">Omitir por ahora</button>
-            </div>
+                <button type="button" onclick="document.body.removeChild(this.closest('.modal'))" 
+                    style="background: none; border: none; color: #999; font-size:0.8rem; text-decoration: underline; cursor: pointer;">
+                    Omitir por ahora
+                </button>
+            </div>` : ''}
         `;
 
         this.showModal('Rebalanceo Inteligente', modalHtml);
@@ -2192,12 +2206,14 @@ class UIManager {
         try {
             const aiText = await this.aiAdvisor.getOverbudgetInsight(catName, excessAmount, surplusCats);
             if (aiText && document.getElementById('overbudget-ai-text')) {
-                document.getElementById('overbudget-ai-text').innerHTML = `"${aiText}"`;
+                // Limpiar comillas extra que a veces devuelve el modelo
+                const clean = aiText.replace(/^"+|"+$/g, '').trim();
+                document.getElementById('overbudget-ai-text').textContent = clean;
             }
         } catch (error) {
             console.error("Failed fetching dynamic AI overbudget alert", error);
             if (document.getElementById('overbudget-ai-text')) {
-                document.getElementById('overbudget-ai-text').innerHTML = `"Te has pasado por $${excessAmount.toLocaleString()} en ${catName}. ¿Quieres cubrirlo prestado del dinero sobrante de otra categoría?"`;
+                document.getElementById('overbudget-ai-text').textContent = `Te has pasado $${excessAmount.toLocaleString()} en ${catName}. Sin fuentes de sacrificio disponibles por ahora.`;
             }
         }
     }
