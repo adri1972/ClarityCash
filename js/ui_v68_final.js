@@ -2060,6 +2060,41 @@ class UIManager {
 
         if (spent > budget) {
             const excess = spent - budget;
+            const excessPct = (excess / budget) * 100;
+            const autoRebalance = this.store.config.auto_rebalance_small_excess === true;
+
+            // AUTO-REBALANCEO: Si el exceso es ≤ 5% del presupuesto y la opción está activada
+            if (autoRebalance && excessPct <= 5) {
+                // Buscar categoría con saldo en la jerarquía de sacrificio
+                const SACRIFICE_ORDER = ['cat_9', 'cat_vicios', 'cat_ant'];
+                let donorCatId = null;
+                for (const sacrificeCatId of SACRIFICE_ORDER) {
+                    if (sacrificeCatId === catId) continue;
+                    const b = parseFloat(this.store.config.budgets?.[sacrificeCatId]) || 0;
+                    const s = this.store.transactions
+                        .filter(t => t.category_id === sacrificeCatId && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
+                        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    if (b - s >= excess) {
+                        donorCatId = sacrificeCatId;
+                        break;
+                    }
+                }
+
+                if (donorCatId) {
+                    // Ejecutar rebalanceo automático
+                    this.executeRebalance(donorCatId, catId, excess);
+                    const donorCat = this.store.categories.find(c => c.id === donorCatId);
+                    const catName = this.store.categories.find(c => c.id === catId)?.name || 'la categoría';
+                    // Solo notifica, no pregunta
+                    setTimeout(() => this.showToast(
+                        `⚡ Rebalanceo automático: $${this.formatNumberWithDots(Math.round(excess))} movidos de ${donorCat?.name || 'Ocio'} → ${catName}.`,
+                        'info', '⚡'
+                    ), 300);
+                    return; // No abrir el modal
+                }
+            }
+
+            // Manual: abrir el modal si el exceso es mayor al 5% o no hay auto-rebalanceo
             this.showOverspendRebalanceModal(catId, excess);
         }
     }
@@ -2277,12 +2312,30 @@ class UIManager {
             // Refrescar vista actual
             this.render();
 
-            // Success Feedback
+            // Toast 1: Confirmación de registro
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:1rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;';
             toast.innerHTML = `✅ Resuelto. Registrado en Crédito.`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
+
+            // Toast 2: Aviso de costo de interés (aparece 2.5s después)
+            setTimeout(() => {
+                const interestToast = document.createElement('div');
+                interestToast.className = 'ai-toast';
+                interestToast.style.cssText = 'position:fixed; top:80px; left:50%; transform:translateX(-50%); background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; padding:14px 20px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.12); z-index:10001; max-width:320px; font-size:0.9rem; line-height:1.5; text-align:center;';
+                const interestCost = Math.round(txData.amount * 0.025);
+                interestToast.innerHTML = `
+                    <div style="font-weight:700; margin-bottom:6px;">💳 Inteligencia de Costo</div>
+                    Die Deuda registrada. Recuerda que esto te costará aproximadamente <b>${this.formatCurrency(interestCost)}</b> en intereses (2.5% mensual). ¿Quieres que prioricemos el pago este mes?
+                    <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+                        <button onclick="this.closest('.ai-toast').remove(); window.ui.navigate('budgets')" style="background:#E65100; color:white; border:none; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Sí, priorizar</button>
+                        <button onclick="this.closest('.ai-toast').remove()" style="background:none; border:1px solid #FFCC80; color:#E65100; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Ahora no</button>
+                    </div>
+                `;
+                document.body.appendChild(interestToast);
+                setTimeout(() => interestToast?.remove(), 12000);
+            }, 2800);
         }
 
         // Limpiamos las variables temporales
@@ -4216,6 +4269,23 @@ class UIManager {
                     </form>
                 </div>
 
+                <!-- Comportamiento IA -->
+                <div style="margin-top: 2rem; padding: 20px; background: var(--bg-surface); border-radius: 20px; box-shadow: var(--shadow-md);">
+                    <h3 style="margin: 0 0 16px 0; font-size: 1rem; font-weight: 700; color: var(--text-main);">⚙️ Comportamiento del Motor IA</h3>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 14px 0; border-top: 1px solid var(--border-color);">
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 2px 0; font-weight: 600; font-size: 0.9rem; color: var(--text-main);">⚡ Rebalanceo Automático</p>
+                            <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3;">Si el exceso es ≤ 5% del presupuesto, la IA lo rebalancea sin preguntar y solo notifica.</p>
+                        </div>
+                        <label style="position:relative; display:inline-block; width:48px; height:26px; flex-shrink:0; margin-left:12px;">
+                            <input type="checkbox" name="auto_rebalance_small_excess" id="toggle-auto-rebalance" ${conf.auto_rebalance_small_excess ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+                            <span onclick="this.previousElementSibling.checked=!this.previousElementSibling.checked" style="position:absolute;cursor:pointer;inset:0;background:${conf.auto_rebalance_small_excess ? '#E91E63' : '#ccc'};border-radius:26px;transition:0.4s;" id="toggle-auto-rebalance-bg"></span>
+                            <span onclick="this.previousElementSibling.previousElementSibling.checked=!this.previousElementSibling.previousElementSibling.checked" style="position:absolute;content:'';height:20px;width:20px;left:3px;top:3px;background:white;border-radius:50%;transition:0.4s;transform:${conf.auto_rebalance_small_excess ? 'translateX(22px)' : 'translateX(0)'}"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
@@ -4523,7 +4593,10 @@ class UIManager {
                         if (val > 0) newBudgets[catId] = val;
                     }
                 }
-                this.store.updateConfig({ budgets: newBudgets });
+                this.store.updateConfig({
+                    budgets: newBudgets,
+                    auto_rebalance_small_excess: !!document.getElementById('toggle-auto-rebalance')?.checked
+                });
                 alert('✅ Metas de presupuesto actualizadas.');
                 this.render();
             }
