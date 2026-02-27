@@ -2061,41 +2061,8 @@ class UIManager {
 
         if (spent > budget) {
             const excess = spent - budget;
-            const excessPct = (excess / budget) * 100;
-            const autoRebalance = this.store.config.auto_rebalance_small_excess === true;
 
-            // AUTO-REBALANCEO: Si el exceso es ≤ 5% del presupuesto y la opción está activada
-            if (autoRebalance && excessPct <= 5) {
-                // Buscar categoría con saldo en la jerarquía de sacrificio
-                const SACRIFICE_ORDER = ['cat_9', 'cat_vicios', 'cat_ant'];
-                let donorCatId = null;
-                for (const sacrificeCatId of SACRIFICE_ORDER) {
-                    if (sacrificeCatId === catId) continue;
-                    const b = parseFloat(this.store.config.budgets?.[sacrificeCatId]) || 0;
-                    const s = this.store.transactions
-                        .filter(t => t.category_id === sacrificeCatId && t.type === 'GASTO' && t.date >= startOfMonth && t.date <= endOfMonth)
-                        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-                    if (b - s >= excess) {
-                        donorCatId = sacrificeCatId;
-                        break;
-                    }
-                }
-
-                if (donorCatId) {
-                    // Ejecutar rebalanceo automático
-                    this.executeRebalance(donorCatId, catId, excess);
-                    const donorCat = this.store.categories.find(c => c.id === donorCatId);
-                    const catName = this.store.categories.find(c => c.id === catId)?.name || 'la categoría';
-                    // Solo notifica, no pregunta
-                    setTimeout(() => this.showToast(
-                        `⚡ Rebalanceo automático: $${this.formatNumberWithDots(Math.round(excess))} movidos de ${donorCat?.name || 'Ocio'} → ${catName}.`,
-                        'info', '⚡'
-                    ), 300);
-                    return; // No abrir el modal
-                }
-            }
-
-            // Manual: abrir el modal si el exceso es mayor al 5% o no hay auto-rebalanceo
+            // El usuario SIEMPRE decide el rebalanceo — nada es automático
             this.showOverspendRebalanceModal(catId, excess);
         }
     }
@@ -2292,7 +2259,7 @@ class UIManager {
     }
 
     resolveNegativeBalance(action, txData, fallbackAccountId, editId) {
-        // Cerrar el modal de Intervención IA (es un div.modal dinámico, no .modal-overlay)
+        // Cerrar el modal de Intervención IA (div.modal dinámico)
         const modals = document.querySelectorAll('.modal:not(#transaction-modal):not(#guide-modal)');
         modals.forEach(m => {
             if (!m.classList.contains('hidden') && document.body.contains(m)) {
@@ -2301,11 +2268,10 @@ class UIManager {
         });
 
         if (action === 'ERROR') {
-            // Reabrir el formulario de transacción pre-llenado para que el usuario corrija
+            // Reabrir el formulario de transacción para que el usuario corrija
             const txModal = document.getElementById('transaction-modal');
             if (txModal) {
                 txModal.classList.remove('hidden');
-                // Restaurar los valores en el formulario si hay datos
                 if (txData) {
                     const form = txModal.querySelector('#transaction-form');
                     if (form) {
@@ -2317,10 +2283,6 @@ class UIManager {
                             const radio = form.querySelector(`[name="type"][value="${txData.type}"]`);
                             if (radio) { radio.checked = true; this.populateSelects(txData.type); }
                         }
-                        if (txData.account_id) {
-                            const accSelect = form.querySelector('[name="account_id"]');
-                            if (accSelect) accSelect.value = txData.account_id;
-                        }
                     }
                 }
             }
@@ -2328,21 +2290,22 @@ class UIManager {
         }
 
         if (action === 'DEBT' && txData && fallbackAccountId) {
-            // Cambiar la cuenta a la tarjeta de crédito
+            // Usuario decidió registrar como deuda en tarjeta de crédito
             txData.account_id = fallbackAccountId;
 
+            let newTx = null;
             if (editId) {
                 this.store.updateTransaction(editId, txData);
-                alert('Movimiento actualizado asumiéndolo como deuda.');
             } else {
-                const newTx = this.store.addTransaction(txData);
+                newTx = this.store.addTransaction(txData);
+                // Solo análisis IA — el usuario ya tomó su decisión financiera
+                // NO llamar checkAndPromptOverspend para no abrir otro modal encima
                 if (txData.type === 'GASTO') {
                     this.triggerSpendingInsight(newTx || txData);
-                    this.checkAndPromptOverspend(newTx || txData);
                 }
             }
 
-            // Limpiar form si existía
+            // Limpiar form
             if (this._pendingTxForm) {
                 this._pendingTxForm.reset();
                 const hiddenId = this._pendingTxForm.querySelector('input[name="edit_tx_id"]');
@@ -2355,26 +2318,23 @@ class UIManager {
                 this._pendingTxModal.classList.add('hidden');
             }
 
-            // Refrescar vista actual
             this.render();
 
             // Registrar incidente semanal
             this.trackWeeklyEvent('intervention', {
-                account: (this.store.accounts.find(a => a.id === txData.account_id))?.name || 'cuenta',
+                account: (this.store.accounts.find(a => a.id === fallbackAccountId))?.name || 'cuenta',
                 amount: txData.amount
             });
 
-            // Toast 1: Confirmación de registro
+            // Toast 1: Confirmación
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:1rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;';
-            toast.innerHTML = `✅ Resuelto. Registrado en Crédito.`;
+            toast.innerHTML = `✅ Registrado como deuda en Tarjeta de Crédito.`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
 
-            // Toast 2: Inteligencia de Costo (aparece 2.5s después)
+            // Toast 2: Inteligencia de Costo (2.8s después)
             setTimeout(() => {
-                // === AUTO-DETECCIÓN DE TASA POR BANCO ===
-                // Tasas mensuales nominales aprox. según Superfinanciera Colombia (2025-2026)
                 const BANK_RATES = [
                     { keywords: ['nu', 'nubank'], rate: 1.51, label: 'Nu' },
                     { keywords: ['bancolombia', 'nequi'], rate: 2.32, label: 'Bancolombia' },
@@ -2390,50 +2350,37 @@ class UIManager {
                     { keywords: ['av villas', 'avvillas'], rate: 2.30, label: 'AV Villas' },
                     { keywords: ['caja social'], rate: 2.15, label: 'Caja Social' },
                 ];
-
-                // Obtener el nombre de la cuenta de crédito seleccionada
                 const creditAcct = this.store.accounts.find(a => a.id === fallbackAccountId);
                 const acctNameLower = (creditAcct?.name || '').toLowerCase();
-
-                let matchedRate = null;
-                let matchedLabel = null;
+                let matchedRate = null, matchedLabel = null;
                 for (const bank of BANK_RATES) {
                     if (bank.keywords.some(kw => acctNameLower.includes(kw))) {
-                        matchedRate = bank.rate;
-                        matchedLabel = bank.label;
-                        break;
+                        matchedRate = bank.rate; matchedLabel = bank.label; break;
                     }
                 }
-
                 const interestToast = document.createElement('div');
                 interestToast.className = 'ai-toast';
                 interestToast.style.cssText = 'position:fixed; top:80px; left:50%; transform:translateX(-50%); background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; padding:14px 20px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.12); z-index:10001; max-width:320px; font-size:0.9rem; line-height:1.5; text-align:center;';
-
-                let interestMsg = '';
-                if (matchedRate) {
-                    const monthlyCost = Math.round(txData.amount * (matchedRate / 100));
-                    interestMsg = `${matchedLabel} cobra aprox. <b>${matchedRate}% mensual</b> en esta tarjeta. Si no pagas a tiempo, este gasto te costará ~<b>${this.formatCurrency(monthlyCost)}</b> en intereses. ¿Priorizamos el pago?`;
-                } else {
-                    interestMsg = `Las tarjetas de crédito cobran entre <b>1.5% y 3% mensual</b> en intereses. ¿Quieres priorizar el pago de esta deuda el próximo mes?`;
-                }
-
+                const interestMsg = matchedRate
+                    ? `${matchedLabel} cobra aprox. <b>${matchedRate}% mensual</b> en esta tarjeta. Si no pagas a tiempo, este gasto te costará ~<b>${this.formatCurrency(Math.round(txData.amount * (matchedRate / 100)))}</b> en intereses. ¿Priorizamos el pago?`
+                    : `Las tarjetas de crédito cobran entre <b>1.5% y 3% mensual</b> en intereses. ¿Quieres priorizar el pago de esta deuda el próximo mes?`;
                 interestToast.innerHTML = `
                     <div style="font-weight:700; margin-bottom:6px;">💳 Inteligencia de Costo</div>
                     ${interestMsg}
                     <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
-                        <button onclick="this.closest('.ai-toast').remove(); window.ui.navigate('budgets')" style="background:#E65100; color:white; border:none; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Sí, priorizar</button>
+                        <button onclick="this.closest('.ai-toast').remove(); window.ui.navigate('settings')" style="background:#E65100; color:white; border:none; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Sí, priorizar</button>
                         <button onclick="this.closest('.ai-toast').remove()" style="background:none; border:1px solid #FFCC80; color:#E65100; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Ahora no</button>
                     </div>
                 `;
                 document.body.appendChild(interestToast);
                 setTimeout(() => interestToast?.remove(), 12000);
             }, 2800);
-        }
 
-        // Limpiamos las variables temporales
-        this._pendingTxForm = null;
-        this._pendingTxModal = null;
-        this._pendingTxCatGroup = null;
+            // Limpiar referencias
+            this._pendingTxForm = null;
+            this._pendingTxModal = null;
+            this._pendingTxCatGroup = null;
+        }
     }
 
     executeRebalance(fromCatId, toCatId, amount) {
@@ -4398,22 +4345,7 @@ class UIManager {
                     </form>
                 </div>
 
-                <!-- Comportamiento IA -->
-                <div style="margin-top: 2rem; padding: 20px; background: var(--bg-surface); border-radius: 20px; box-shadow: var(--shadow-md);">
-                    <h3 style="margin: 0 0 16px 0; font-size: 1rem; font-weight: 700; color: var(--text-main);">⚙️ Comportamiento del Motor IA</h3>
-                    
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 14px 0; border-top: 1px solid var(--border-color);">
-                        <div style="flex: 1;">
-                            <p style="margin: 0 0 2px 0; font-weight: 600; font-size: 0.9rem; color: var(--text-main);">⚡ Rebalanceo Automático</p>
-                            <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3;">Si el exceso es ≤ 5% del presupuesto, la IA lo rebalancea sin preguntar y solo notifica.</p>
-                        </div>
-                        <label style="position:relative; display:inline-block; width:48px; height:26px; flex-shrink:0; margin-left:12px;">
-                            <input type="checkbox" name="auto_rebalance_small_excess" id="toggle-auto-rebalance" ${conf.auto_rebalance_small_excess ? 'checked' : ''} style="opacity:0; width:0; height:0;">
-                            <span onclick="this.previousElementSibling.checked=!this.previousElementSibling.checked" style="position:absolute;cursor:pointer;inset:0;background:${conf.auto_rebalance_small_excess ? '#E91E63' : '#ccc'};border-radius:26px;transition:0.4s;" id="toggle-auto-rebalance-bg"></span>
-                            <span onclick="this.previousElementSibling.previousElementSibling.checked=!this.previousElementSibling.previousElementSibling.checked" style="position:absolute;content:'';height:20px;width:20px;left:3px;top:3px;background:white;border-radius:50%;transition:0.4s;transform:${conf.auto_rebalance_small_excess ? 'translateX(22px)' : 'translateX(0)'}"></span>
-                        </label>
-                    </div>
-                </div>
+
 
                 <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
