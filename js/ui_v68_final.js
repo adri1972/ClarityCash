@@ -2319,15 +2319,55 @@ class UIManager {
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
 
-            // Toast 2: Aviso de costo de interés (aparece 2.5s después)
+            // Toast 2: Inteligencia de Costo (aparece 2.5s después)
             setTimeout(() => {
+                // === AUTO-DETECCIÓN DE TASA POR BANCO ===
+                // Tasas mensuales nominales aprox. según Superfinanciera Colombia (2025-2026)
+                const BANK_RATES = [
+                    { keywords: ['nu', 'nubank'], rate: 1.51, label: 'Nu' },
+                    { keywords: ['bancolombia', 'nequi'], rate: 2.32, label: 'Bancolombia' },
+                    { keywords: ['davivienda'], rate: 2.43, label: 'Davivienda' },
+                    { keywords: ['bogotá', 'bogota'], rate: 2.21, label: 'Banco de Bogotá' },
+                    { keywords: ['bbva'], rate: 2.18, label: 'BBVA' },
+                    { keywords: ['occidente'], rate: 2.25, label: 'Banco de Occidente' },
+                    { keywords: ['popular'], rate: 2.19, label: 'Banco Popular' },
+                    { keywords: ['colpatria', 'scotiabank'], rate: 2.52, label: 'Scotiabank Colpatria' },
+                    { keywords: ['falabella', 'cmr'], rate: 2.93, label: 'Falabella' },
+                    { keywords: ['éxito', 'exito', 'alkosto'], rate: 2.86, label: 'Éxito/Alkosto' },
+                    { keywords: ['itaú', 'itau'], rate: 2.28, label: 'Itaú' },
+                    { keywords: ['av villas', 'avvillas'], rate: 2.30, label: 'AV Villas' },
+                    { keywords: ['caja social'], rate: 2.15, label: 'Caja Social' },
+                ];
+
+                // Obtener el nombre de la cuenta de crédito seleccionada
+                const creditAcct = this.store.accounts.find(a => a.id === fallbackAccountId);
+                const acctNameLower = (creditAcct?.name || '').toLowerCase();
+
+                let matchedRate = null;
+                let matchedLabel = null;
+                for (const bank of BANK_RATES) {
+                    if (bank.keywords.some(kw => acctNameLower.includes(kw))) {
+                        matchedRate = bank.rate;
+                        matchedLabel = bank.label;
+                        break;
+                    }
+                }
+
                 const interestToast = document.createElement('div');
                 interestToast.className = 'ai-toast';
                 interestToast.style.cssText = 'position:fixed; top:80px; left:50%; transform:translateX(-50%); background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; padding:14px 20px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.12); z-index:10001; max-width:320px; font-size:0.9rem; line-height:1.5; text-align:center;';
-                const interestCost = Math.round(txData.amount * 0.025);
+
+                let interestMsg = '';
+                if (matchedRate) {
+                    const monthlyCost = Math.round(txData.amount * (matchedRate / 100));
+                    interestMsg = `${matchedLabel} cobra aprox. <b>${matchedRate}% mensual</b> en esta tarjeta. Si no pagas a tiempo, este gasto te costará ~<b>${this.formatCurrency(monthlyCost)}</b> en intereses. ¿Priorizamos el pago?`;
+                } else {
+                    interestMsg = `Las tarjetas de crédito cobran entre <b>1.5% y 3% mensual</b> en intereses. ¿Quieres priorizar el pago de esta deuda el próximo mes?`;
+                }
+
                 interestToast.innerHTML = `
                     <div style="font-weight:700; margin-bottom:6px;">💳 Inteligencia de Costo</div>
-                    Deuda registrada. En Colombia, las tarjetas cobran entre <b>1.5% y 3% mensual</b> en intereses (según tu banco y tipo de tarjeta). ¿Quieres que prioricemos el pago este mes?
+                    ${interestMsg}
                     <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
                         <button onclick="this.closest('.ai-toast').remove(); window.ui.navigate('budgets')" style="background:#E65100; color:white; border:none; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Sí, priorizar</button>
                         <button onclick="this.closest('.ai-toast').remove()" style="background:none; border:1px solid #FFCC80; color:#E65100; padding:7px 14px; border-radius:20px; font-weight:600; font-size:0.8rem; cursor:pointer;">Ahora no</button>
