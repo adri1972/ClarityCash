@@ -1256,6 +1256,9 @@ class UIManager {
                                     ${statusText}
                                 </span>
                             </div>
+                            <div style="margin-top: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;">
+                                ${ratio > 1.0 ? 'Este mes estás por encima de tu presupuesto.' : (ratio >= 0.8 ? 'Este mes estás cerca del límite.' : 'Vas bien este mes.')}
+                            </div>
                         </div>
                         <div style="text-align: right;">
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">Disponible restante</span>
@@ -3852,11 +3855,75 @@ class UIManager {
 
         const nudgesHTML = this.generateCoachingNudges(summary);
 
+        // RECOMENDACION DEL MES (Reglas Simples)
+        let recomendacionMes = "";
+        let recBoxColor = "#E8F5E9";
+        let recTextColor = "#2E7D32";
+
+        const getCatName = (id) => {
+            const c = this.store.categories.find(cat => cat.id === id);
+            return c ? c.name : 'tu mayor gasto';
+        };
+
+        if (summary.expenses > summary.income && summary.income > 0) {
+            const budgets = this.store.getMonthlyBudgets(month, year);
+            let maxDevCat = null;
+            let maxDevVal = 0;
+
+            Object.keys(summary.expensesByCategory).forEach(catId => {
+                const spent = summary.expensesByCategory[catId] || 0;
+                const limit = budgets[catId] || 0;
+                if (limit > 0 && spent > limit) {
+                    const dev = spent - limit;
+                    if (dev > maxDevVal) {
+                        maxDevVal = dev;
+                        maxDevCat = catId;
+                    }
+                }
+            });
+
+            const catName = maxDevCat ? getCatName(maxDevCat) : "una categoría excesiva";
+            const valForm = maxDevVal > 0 ? this.formatCurrency(maxDevVal) : this.formatCurrency(summary.expenses - summary.income);
+
+            recomendacionMes = `Este mes estás gastando más de lo que ingresas. Si reduces al menos ${valForm} en ${catName}, puedes recuperar equilibrio.`;
+            recBoxColor = "#FFEBEE";
+            recTextColor = "#D32F2F";
+        } else {
+            const budgets = this.store.getMonthlyBudgets(month, year);
+            let catExcedida = null;
+            Object.keys(summary.expensesByCategory).forEach(catId => {
+                const spent = summary.expensesByCategory[catId] || 0;
+                const limit = budgets[catId] || 0;
+                if (limit > 0 && spent > limit && !catExcedida) {
+                    catExcedida = catId;
+                }
+            });
+
+            if (catExcedida) {
+                const catName = getCatName(catExcedida);
+                recomendacionMes = `Este mes estás gastando más de lo planeado en ${catName}. Ajustar un 10-15% te ayudará a mantener el control.`;
+                recBoxColor = "#FFF3E0";
+                recTextColor = "#E65100";
+            } else {
+                recomendacionMes = `Este mes estás dentro de tu presupuesto. Mantén este ritmo y considera aumentar tu ahorro.`;
+            }
+        }
+
+        const recomendacionHtml = `
+            <div style="background: ${recBoxColor}; color: ${recTextColor}; padding: 16px; border-radius: 12px; margin-top: 1.5rem; margin-bottom: 2rem;">
+                <h4 style="margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                    <i data-feather="compass" style="width: 18px; height: 18px;"></i> Recomendación del mes
+                </h4>
+                <p style="margin: 0; font-size: 0.95rem; line-height: 1.5;">${recomendacionMes}</p>
+            </div>
+        `;
+
         // 1. CHART SECTION
         let html = `
             ${nudgesHTML}
             ${metricsHTML}
             ${this.renderBudgetCompact()}
+            ${recomendacionHtml}
 
 
             <div class="charts-grid" style="margin-bottom: 2rem;">
@@ -3989,8 +4056,8 @@ class UIManager {
                     <p style="color: #666;">¿Listo para recibir tu consejo financiero personalizado?</p>
                 </div>
                 <div style="text-align: center;">
-                    <button id="ai-ask-btn" class="btn btn-primary" style="padding: 0.6rem 2rem; font-size: 1rem;">
-                        🧠 Consultar ${providerName}
+                    <button id="ai-ask-btn" class="btn btn-primary" style="padding: 0.6rem 2rem; font-size: 1rem; background: linear-gradient(135deg, #FF4081, #E91E63); color: white; border: none; font-weight: 600; box-shadow: 0 4px 15px rgba(233,30,99,0.25);">
+                        🧠 Explícame cómo mejorar este mes
                     </button>
                 </div>
             `;

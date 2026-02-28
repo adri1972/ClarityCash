@@ -1,5 +1,5 @@
 {
-    "version": "69.MULTI-5",
-    "updatedAt": "2026-02-28T12:00:00Z",
+    "version": "69.MULTI-7",
+    "updatedAt": "2026-02-28T13:30:00Z",
     "notes": "Fix: UIManager Singleton pattern to prevent duplicate event listeners breaking navigation."
 }
