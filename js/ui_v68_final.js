@@ -1172,19 +1172,7 @@ class UIManager {
         // Control Visibility based on Data
         const plan = this.advisor.generateActionPlan(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
-        // --- Manage Quick Expense FAB state ---
         const hasTransactions = this.store.transactions && this.store.transactions.length > 0;
-        const fab = document.getElementById('quick-expense-fab');
-        const fabHint = document.getElementById('quick-expense-hint');
-        if (fab) {
-            if (hasTransactions) {
-                fab.classList.remove('fab-pulse');
-                if (fabHint) fabHint.style.opacity = '0'; // Hide hint if they already know how to use it
-            } else {
-                fab.classList.add('fab-pulse');
-                if (fabHint) fabHint.style.opacity = '1';
-            }
-        }
 
         // --- CHECK: Is this a brand new user? ---
         const hasApiKey = this.aiAdvisor && this.aiAdvisor.hasApiKey && this.aiAdvisor.hasApiKey();
@@ -1196,17 +1184,11 @@ class UIManager {
                 <div style="background: var(--bg-surface); border-radius: 24px; padding: 32px 24px; margin-bottom: 2rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); text-align: center;">
                     <img src="assets/logo.png" style="width: 64px; height: 64px; margin-bottom: 16px; border-radius: 16px;">
                     <h2 style="margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);">ClarityCash</h2>
-                    <p style="color: var(--text-secondary); margin: 0 0 24px 0; font-size: 0.95rem; line-height: 1.6; max-width: 280px; margin-left: auto; margin-right: auto;">
-                        Domina tus finanzas con inteligencia. Tu libertad financiera empieza con el primer registro.
-                    </p>
                     
                     <button onclick="window.showGuide()" style="width:100%; max-width: 280px; padding:16px; background:var(--bg-surface); color:var(--primary-color); border:2px solid var(--primary-color); border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; margin-bottom:12px; transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                         📖 Ver Guía de Inicio
                     </button>
-                    <button onclick="window.ui.openQuickExpense()" style="width:100%; max-width: 280px; padding:16px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; margin-bottom:20px; box-shadow: 0 8px 20px rgba(233,30,99,0.25); transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
-                        ⚡ Registrar mi primer gasto
-                    </button>
-
+                    
                     <div style="display: flex; justify-content: center; gap: 16px; opacity: 0.7;">
                         <small style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
                             <i data-feather="camera" style="width:14px; height:14px;"></i> Escáner IA
@@ -1292,6 +1274,14 @@ class UIManager {
                         <span>Presupuesto: <b>${this.formatCurrency(totalBudget)}</b></span>
                     </div>
                 </div>
+                
+                <div style="margin-top: 16px; text-align: center;">
+                    <button onclick="document.getElementById('add-transaction-btn').click()" style="width: 100%; max-width: 320px; padding: 14px; background: var(--bg-surface); color: var(--text-main); border: 2px solid #e2e8f0; border-radius: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin: 0 auto;" onmousedown="this.style.transform='scale(0.97)'; this.style.borderColor='var(--primary-color)';" onmouseup="this.style.transform='scale(1)'; this.style.borderColor='#e2e8f0';">
+                        <i data-feather="plus-circle" style="width: 20px; height: 20px;"></i> Registrar gasto
+                    </button>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">Usa el escáner IA o ingresa el valor manualmente</p>
+                </div>
+
             </div>
         `;
 
@@ -1380,32 +1370,7 @@ class UIManager {
             </div>
         `;
 
-        // --- SECTION 3: VISUALS (Charts) ---
-        const chartsHTML = `
-            <div class="charts-grid">
-                <div class="chart-card main-chart">
-                    <div class="card-header-clean">
-                        <h4>Tendencia Semestral</h4>
-                    </div>
-                    <div class="chart-wrapper">
-                        <canvas id="historyChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card secondary-chart">
-                    <div class="card-header-clean">
-                         <h4>Gastos por Categoría</h4>
-                    </div>
-                    <div class="chart-wrapper">
-                         <canvas id="expensesChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // --- SECTION 4: DETAILS (Budget + Transactions) ---
-        // New: Compact Budget (Only show what matters)
-        const budgetStartHTML = this.renderBudgetCompact();
-
+        // --- SECTION 4: DETAILS (Transactions) ---
         const recentTxHTML = `
              <div class="details-card">
                 <div class="card-header-clean">
@@ -1413,14 +1378,13 @@ class UIManager {
                     <button class="btn-link" onclick="document.querySelector('[data-view=transactions]').click()">Ver todos</button>
                 </div>
                 <div class="transaction-list-compact">
-                    ${this.renderRecentTransactionsHTML()}
+                    ${this.renderRecentTransactionsHTML(3)}
                 </div>
             </div>
         `;
 
         const detailsHTML = `
             <div class="details-grid">
-                ${budgetStartHTML}
                 ${recentTxHTML}
             </div>
         `;
@@ -1433,13 +1397,9 @@ class UIManager {
             ${heroHTML}
             ${nudgesHTML}
             ${metricsHTML}
-            ${chartsHTML}
             ${detailsHTML}
         `;
 
-        // Render Charts
-        this.renderChart(); // Doughnut
-        this.renderHistoryChart(); // Bar Chart
         if (window.feather) window.feather.replace();
 
         // Trigger AI Insight if needed (for budget advice cards only)
@@ -2970,11 +2930,11 @@ class UIManager {
         `;
     }
 
-    renderRecentTransactionsHTML() {
-        // Get last 5 transactions
+    renderRecentTransactionsHTML(limit = 5) {
+        // Get last limit transactions
         const txs = this.store.transactions
             .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 5);
+            .slice(0, limit);
 
         if (txs.length === 0) {
             return '<p class="text-secondary" style="text-align: center; padding: 1rem;">No hay transacciones recientes.</p>';
@@ -3909,17 +3869,30 @@ class UIManager {
 
         // 1. CHART SECTION
         let html = `
-            <div class="card" style="margin-bottom: 2rem;">
-                <h3>Evolución Financiera (6 Meses) 📈</h3>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="trendChart"></canvas>
+            ${this.renderBudgetCompact()}
+
+            <div class="charts-grid" style="margin-bottom: 2rem;">
+                <div class="chart-card main-chart">
+                    <div class="card-header-clean">
+                        <h4>Tendencia Semestral</h4>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card secondary-chart">
+                    <div class="card-header-clean">
+                         <h4>Gastos por Categoría</h4>
+                    </div>
+                    <div class="chart-wrapper">
+                         <canvas id="expensesChart"></canvas>
+                    </div>
                 </div>
             </div>
             
             <div style="max-width: 800px; margin: 0 auto;">
                 <h3 style="margin-bottom: 1rem;">Diagnóstico Mensual 🩺</h3>
         `;
-
         const insights = this.advisor.analyze(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
         if (insights.length === 0) {
@@ -4087,8 +4060,9 @@ class UIManager {
         if (askBtn) askBtn.addEventListener('click', handleAIRequest);
         if (refreshBtn) refreshBtn.addEventListener('click', handleAIRequest);
 
-        // Render Chart
-        this.renderTrendChart();
+        // Render Charts
+        this.renderChart(); // Doughnut
+        this.renderHistoryChart(); // Bar Chart
     }
 
     renderTrendChart() {
