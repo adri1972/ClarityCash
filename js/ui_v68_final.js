@@ -3866,7 +3866,7 @@ class UIManager {
         };
 
         if (summary.expenses > summary.income && summary.income > 0) {
-            const budgets = this.store.getMonthlyBudgets(month, year);
+            const budgets = this.store.config.budgets || {};
             let maxDevCat = null;
             let maxDevVal = 0;
 
@@ -3889,7 +3889,7 @@ class UIManager {
             recBoxColor = "#FFEBEE";
             recTextColor = "#D32F2F";
         } else {
-            const budgets = this.store.getMonthlyBudgets(month, year);
+            const budgets = this.store.config.budgets || {};
             let catExcedida = null;
             Object.keys(summary.expensesByCategory).forEach(catId => {
                 const spent = summary.expensesByCategory[catId] || 0;
