@@ -1201,20 +1201,8 @@ class UIManager {
             `;
         }
 
-        // --- AI TIP (if no API key and has transactions) ---
+        // --- AI TIP REMOVED ---
         let aiTipHTML = '';
-        if (hasTransactions && !hasApiKey) {
-            aiTipHTML = `
-                <div style="background: linear-gradient(135deg, #0D47A1, #1976D2); border-radius: 12px; padding: 14px 18px; margin-bottom: 1rem; color: white; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="window.ui.navigate('settings')">
-                    <span style="font-size: 1.5rem;">🧠</span>
-                    <div style="flex: 1;">
-                        <strong style="font-size: 0.85rem;">Desbloquea tu Asesor IA</strong>
-                        <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.85;">Conecta Gemini gratis para recibir consejos financieros personalizados → Toca aquí</p>
-                    </div>
-                    <span style="font-size: 1.2rem;">→</span>
-                </div>
-            `;
-        }
 
         // --- SECTION 1: HERO (Simplified Dashboard Card) ---
         const totalBudget = Object.values(this.store.config.budgets || {}).reduce((a, b) => a + (Number(b) || 0), 0) || (Number(this.store.config.monthly_income_target) || 0);
@@ -2544,9 +2532,8 @@ class UIManager {
     async triggerSpendingInsight(tx) {
         if (!tx) return;
 
-        // Auto-Trigger relies exclusively on AI if enabled and accepted (or if Pro Firebase is active)
-        const hasProProxy = this.store.config && this.store.config.firebase_project_id;
-        if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey() || (!hasProProxy && !this.store.config.ai_terms_accepted)) {
+        // Auto-Trigger relies on AI Advisor being present
+        if (!this.aiAdvisor) {
             return;
         }
 
@@ -3097,18 +3084,8 @@ class UIManager {
                 if (choice) {
                     // Double confirm for full reset
                     if (confirm("🚨 ÚLTIMA CONFIRMACIÓN\n\nEsto borrará:\n✖ Todos los movimientos\n✖ Presupuestos\n✖ Gastos fijos\n✖ Ingresos recurrentes\n✖ Metas\n✖ Caché de IA\n\n(Tu API Key se conservará)\n\n¿Continuar?")) {
-                        // Save API key before wiping
-                        const apiKey = this.store.config.gemini_api_key || '';
-                        const provider = this.store.config.ai_provider || 'gemini';
-
                         // Nuclear reset
                         localStorage.clear();
-
-                        // Restore API key
-                        if (apiKey) {
-                            const freshStore = { config: { gemini_api_key: apiKey, ai_provider: provider } };
-                            localStorage.setItem('clarity_cash_data', JSON.stringify(freshStore));
-                        }
 
                         alert("✅ Todo limpio. La app se recargará ahora.");
                         location.reload();
@@ -4024,30 +4001,17 @@ class UIManager {
         html += '</div>'; // Close max-width container
 
         // --- AI ADVISOR SECTION (Gemini / ChatGPT) ---
-        const hasKey = this.aiAdvisor && this.aiAdvisor.hasApiKey();
-        const cached = hasKey ? this.aiAdvisor.getCachedResponse(this.viewDate.getMonth(), this.viewDate.getFullYear()) : null;
-        const providerName = this.aiAdvisor ? (this.aiAdvisor.getProvider() === 'openai' ? 'ChatGPT' : 'Gemini') : 'IA';
+        const cached = this.aiAdvisor ? this.aiAdvisor.getCachedResponse(this.viewDate.getMonth(), this.viewDate.getFullYear()) : null;
 
         html += `
-            <div class="card" style="margin-top: 2rem; border: 2px solid ${hasKey ? '#E91E63' : '#ddd'}; border-radius: 12px;">
+            <div class="card" style="margin-top: 2rem; border: 2px solid #E91E63; border-radius: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                     <h3 style="margin: 0;">🧠 Asesor IA Personal</h3>
-                    ${hasKey ? `<span class="badge" style="background: #E8F5E9; color: #2E7D32; font-size: 0.75rem;">${providerName} Activo ✓</span>` : ''}
+                    <span class="badge" style="background: #E8F5E9; color: #2E7D32; font-size: 0.75rem;">Activo ✓</span>
                 </div>
         `;
 
-        if (!hasKey) {
-            html += `
-                <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
-                    <p style="font-size: 2rem; margin-bottom: 0.5rem;">🤖</p>
-                    <p style="color: #555; margin-bottom: 1rem;">Conecta tu cuenta de <strong>Google Gemini</strong> (gratis) o <strong>ChatGPT</strong> para recibir consejos personalizados con IA real.</p>
-                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=settings]').click()" style="margin-bottom: 0.5rem;">
-                        ⚙️ Configurar API Key
-                    </button>
-                    <p style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">Tus datos se envían directo a la IA desde tu celular. No pasan por ningún servidor.</p>
-                </div>
-            `;
-        } else if (cached) {
+        if (cached) {
             html += `
                 <div id="ai-response" style="white-space: pre-line; line-height: 1.7; font-size: 0.95rem; color: #444;">
                     ${cached}
@@ -4213,29 +4177,7 @@ class UIManager {
         });
     }
 
-    revealDeveloperMenu() {
-        this.devMenuClicks = (this.devMenuClicks || 0) + 1;
-        if (this.devMenuClicks >= 5) {
-            this.devMenuClicks = 0; // reset
-            const currentKey = localStorage.getItem('cc_dev_master_key') || '';
-            const newKey = prompt('🤫 MODO DESARROLLADOR SECRETO 🤫\n\nPega aquí tu API Key Maestra de Gemini (Facturación Pay-as-you-go). Esto se guardará en tu navegador local y tus usuarios finales jamás lo verán.\n\nPara borrarla, déjalo en blanco.', currentKey);
-
-            if (newKey !== null) {
-                if (newKey.trim() === '') {
-                    localStorage.removeItem('cc_dev_master_key');
-                    alert('❌ Llave maestra eliminada del dispositivo.');
-                } else {
-                    localStorage.setItem('cc_dev_master_key', newKey.trim());
-                    alert('✅ Llave maestra guardada. La IA Premium está activa.');
-                }
-                // reinit advisor to pickup new key
-                if (this.aiAdvisor) this.aiAdvisor = new AIAdvisor(this.store);
-
-                // FORCE reload to ensure the new key is used across modules
-                window.location.reload();
-            }
-        }
-    }
+    // revealDeveloperMenu removed
 
     async testListModels() {
         if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey()) {
@@ -4405,11 +4347,7 @@ class UIManager {
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label style="color: #6366f1; font-weight: bold;">Identificador del Proyecto Firebase (Proxy IA)</label>
-                            <input type="text" name="firebase_project_id" value="${conf.firebase_project_id || ''}" placeholder="Ej: claritycash-a1b2c">
-                            <small style="color: #64748b; font-size: 0.75rem;">Requerido para rutear de forma segura las consultas al CFO hacia tu propio entorno de Google Cloud.</small>
-                        </div>
+                        <!-- Firebase Proxy Config Removed -->
                         
                         <div class="form-group">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -4556,44 +4494,19 @@ class UIManager {
                      </form>
                 </div>
 
-                <!-- AI CONFIGURATION CARD - MODERN -->
+                <!-- AI CONFIGURATION CARD - PASSIVE -->
                 <div class="card" style="margin-top: 2rem; border: none; border-radius: 20px; background: linear-gradient(145deg, #ffffff, #f5f5f5); box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-                    <div style="background: linear-gradient(135deg, #6C5DD3, #8B5CF6); padding: 24px; border-radius: 18px; color: white; margin-bottom: 20px; position: relative; overflow: hidden;">
-                        <div style="position: absolute; top: -20px; right: -20px; font-size: 100px; opacity: 0.1;">🤖</div>
-                        <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; font-size: 1.4rem;">
-                            <span>🧠</span> Conectar Inteligencia
-                        </h3>
-                        <p style="margin: 0; font-size: 0.95rem; opacity: 0.9;">
-                            Vincula tu cuenta para que la IA actúe como tu asesor financiero personal. Totalmente privado y seguro.
-                        </p>
+                    <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px;">
+                        <div style="font-size: 2.5rem;">🧠</div>
+                        <div>
+                            <h4 style="margin: 0 0 4px 0; color: #3730a3; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                                Asistente Financiero Activo <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">ON</span>
+                            </h4>
+                            <p style="margin: 0; font-size: 0.85rem; color: #4338ca; line-height: 1.4;">
+                                Tu inteligencia artificial está operando y protegiendo tu salud financiera en tiempo real.
+                            </p>
+                        </div>
                     </div>
-
-                    <form id="ai-config-form">
-                        <!-- DEVELOPER MANAGED CONFIGURATION (HIDDEN) -->
-                        <div style="display: none;">
-                            <input type="password" name="gemini_api_key" value="${conf.gemini_api_key || ''}">
-                            <input type="checkbox" name="ai_pro_mode" checked>
-                            <input type="hidden" name="ai_provider" value="gemini">
-                        </div>
-
-                        <!-- READ ONLY AI STATUS FOR USERS -->
-                        <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px;">
-                            <div style="font-size: 2.5rem; cursor: pointer; user-select: none; transition: transform 0.2s;" onclick="this.style.transform='scale(0.9)'; setTimeout(()=>this.style.transform='scale(1)', 100); window.ui.revealDeveloperMenu();" title="Toca 5 veces para menú maestro">💎</div>
-                            <div>
-                                <h4 style="margin: 0 0 4px 0; color: #3730a3; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                                    Inteligencia Artificial Premium Activa <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">PRO</span>
-                                </h4>
-                                <p style="margin: 0; font-size: 0.85rem; color: #4338ca; line-height: 1.4;">
-                                    Tu aplicación cuenta con un motor de IA Profesional Integrado. Tus datos financieros están analizándose bajo encriptación bancaria y están garantizados contractualmente contra el entrenamiento de modelos públicos.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div id="connection-result" style="text-align: center; margin-top: 16px; font-weight: 600; min-height: 24px;"></div>
-                        <button id="test-proxy-btn" type="button" onclick="window.ui.debugProxyConnection()" style="margin-top: 10px; width: 100%; padding: 12px; background: #3730a3; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                            🔌 Forzar Prueba de Conexión Proxy
-                        </button>
-                    </form>
                 </div>
 
 
@@ -4888,8 +4801,7 @@ class UIManager {
                     spending_profile: formData.get('spending_profile'),
                     currency: formData.get('currency') || 'COP',
                     has_debts: formData.get('has_debts') === 'on',
-                    total_debt: parseFloat(rawDebt) || 0,
-                    firebase_project_id: formData.get('firebase_project_id') || ''
+                    total_debt: parseFloat(rawDebt) || 0
                 });
                 alert('✅ Perfil guardado correctamente.');
                 this.render();
@@ -4913,17 +4825,7 @@ class UIManager {
                 this.render();
             }
 
-            if (formId === 'ai-config-form') {
-                const formData = new FormData(e.target);
-                this.store.updateConfig({
-                    ai_provider: formData.get('ai_provider') || 'gemini',
-                    gemini_api_key: formData.get('gemini_api_key') || '',
-                    openai_api_key: formData.get('openai_api_key') || '',
-                    ai_pro_mode: formData.get('ai_pro_mode') === 'on'
-                });
-                alert('✅ Configuración de IA guardada.');
-                this.render();
-            }
+            // ai-config-form handler removed
 
             if (formId === 'fixed-expense-form') {
                 const formData = new FormData(e.target);
@@ -5485,61 +5387,6 @@ class UIManager {
             // Revert config on error to avoid breaking app state with bad key
             this.store.config = originalConfig;
             this.aiAdvisor = new AIAdvisor(this.store);
-        }
-    }
-
-    async debugProxyConnection() {
-        const btn = document.getElementById('test-proxy-btn');
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Probando...';
-        btn.disabled = true;
-
-        try {
-            // Auto-read from DOM if user forgot to click Save Profile
-            const inputEl = document.querySelector('input[name="firebase_project_id"]');
-            let projectId = '';
-
-            if (inputEl && inputEl.value.trim().length > 0) {
-                projectId = inputEl.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-                this.store.updateConfig({ firebase_project_id: projectId }); // Auto-save
-            } else {
-                const conf = this.store.config || {};
-                projectId = (conf.firebase_project_id || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-            }
-
-            if (!projectId) {
-                alert("Por favor escribe tu Identificador de Proyecto Firebase arriba.");
-                return;
-            }
-
-            const PROXY_URL = `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`;
-            alert("Intentando conectar con servidor proxy en:\n" + projectId);
-
-            const proxyPayload = {
-                model: "gemini-2.5-flash",
-                contents: [{ parts: [{ text: "Prueba de conexión. Responde OK." }] }]
-            };
-
-            const response = await fetch(PROXY_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(proxyPayload)
-            });
-
-            if (!response.ok) {
-                let errText = "Error desconocido";
-                try {
-                    const errJson = await response.json();
-                    errText = JSON.stringify(errJson);
-                } catch (e) {
-                    errText = await response.text();
-                }
-                alert(`FALLO DE RED [${response.status}]: ${errText}`);
-            } else {
-                const data = await response.json();
-                alert(`CONEXIÓN EXITOSA: ${JSON.stringify(data).substring(0, 50)}...`);
-            }
-        } catch (e) {
-            alert("EXCEPCIÓN CRÍTICA PROXY: " + e.message);
         }
     }
 }

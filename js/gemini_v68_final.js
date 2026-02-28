@@ -22,10 +22,8 @@ class AIAdvisor {
     }
 
     hasApiKey() {
-        // Validación basada en si existe el Project ID configurado por la Directora 
-        const conf = this.store && this.store.config ? this.store.config : {};
-        const projectId = conf.firebase_project_id || '';
-        return projectId.length > 3;
+        // En la arquitectura v68.FINAL-9 la IA está integrada de fábrica.
+        return true;
     }
 
     /**
@@ -33,11 +31,9 @@ class AIAdvisor {
      * Includes "Gasto Hormiga" API-saving cache
      */
     async analyzeTransaction(tx) {
-        // En la versión PRO (Firebase), si hay un Project ID configurado se asume instalación consciente.
-        const conf = this.store && this.store.config ? this.store.config : {};
-        if (!conf.firebase_project_id && !conf.ai_terms_accepted) return null;
+        // En la versión PRO integrada, siempre está activo.
         const apiKey = this.getApiKey();
-        if (!apiKey || apiKey.length < 10) return null;
+        if (!apiKey) return null;
 
         // "Gasto Hormiga" Pattern Cache Logic
         // If the user logs the EXACT SAME amount and category consecutively within 5 minutes
@@ -320,9 +316,12 @@ Esquema Obligatorio:
 
         // Determinar URL de enrutamiento basado en Arquitectura Proxy
         const conf = this.store && this.store.config ? this.store.config : {};
-        const projectId = conf.firebase_project_id || '';
+
+        // Fallback al projectId de firebase-config.js si no hay uno personalizado en el store
+        const projectId = conf.firebase_project_id || (window.firebaseConfig ? window.firebaseConfig.projectId : 'claritycash-e93ca');
+
         if (!projectId) {
-            throw new Error("PROXY_MISSING: Falta el Project ID de Firebase en Configuración.");
+            throw new Error("PROXY_MISSING: Falta el Project ID de Firebase.");
         }
 
         const PROXY_URL = `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`;

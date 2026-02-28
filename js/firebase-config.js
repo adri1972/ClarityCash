@@ -1,7 +1,7 @@
 // CONFIGURACIÓN MAESTRA DE FIREBASE
 // Proyecto: claritycash-e93ca - ACTIVADO ✅
 
-const firebaseConfig = {
+window.firebaseConfig = {
     apiKey: "AIzaSyCxFOkfwLBXwl_LRGCIkDj7ynu7u78qVvU",
     authDomain: "claritycash-e93ca.firebaseapp.com",
     projectId: "claritycash-e93ca",
