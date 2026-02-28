@@ -5,7 +5,7 @@
     <script>
         // --- STABLE UPDATE ENGINE v68.Y (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '69.MULTI-4';
+            const CURRENT_VERSION = '69.MULTI-5';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -100,7 +100,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=v69.4">
+    <link rel="stylesheet" href="css/styles.css?v=v69.5">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -169,13 +169,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
-    <div id="quick-expense-container" style="position:fixed; bottom:85px; right:15px; z-index:999; display: none;">
-        <button id="quick-expense-fab" onclick="window.ui.openQuickExpense()" class="fab-pulse"
-            style="height:56px; padding:0 24px; border-radius:28px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; font-size:1rem; font-weight:700; cursor:pointer; box-shadow:0 8px 25px rgba(233,30,99,0.3); display:flex; align-items:center; gap:8px;">
-            <i data-feather="zap" style="width:20px; height:20px;"></i> Gasto Rápido
-        </button>
     </div>
 
     <!-- Modals (Restored complete structure) -->
@@ -254,24 +247,24 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <script src="js/firebase-config.js?v=v69.4"></script>
-    <script src="js/auth.js?v=v69.4"></script>
-    <script src="js/data.js?v=v69.4"></script>
-    <script src="js/advisor.js?v=v69.4"></script>
-    <script src="js/gemini_v68_final.js?v=v69.4"></script>
-    <script src="js/ui_v68_final.js?v=v69.4"></script>
-    <script src="js/strategy_report_v68.js?v=v69.4"></script>
-    <script src="js/app.js?v=v69.4"></script>
+    <script src="js/firebase-config.js?v=v69.5"></script>
+    <script src="js/auth.js?v=v69.5"></script>
+    <script src="js/data.js?v=v69.5"></script>
+    <script src="js/advisor.js?v=v69.5"></script>
+    <script src="js/gemini_v68_final.js?v=v69.5"></script>
+    <script src="js/ui_v68_final.js?v=v69.5"></script>
+    <script src="js/strategy_report_v68.js?v=v69.5"></script>
+    <script src="js/app.js?v=v69.5"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=v69.4').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v69.5').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div
         style="position:fixed; bottom:5px; left:5px; font-size:10px; color:#E91E63; z-index:9999; pointer-events:none; font-weight:bold;">
-        v69.MULTI-4</div>
+        v69.MULTI-5</div>
 </body>
 
 </html>
