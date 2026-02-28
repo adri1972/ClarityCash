@@ -1234,96 +1234,62 @@ class UIManager {
             `;
         }
 
-        // --- SECTION 1: HERO (Diagnosis + Key Stats) ---
+        // --- SECTION 1: HERO (Simplified Dashboard Card) ---
+        const totalBudget = Object.values(this.store.config.budgets || {}).reduce((a, b) => a + (Number(b) || 0), 0) || (Number(this.store.config.monthly_income_target) || 0);
+        const used = summary.expenses;
+        const available = totalBudget - used;
+        const ratio = totalBudget > 0 ? (used / totalBudget) : 0;
+
+        let statusText = "Dentro del presupuesto";
+        let statusColor = "#2E7D32"; // Green
+        let statusBg = "#E8F5E9";
+
+        if (ratio > 1.0) {
+            statusText = "Presupuesto superado";
+            statusColor = "#D32F2F"; // Red
+            statusBg = "#FFEBEE";
+        } else if (ratio >= 0.8) {
+            statusText = "Cerca del límite";
+            statusColor = "#E65100"; // Orange
+            statusBg = "#FFF3E0";
+        }
+
         const heroHTML = `
             ${welcomeTipHTML}
-            ${aiTipHTML}
-            <div class="dashboard-hero">
-                <!-- Left: context/nav -->
-                <div class="hero-header">
-                    <div class="month-selector">
-                        <button class="btn-icon" onclick="window.ui.changeMonth(-1)"><i data-feather="chevron-left"></i></button>
-                        <h2>${currentMonthName} ${currentYear}</h2>
-                        <button class="btn-icon" onclick="window.ui.changeMonth(1)"><i data-feather="chevron-right"></i></button>
+            <div class="dashboard-hero" style="background: white; border-radius: 24px; padding: 24px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <button class="btn-icon" onclick="window.ui.changeMonth(-1)" style="background: #f8f9fa;"><i data-feather="chevron-left"></i></button>
+                        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${currentMonthName} ${currentYear}</h2>
+                        <button class="btn-icon" onclick="window.ui.changeMonth(1)" style="background: #f8f9fa;"><i data-feather="chevron-right"></i></button>
                     </div>
                 </div>
 
-                <!-- Diagnosis Banner (Hero Card Rediseñada) -->
-                <div class="diagnosis-banner ${plan.status.toLowerCase()}" style="padding: 20px; border-radius: 20px; border: none; background: var(--bg-surface); box-shadow: var(--shadow-md); margin-bottom: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-                        <div style="flex: 1;">
-
-                            ${(() => {
-                // Leer caché del último análisis de movimiento
-                let cachedInsight = null;
-                try { cachedInsight = JSON.parse(localStorage.getItem('cc_last_ai_insight')); } catch (e) { }
-
-                const minutesAgo = cachedInsight ? Math.round((Date.now() - cachedInsight.ts) / 60000) : null;
-                const timeLabel = minutesAgo !== null ? (minutesAgo < 1 ? 'Ahora mismo' : minutesAgo < 60 ? `Hace ${minutesAgo} min` : `Hace ${Math.round(minutesAgo / 60)} h`) : null;
-
-                // Risk color
-                const riskColors = { danger: '#D32F2F', warning: '#E65100', success: '#2E7D32', info: '#1565C0' };
-                const riskBg = { danger: '#FFEBEE', warning: '#FFF3E0', success: '#E8F5E9', info: '#E3F2FD' };
-
-                if (cachedInsight && cachedInsight.text) {
-                    return `
-                                        <div style="display:flex; align-items:center; gap: 8px; margin-bottom: 8px;">
-                                            <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 3px 8px; border-radius: 12px; background: linear-gradient(135deg, #7B1FA2, #E91E63); color: white;">✨ Último Análisis IA</span>
-                                            <span style="font-size:0.65rem; color: var(--text-secondary);">${timeLabel}</span>
-                                        </div>
-                                        <div style="background: ${riskBg[cachedInsight.type] || '#E3F2FD'}; border-left: 3px solid ${riskColors[cachedInsight.type] || '#1565C0'}; border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 0.9rem; color: ${riskColors[cachedInsight.type] || '#1565C0'}; line-height: 1.5;">
-                                            ${cachedInsight.icon} ${cachedInsight.text}
-                                        </div>
-                                    `;
-                } else if (hasApiKey) {
-                    return `
-                                        <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 3px 8px; border-radius: 12px; background: #f0f0f0; color: #888; display:inline-block; margin-bottom:6px;">⚡ IA Lista</span>
-                                        <p style="margin: 4px 0 0; font-size: 0.9rem; color: var(--text-secondary); line-height:1.4;">El análisis aparece aquí la próxima vez que registres un gasto.</p>
-                                    `;
-                } else {
-                    return `
-                                        <h3 style="margin:4px 0 0; font-size:1rem; color:var(--text-main); line-height: 1.4;">${plan.priority}</h3>
-                                    `;
-                }
-            })()}
+                <div style="background: #fcfcfc; border-radius: 20px; padding: 20px; border: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Tu estado del mes</span>
+                            <div style="margin-top: 4px;">
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: ${statusColor}; background: ${statusBg};">
+                                    ${statusText}
+                                </span>
+                            </div>
                         </div>
-                        <div style="font-size:1.5rem; margin-left: 8px;">${plan.status === 'CRITICAL' ? '🚨' : plan.status === 'WARNING' ? '⚠️' : '✅'}</div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Disponible restante</span>
+                            <div style="font-size: 1.5rem; font-weight: 800; color: ${available < 0 ? '#D32F2F' : '#2E7D32'}; margin-top: 4px;">
+                                ${this.formatCurrency(available)}
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- FINANCIAL HEALTH BAR (SEMAPHORE) -->
-                    ${(() => {
-                const totalIncome = summary.income > 0 ? summary.income : 1; // Avoid div by zero
-                const totalExpense = summary.expenses;
-                const ratio = (totalExpense / totalIncome) * 100;
+                    <div style="height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin-bottom: 12px;">
+                        <div style="width: ${Math.min(ratio * 100, 100)}%; background: ${statusColor}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
+                    </div>
 
-                let color = '#4CAF50'; // Green (Safe)
-                let healthText = 'Saludable';
-
-                if (ratio > 100) { color = '#9C27B0'; healthText = 'Déficit (Peligro)'; } // Purple
-                else if (ratio > 85) { color = '#F44336'; healthText = 'Crítico'; } // Red
-                else if (ratio > 60) { color = '#FF9800'; healthText = 'Precaución'; } // Orange
-
-                // Cap width at 100% for CSS
-                const width = Math.min(ratio, 100);
-
-                return `
-                        <div style="margin-bottom: 16px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:6px; color:var(--text-secondary);">
-                                <span>Gastado: ${Math.round(ratio)}%</span>
-                                <span style="color:${color}; font-weight:700;">${healthText}</span>
-                            </div>
-                            <div style="height:10px; background:rgba(0,0,0,0.05); border-radius:10px; overflow:hidden;">
-                                <div style="width:${width}%; background:${color}; height:100%; border-radius:10px; transition: width 1s ease-out;"></div>
-                            </div>
-                        </div>
-                        `;
-            })()}
-
-                    <div class="diagnosis-balance" style="text-align: right;">
-                         <small style="display:block; font-size:0.7rem; color:var(--text-secondary);">Disponible Real</small>
-                         <span class="${summary.balance_net < 0 ? 'text-danger' : 'text-success'}" style="font-size:1.5rem; font-weight:800;">
-                            ${summary.balance_net < 0 ? '-' : '+'}${this.formatCurrency(Math.abs(summary.balance_net))}
-                         </span>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
+                        <span>Usado: <b>${this.formatCurrency(used)}</b></span>
+                        <span>Presupuesto: <b>${this.formatCurrency(totalBudget)}</b></span>
                     </div>
                 </div>
             </div>
