@@ -1276,97 +1276,12 @@ class UIManager {
                 </div>
                 
                 <div style="margin-top: 16px; text-align: center;">
-                    <button onclick="document.getElementById('add-transaction-btn').click()" style="width: 100%; max-width: 320px; padding: 14px; background: var(--bg-surface); color: var(--text-main); border: 2px solid #e2e8f0; border-radius: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin: 0 auto;" onmousedown="this.style.transform='scale(0.97)'; this.style.borderColor='var(--primary-color)';" onmouseup="this.style.transform='scale(1)'; this.style.borderColor='#e2e8f0';">
-                        <i data-feather="plus-circle" style="width: 20px; height: 20px;"></i> Registrar gasto
+                    <button onclick="window.ui.openQuickExpense()" style="width: 100%; max-width: 320px; padding: 14px; background: linear-gradient(135deg, #FF4081, #E91E63); color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin: 0 auto; box-shadow: 0 4px 15px rgba(233,30,99,0.25);" onmousedown="this.style.transform='scale(0.97)';" onmouseup="this.style.transform='scale(1)';">
+                        <i data-feather="zap" style="width: 20px; height: 20px;"></i> Agregar Gasto Rápido
                     </button>
-                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">Usa el escáner IA o ingresa el valor manualmente</p>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">Ideal para cafés, taxis y el día a día en 5 segundos</p>
                 </div>
 
-            </div>
-        `;
-
-        // --- SECTION 2: METRICS ROW (with month-over-month comparison) ---
-        const month = this.viewDate.getMonth();
-        const year = this.viewDate.getFullYear();
-        const prevMonth = month === 0 ? 11 : month - 1;
-        const prevYear = month === 0 ? year - 1 : year;
-        const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
-
-        const compareArrow = (current, previous) => {
-            // NEW LOGIC: If previous is 0, we still want to show progress if current > 0
-            let prevVal = previous === 0 ? 0 : previous;
-            let pctChange = 0;
-
-            if (prevVal === 0) {
-                if (current > 0) pctChange = 100; // From 0 to something = 100% gain effectively for UI
-                else return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
-            } else {
-                pctChange = Math.round(((current - prevVal) / prevVal) * 100);
-            }
-
-            if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
-
-            const color = pctChange > 0 ? '#4CAF50' : '#F44336';
-            const arrow = pctChange > 0 ? '↑' : '↓';
-            // If it was 0 and now is X, we show "↑ 100%" or just "↑" to indicate "Good job starting"
-            return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
-        };
-
-        const expenseArrow = (current, previous) => {
-            // NEW LOGIC: If previous is 0, we still show the spending trend
-            let prevVal = previous === 0 ? 0 : previous;
-            let pctChange = 0;
-
-            if (prevVal === 0) {
-                if (current > 0) pctChange = 100; // Spending went up from 0
-                else return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
-            } else {
-                pctChange = Math.round(((current - prevVal) / prevVal) * 100);
-            }
-
-            if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
-
-            // For expenses: UP is BAD (red), DOWN is GOOD (green)
-            const color = pctChange > 0 ? '#F44336' : '#4CAF50';
-            const arrow = pctChange > 0 ? '↑' : '↓';
-            return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
-        };
-
-        // STREAK: Calculate consecutive days logging transactions
-        const streakCount = this.calculateStreak();
-        const streakHTML = streakCount > 0 ? `
-            <div style="text-align:center; margin-bottom: 8px;">
-                <span style="background: linear-gradient(135deg, #FF9800, #F44336); color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
-                    🔥 Racha: ${streakCount} día${streakCount > 1 ? 's' : ''} registrando
-                </span>
-            </div>
-        ` : '';
-
-        // COFFEE EQUIVALENT
-        const coffeePrice = 5000; // $5.000 COP aprox
-        const coffees = Math.round(summary.expenses / coffeePrice);
-        const coffeeText = summary.expenses > 0 ? `☕ ${coffees} cafés` : '';
-
-        const metricsHTML = `
-            ${streakHTML}
-            <div class="metrics-row">
-                <div class="metric-card">
-                    <span class="label">Ingresos ${compareArrow(summary.income, prevSummary.income)}</span>
-                    <span class="value income">+${this.formatCurrency(summary.income)}</span>
-                </div>
-                 <div class="metric-card">
-                    <span class="label">Gastos ${expenseArrow(summary.expenses, prevSummary.expenses)}</span>
-                    <span class="value expense">-${this.formatCurrency(summary.expenses)}</span>
-                    ${coffeeText ? `<span style="font-size:0.75rem; color:#666; font-weight:500; margin-top:4px;">${coffeeText}</span>` : ''}
-                </div>
-                 <div class="metric-card">
-                    <span class="label">Ahorro ${compareArrow(summary.savings, prevSummary.savings)}</span>
-                    <span class="value savings">${this.formatCurrency(summary.savings)}</span>
-                </div>
-                 <div class="metric-card">
-                    <span class="label">Deuda Pagada</span>
-                    <span class="value debt">-${this.formatCurrency(summary.debt_payment)}</span>
-                </div>
             </div>
         `;
 
@@ -1389,17 +1304,11 @@ class UIManager {
             </div>
         `;
 
-        // --- COACHING NUDGES ---
-        const nudgesHTML = this.generateCoachingNudges(summary);
-
         // LAYOUT ASSEMBLY
         this.container.innerHTML = `
             ${heroHTML}
-            ${nudgesHTML}
-            ${metricsHTML}
             ${detailsHTML}
         `;
-
         if (window.feather) window.feather.replace();
 
         // Trigger AI Insight if needed (for budget advice cards only)
@@ -3867,9 +3776,88 @@ class UIManager {
     renderInsightsPage() {
         this.pageTitle.textContent = 'Análisis de tus Finanzas 🔍';
 
+        // METRICS ROW
+        const month = this.viewDate.getMonth();
+        const year = this.viewDate.getFullYear();
+        const prevMonth = month === 0 ? 11 : month - 1;
+        const prevYear = month === 0 ? year - 1 : year;
+        const summary = this.store.getFinancialSummary(month, year);
+        const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
+
+        const compareArrow = (current, previous) => {
+            let prevVal = previous === 0 ? 0 : previous;
+            let pctChange = 0;
+            if (prevVal === 0) {
+                if (current > 0) pctChange = 100;
+                else return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            } else {
+                pctChange = Math.round(((current - prevVal) / prevVal) * 100);
+            }
+            if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            const color = pctChange > 0 ? '#4CAF50' : '#F44336';
+            const arrow = pctChange > 0 ? '↑' : '↓';
+            return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
+        };
+
+        const expenseArrow = (current, previous) => {
+            let prevVal = previous === 0 ? 0 : previous;
+            let pctChange = 0;
+            if (prevVal === 0) {
+                if (current > 0) pctChange = 100;
+                else return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            } else {
+                pctChange = Math.round(((current - prevVal) / prevVal) * 100);
+            }
+            if (pctChange === 0) return '<span style="font-size:0.65rem; color:#999;">= igual</span>';
+            const color = pctChange > 0 ? '#F44336' : '#4CAF50';
+            const arrow = pctChange > 0 ? '↑' : '↓';
+            return `<span style="font-size:0.75rem; color:${color}; font-weight:700;">${arrow}${Math.abs(pctChange)}%</span>`;
+        };
+
+        const streakCount = this.calculateStreak();
+        const streakHTML = streakCount > 0 ? `
+            <div style="text-align:center; margin-bottom: 8px;">
+                <span style="background: linear-gradient(135deg, #FF9800, #F44336); color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                    🔥 Racha: ${streakCount} día${streakCount > 1 ? 's' : ''} registrando
+                </span>
+            </div>
+        ` : '';
+
+        const coffeePrice = 5000;
+        const coffees = Math.round(summary.expenses / coffeePrice);
+        const coffeeText = summary.expenses > 0 ? `☕ ${coffees} cafés` : '';
+
+        const metricsHTML = `
+            ${streakHTML}
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <span class="label">Ingresos ${compareArrow(summary.income, prevSummary.income)}</span>
+                    <span class="value income">+${this.formatCurrency(summary.income)}</span>
+                </div>
+                 <div class="metric-card">
+                    <span class="label">Gastos ${expenseArrow(summary.expenses, prevSummary.expenses)}</span>
+                    <span class="value expense">-${this.formatCurrency(summary.expenses)}</span>
+                    ${coffeeText ? `<span style="font-size:0.75rem; color:#666; font-weight:500; margin-top:4px;">${coffeeText}</span>` : ''}
+                </div>
+                 <div class="metric-card">
+                    <span class="label">Ahorro ${compareArrow(summary.savings, prevSummary.savings)}</span>
+                    <span class="value savings">${this.formatCurrency(summary.savings)}</span>
+                </div>
+                 <div class="metric-card">
+                    <span class="label">Deuda Pagada</span>
+                    <span class="value debt">-${this.formatCurrency(summary.debt_payment)}</span>
+                </div>
+            </div>
+        `;
+
+        const nudgesHTML = this.generateCoachingNudges(summary);
+
         // 1. CHART SECTION
         let html = `
+            ${nudgesHTML}
+            ${metricsHTML}
             ${this.renderBudgetCompact()}
+
 
             <div class="charts-grid" style="margin-bottom: 2rem;">
                 <div class="chart-card main-chart">
