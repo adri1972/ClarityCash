@@ -622,7 +622,29 @@ class UIManager {
         }
 
         document.body.classList.remove('no-auth');
-        this.toggleAuthElements(true);
+
+        // 🚀 VERIFICACIÓN DE SUSCRIPCIÓN
+        const sub = this.store.config.subscription;
+        if (sub && sub.plan === 'trial' && sub.status === 'active') {
+            const now = new Date();
+            const trialEnd = new Date(sub.trialEnd);
+
+            if (now > trialEnd) {
+                console.log('🛑 Trial Expired. Blocking access.');
+                if (this.currentView !== 'upgrade') {
+                    this.currentView = 'upgrade';
+                    this.renderUpgradeScreen();
+                    return;
+                }
+            }
+        }
+
+        this.toggleAuthElements(this.currentView !== 'upgrade');
+
+        if (this.currentView === 'upgrade') {
+            this.renderUpgradeScreen();
+            return;
+        }
 
         try {
             switch (this.currentView) {
@@ -632,6 +654,7 @@ class UIManager {
                 case 'goals': this.renderGoals(); break;
                 case 'settings': this.renderSettings(); break;
                 case 'strategy': this.renderStrategyReport(); break;
+                case 'upgrade': this.renderUpgradeScreen(); break;
                 default: this.renderDashboard();
             }
         } catch (err) {
@@ -722,6 +745,45 @@ class UIManager {
             if (nameEl) nameEl.textContent = 'Sin Sesión';
             if (statusEl) statusEl.textContent = 'Inicia sesión';
         }
+    }
+
+    renderUpgradeScreen() {
+        this.pageTitle.textContent = 'Trial Terminado';
+        this.container.innerHTML = `
+            <div style="max-width: 500px; margin: 40px auto; padding: 40px 30px; background: white; border-radius: 24px; box-shadow: var(--shadow-lg); text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 20px;">⌛</div>
+                <h2 style="margin-bottom: 12px; font-size: 1.8rem; font-weight: 800; color: var(--text-main);">Tu periodo de prueba ha terminado</h2>
+                <p style="color: var(--text-secondary); font-size: 1rem; line-height: 1.6; margin-bottom: 30px;">
+                    Han pasado los 7 días de acceso gratuito. Esperamos que <b>ClarityCash</b> te haya ayudado a ver tus finanzas con más claridad.
+                </p>
+
+                <div style="background: #F8F9FA; border-radius: 16px; padding: 20px; margin-bottom: 30px; text-align: left;">
+                    <h4 style="margin: 0 0 12px 0; color: var(--primary-color);">¿Qué incluye el Plan Premium?</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem;">
+                        <li style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #2E7D32;">✔</span> Asesor IA personalizada ilimitada
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #2E7D32;">✔</span> Escáner de recibos por IA
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #2E7D32;">✔</span> Sincronización en la nube multi-dispositivo
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #2E7D32;">✔</span> Reportes semanales de estrategia
+                        </li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; padding: 18px; border-radius: 14px; font-size: 1.1rem; font-weight: 700; margin-bottom: 15px;" onclick="alert('Funcionalidad de pago no integrada aún. ¡Gracias por el interés!')">
+                    Activar Premium ✨
+                </button>
+                
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Sin compromisos, cancela cuando quieras.
+                </p>
+            </div>
+        `;
     }
 
     /**

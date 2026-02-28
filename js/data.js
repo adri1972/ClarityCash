@@ -13,7 +13,13 @@ const DEFAULT_DATA = {
         fixed_expenses: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        migrationCompleted: false // Marker for Firebase migration
+        migrationCompleted: false, // Marker for Firebase migration
+        subscription: {
+            plan: "trial",
+            trialStart: new Date().toISOString(),
+            trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            status: "active"
+        }
     },
     goals: [],
     accounts: [
@@ -84,6 +90,17 @@ class Store {
                 await this._checkAndPerformMigration();
             } else {
                 this.data.config = { ...DEFAULT_DATA.config, ...configDoc.data() };
+
+                // Asegurar que exista el objeto subscription (para usuarios antiguos post-migración)
+                if (!this.data.config.subscription) {
+                    this.data.config.subscription = {
+                        plan: "trial",
+                        trialStart: this.data.config.created_at || new Date().toISOString(),
+                        trialEnd: new Date(new Date(this.data.config.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                        status: "active"
+                    };
+                    await this._saveConfig(this.data.config);
+                }
             }
 
             // 2. Cargar Colecciones (One-time fetch for initial load)
