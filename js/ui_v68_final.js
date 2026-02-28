@@ -3865,13 +3865,22 @@ class UIManager {
             return c ? c.name : 'tu mayor gasto';
         };
 
+        const expensesByCategory = {};
+        const monthlyTx = this.store.transactions.filter(t => {
+            const parts = t.date.split('-');
+            return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month && t.type === 'GASTO';
+        });
+        monthlyTx.forEach(t => {
+            expensesByCategory[t.category_id] = (expensesByCategory[t.category_id] || 0) + t.amount;
+        });
+
         if (summary.expenses > summary.income && summary.income > 0) {
             const budgets = this.store.config.budgets || {};
             let maxDevCat = null;
             let maxDevVal = 0;
 
-            Object.keys(summary.expensesByCategory).forEach(catId => {
-                const spent = summary.expensesByCategory[catId] || 0;
+            Object.keys(expensesByCategory).forEach(catId => {
+                const spent = expensesByCategory[catId] || 0;
                 const limit = budgets[catId] || 0;
                 if (limit > 0 && spent > limit) {
                     const dev = spent - limit;
@@ -3891,8 +3900,8 @@ class UIManager {
         } else {
             const budgets = this.store.config.budgets || {};
             let catExcedida = null;
-            Object.keys(summary.expensesByCategory).forEach(catId => {
-                const spent = summary.expensesByCategory[catId] || 0;
+            Object.keys(expensesByCategory).forEach(catId => {
+                const spent = expensesByCategory[catId] || 0;
                 const limit = budgets[catId] || 0;
                 if (limit > 0 && spent > limit && !catExcedida) {
                     catExcedida = catId;
