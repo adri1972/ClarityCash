@@ -770,7 +770,7 @@ class UIManager {
             if (nameEl) nameEl.textContent = user.email.split('@')[0];
             if (statusEl) {
                 statusEl.innerHTML = `${user.emailVerified ? 'Cuenta Verificada ✅' : 'Sin verificar ✉️'} <br>
-                <button onclick="window.authService.logout()" style="background:none; border:none; color:#E91E63; font-size:0.75rem; text-decoration:underline; cursor:pointer; padding:0; margin-top:4px;">Cerrar Sesión</button>`;
+                <button onclick="window.authService.logout()" style="background:none; border:none; color:var(--danger-color); font-size:0.75rem; text-decoration:underline; cursor:pointer; padding:0; margin-top:4px;">Cerrar Sesión</button>`;
             }
             if (avatarEl) avatarEl.textContent = user.email[0].toUpperCase();
         } else {
@@ -883,7 +883,7 @@ class UIManager {
                 </form>
 
                 <p style="margin-top:25px; font-size:0.85rem; color:#666;">
-                    ¿No tienes cuenta? <a href="#" onclick="window.ui.navigate('register')" style="color:#E91E63; font-weight:700;">Regístrate</a>
+                    ¿No tienes cuenta? <a href="#" onclick="window.ui.navigate('register')" style="color:var(--primary-color); font-weight:700;">Regístrate</a>
                 </p>
                 <p style="margin-top:10px; font-size:0.8rem;">
                     <a href="#" onclick="window.ui.showResetPassword()" style="color:#999;">Olvidé mi contraseña</a>
@@ -935,7 +935,7 @@ class UIManager {
                 </form>
 
                 <p style="margin-top:25px; font-size:0.85rem; color:#666;">
-                    ¿Ya tienes cuenta? <a href="#" onclick="window.ui.navigate('login')" style="color:#E91E63; font-weight:700;">Inicia Sesión</a>
+                    ¿Ya tienes cuenta? <a href="#" onclick="window.ui.navigate('login')" style="color:var(--primary-color); font-weight:700;">Inicia Sesión</a>
                 </p>
             </div>
         `;
@@ -1286,17 +1286,17 @@ class UIManager {
 
             if (fixedRate > 0.6) {
                 diagnosisTitle = "Atención: Gastos Elevados";
-                diagnosisColor = "#b91c1c"; // Red
+                diagnosisColor = "var(--danger-color)";
                 diagnosisIcon = "⚠️";
                 diagnosisText = `Tus gastos fijos consumen el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos ($${this.formatNumberWithDots(fixedExpense)}). Esto deja poco margen de maniobra.`;
             } else if (fixedRate > 0.3) {
                 diagnosisTitle = "Panorama Estable";
-                diagnosisColor = "#0369a1"; // Blue
+                diagnosisColor = "#0369a1"; // Blue for stability
                 diagnosisIcon = "✅";
                 diagnosisText = `Tus gastos fijos representan el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos. Es un nivel saludable, pero podemos optimizar.`;
             } else {
                 diagnosisTitle = "Excelente Capacidad";
-                diagnosisColor = "#15803d"; // Green
+                diagnosisColor = "var(--success-color)";
                 diagnosisIcon = "🌟";
                 diagnosisText = `Solo el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos se va en gastos fijos. Tienes una gran oportunidad para invertir y crecer.`;
             }
@@ -1530,7 +1530,7 @@ class UIManager {
                         </div>
                         <div style="text-align: right;">
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">Disponible restante</span>
-                            <div style="font-size: 1.5rem; font-weight: 800; color: ${available < 0 ? '#D32F2F' : '#2E7D32'}; margin-top: 4px;">
+                            <div style="font-size: 1.5rem; font-weight: 800; color: ${available < 0 ? 'var(--danger-color)' : 'var(--success-color)'}; margin-top: 4px;">
                                 ${this.formatCurrency(available)}
                             </div>
                         </div>
@@ -1547,10 +1547,10 @@ class UIManager {
                 </div>
                 
                 <div style="margin-top: 16px; text-align: center;">
-                    <button onclick="window.ui.openQuickExpense()" style="width: 100%; max-width: 320px; padding: 14px; background: linear-gradient(135deg, #FF4081, #E91E63); color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin: 0 auto; box-shadow: 0 4px 15px rgba(233,30,99,0.25);" onmousedown="this.style.transform='scale(0.97)';" onmouseup="this.style.transform='scale(1)';">
+                    <button onclick="window.ui.openQuickExpense()" style="width: 100%; max-width: 320px; padding: 14px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin: 0 auto; box-shadow: var(--shadow-md);" onmousedown="this.style.transform='scale(0.97)';" onmouseup="this.style.transform='scale(1)';">
                         <i data-feather="zap" style="width: 20px; height: 20px;"></i> Agregar Gasto Rápido
                     </button>
-                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">Ideal para cafés, taxis y el día a día en 5 segundos</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;">Ideal para cafés, taxis y el día a día en 5 segundos</p>
                 </div>
 
             </div>
@@ -1813,7 +1813,7 @@ class UIManager {
                             <strong style="font-size: 0.85rem; color: #333;">${n.title}</strong>
                         </div>
                         <p style="margin: 0 0 8px; font-size: 0.8rem; color: #666; line-height: 1.4;">${n.msg}</p>
-                        <button onclick="${n.onclick}" style="background: none; border: none; color: #E91E63; font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">
+                        <button onclick="${n.onclick}" style="background: none; border: none; color: var(--primary-color); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">
                             ${n.action}
                         </button>
                     </div>
@@ -1975,9 +1975,9 @@ class UIManager {
             </div>
                 
                 <div style="position:relative; margin-bottom: 24px;">
-                    <span style="position:absolute; left:20px; top:50%; transform:translateY(-50%); font-size:1.5rem; color: #E91E63; font-weight:700;">$</span>
+                    <span style="position:absolute; left:20px; top:50%; transform:translateY(-50%); font-size:1.5rem; color: var(--text-main); font-weight:700;">$</span>
                     <input id="quick-amount" type="text" inputmode="numeric" placeholder="0" 
-                        style="width:100%; padding:20px 20px 20px 40px; font-size:2.5rem; font-weight:800; border:none; background:rgba(233, 30, 99, 0.05); border-radius:18px; text-align:center; box-sizing:border-box; outline:none; color:#E91E63;"
+                        style="width:100%; padding:20px 20px 20px 40px; font-size:2.5rem; font-weight:800; border:none; background:var(--bg-body); border-radius:18px; text-align:center; box-sizing:border-box; outline:none; color:var(--text-main);"
                         oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"
                         autofocus />
                 </div>
@@ -2001,7 +2001,7 @@ class UIManager {
                     </select>
                 </div>
                 
-                <button id="quick-save-btn" style="width:100%; padding:18px; background:linear-gradient(135deg, #FF4081, #E91E63); color:white; border:none; border-radius:16px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow: 0 8px 20px rgba(233,30,99,0.3); opacity: 0.5; pointer-events: none; transition: opacity 0.3s;">
+                <button id="quick-save-btn" style="width:100%; padding:18px; background:var(--text-main); color:white; border:none; border-radius:16px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow: var(--shadow-md); opacity: 0.5; pointer-events: none; transition: opacity 0.3s;">
                     Guardar Gasto
                 </button>
             </div>
@@ -2044,7 +2044,7 @@ class UIManager {
             });
 
             btn.style.background = '#FCE4EC';
-            btn.style.borderColor = '#E91E63';
+            btn.style.borderColor = 'var(--primary-color)';
             btn.style.color = '#C2185B';
             btn.style.transform = 'scale(1.02)';
             btn.style.boxShadow = '0 4px 12px rgba(233,30,99,0.15)';
@@ -2208,7 +2208,7 @@ class UIManager {
                             </span>
                         </div>
                         <div style="align-self: flex-end; margin-top: 5px;">
-                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:#E91E63; font-size:0.7rem; cursor:pointer; text-decoration:underline;">
+                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:var(--primary-color); font-size:0.7rem; cursor:pointer; text-decoration:underline;">
                                 Reintentar
                            </button>
                         </div>
@@ -2465,7 +2465,7 @@ class UIManager {
                     </p>
                     <div style="display:flex; gap:8px; justify-content:center;">
                         <button type="button" onclick="document.body.removeChild(this.closest('.modal')); document.querySelector('[data-view=settings]').click()" 
-                            style="background:#E91E63; color:white; border:none; padding:10px 16px; border-radius:20px; font-weight:700; font-size:0.85rem; cursor:pointer;">
+                            style="background:var(--primary-color); color:white; border:none; padding:10px 16px; border-radius:20px; font-weight:700; font-size:0.85rem; cursor:pointer;">
                             Ajustar Presupuesto
                         </button>
                         <button type="button" onclick="document.body.removeChild(this.closest('.modal'))" 
@@ -2562,7 +2562,7 @@ class UIManager {
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
                 ${creditAccount ? `
                     <button type="button" onclick="window.ui.resolveNegativeBalance('DEBT', ${JSON.stringify(txData).replace(/"/g, '&quot;')}, '${creditAccount.id}', ${editId ? `'${editId}'` : 'null'})"
-                            style="background: #FCE4EC; border: 1px solid #E91E63; color: #C2185B; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;"
+                            style="background: var(--primary-light); border: 1px solid var(--primary-color); color: var(--primary-dark); padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;"
                             onmouseover="this.style.background='#F8BBD0'" onmouseout="this.style.background='#FCE4EC'">
                         <span>💳 Es Deuda. Lo pagué con ${creditAccount.name}</span>
                         <span>→</span>
@@ -3192,7 +3192,7 @@ class UIManager {
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#E91E63', '#9C27B0', '#2196F3', '#00BCD4', '#4CAF50', '#FFC107', '#FF5722', '#795548', '#607D8B'],
+                        backgroundColor: ['var(--primary-color)', '#9C27B0', '#2196F3', '#00BCD4', '#10B981', '#F59E0B', '#EF4444', '#795548', '#64748B'],
                         borderWidth: 0
                     }]
                 },
@@ -3546,7 +3546,7 @@ class UIManager {
         
         <div style="padding:20px 24px;">
             <div style="margin-bottom:25px;">
-                <h3 style="font-size:1.1rem; color:#E91E63; margin-bottom:10px;">🤖 1. Inteligencia Artificial</h3>
+                <h3 style="font-size:1.1rem; color:var(--primary-color); margin-bottom:10px;">🤖 1. Inteligencia Artificial</h3>
                 <p style="font-size:0.95rem; line-height:1.5; color:var(--text-main);">
                     <b>¿Cómo funciona?</b> La IA analiza tus gastos mes a mes. Para que funcione, necesitas ir a <b>Configuración (⚙️)</b> y obtener tu "Llave Gratis".<br><br>
                     <b>Análisis Mensual:</b> Ve a la pestaña "Análisis" ⚡. Ahí verás diagnósticos, alertas de fugas y consejos personalizados.
@@ -4358,7 +4358,7 @@ class UIManager {
         const cached = this.aiAdvisor ? this.aiAdvisor.getCachedResponse(this.viewDate.getMonth(), this.viewDate.getFullYear()) : null;
 
         html += `
-            <div class="card" style="margin-top: 2rem; border: 2px solid #E91E63; border-radius: 12px;">
+            <div class="card" style="margin-top: 2rem; border: 2px solid var(--primary-color); border-radius: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                     <h3 style="margin: 0;">🧠 Asesor IA Personal</h3>
                     <span class="badge" style="background: #E8F5E9; color: #2E7D32; font-size: 0.75rem;">Activo ✓</span>
@@ -4384,7 +4384,7 @@ class UIManager {
                     <p style="color: #666; font-weight: 500;">Tu CFO personal está listo para analizar tu mes.</p>
                 </div>
                 <div style="text-align: center;">
-                    <button id="ai-ask-btn" class="btn btn-primary" ${aiDisabled ? 'disabled' : ''} style="padding: 0.6rem 2rem; font-size: 1rem; background: ${aiDisabled ? '#cbd5e1' : 'linear-gradient(135deg, #FF4081, #E91E63)'}; color: white; border: none; font-weight: 600; box-shadow: ${aiDisabled ? 'none' : '0 4px 15px rgba(233,30,99,0.25)'}; cursor: ${aiDisabled ? 'not-allowed' : 'pointer'};">
+                    <button id="ai-ask-btn" class="btn btn-primary" ${aiDisabled ? 'disabled' : ''} style="padding: 0.6rem 2rem; font-size: 1rem; background: ${aiDisabled ? 'var(--text-muted)' : 'var(--primary-color)'}; color: white; border: none; font-weight: 600; box-shadow: ${aiDisabled ? 'none' : 'var(--shadow-primary)'}; cursor: ${aiDisabled ? 'not-allowed' : 'pointer'};">
                         🧠 Explícame cómo mejorar este mes
                     </button>
                     ${aiDisabled ? `<p style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">Disponible cuando registres al menos 5 movimientos.</p>` : ''}
@@ -4408,7 +4408,7 @@ class UIManager {
             if (responseDiv) {
                 responseDiv.innerHTML = `
                     <div style="text-align: center; padding: 2rem;">
-                        <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #ddd; border-top-color: #E91E63; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #ddd; border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
                         <p style="color: #999; margin-top: 1rem;">La IA está analizando tus finanzas...</p>
                     </div>
                 `;

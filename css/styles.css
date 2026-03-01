@@ -1,40 +1,50 @@
 :root {
-    /* Colors - Pink & White Theme */
-    --primary-hue: 330;
-    --primary-color: hsl(var(--primary-hue), 85%, 60%);
-    /* Vibrant Pink */
-    --primary-light: hsl(var(--primary-hue), 90%, 96%);
-    --primary-dark: hsl(var(--primary-hue), 60%, 45%);
+    /* Color Identity: Strategic & Premium Magenta */
+    --primary-hue: 335;
+    --primary-color: hsl(var(--primary-hue), 77%, 42%);
+    /* Deep Strategic Magenta (#BE185D) */
+    --primary-light: hsl(var(--primary-hue), 70%, 96%);
+    --primary-dark: hsl(var(--primary-hue), 80%, 30%);
 
-    --accent-color: hsl(260, 100%, 65%);
-    /* Slight purple accent for gradients */
+    --accent-color: hsl(250, 40%, 45%);
+    /* Subtle professional accent */
 
-    --success-color: hsl(150, 60%, 45%);
-    --danger-color: hsl(350, 70%, 55%);
-    --warning-color: hsl(40, 90%, 60%);
+    /* Financial State Colors (Semantic only) */
+    --success-color: #15803d;
+    /* Money Green (Strategic Success) */
+    --danger-color: #b91c1c;
+    /* Alert Red */
+    --warning-color: #d97706;
+    /* Warning Amber */
 
-    --bg-body: #F8F9FB;
+    /* Surface & Background (Always Light) */
+    --bg-body: #F8FAFC;
+    /* Slate 50 (Very light gray) */
     --bg-surface: #FFFFFF;
     --bg-sidebar: #FFFFFF;
 
-    --text-main: #1A1A2E;
-    --text-secondary: #6B7280;
-    --text-muted: #9CA3AF;
-
-    --border-color: #E5E7EB;
+    /* Structural Grayscale */
+    --text-main: #0F172A;
+    /* Slate 900 */
+    --text-secondary: #475569;
+    /* Slate 600 */
+    --text-muted: #94A3B8;
+    /* Slate 400 */
+    --border-color: #E2E8F0;
+    /* Slate 200 */
 
     /* Spacing & Radius */
     --radius-sm: 8px;
     --radius-md: 12px;
-    --radius-lg: 20px;
+    --radius-lg: 24px;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-    --shadow-primary: 0 4px 14px 0 rgba(255, 64, 129, 0.3);
+    /* Elevated Hierarchy */
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-primary: 0 4px 14px 0 hsla(var(--primary-hue), 77%, 42%, 0.2);
 
-    /* Transitions */
-    --transition: all 0.2s ease-in-out;
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hidden {
@@ -100,7 +110,7 @@ body.no-auth .content-container {
 .logo-icon {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     border-radius: var(--radius-md);
     display: flex;
@@ -112,11 +122,9 @@ body.no-auth .content-container {
 
 .brand h1 {
     font-size: 1.25rem;
-    font-weight: 700;
-    background: linear-gradient(90deg, var(--text-main), var(--primary-dark));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
 }
 
 nav {
@@ -248,7 +256,7 @@ nav {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.4);
+    box-shadow: 0 6px 20px hsla(var(--primary-hue), 77%, 42%, 0.4);
 }
 
 .btn-text {
@@ -490,23 +498,23 @@ textarea:focus {
 }
 
 .card.income .card-icon {
-    background: rgba(76, 175, 80, 0.15);
-    color: #2E7D32;
+    background: hsla(142, 70%, 45%, 0.1);
+    color: var(--success-color);
 }
 
 .card.expense .card-icon {
-    background: rgba(244, 67, 54, 0.15);
-    color: #C62828;
+    background: hsla(0, 70%, 45%, 0.1);
+    color: var(--danger-color);
 }
 
 .card.savings .card-icon {
-    background: rgba(33, 150, 243, 0.15);
-    color: #1565C0;
+    background: hsla(210, 70%, 45%, 0.1);
+    color: #1a56db;
 }
 
 .card.balance .card-icon {
-    background: rgba(255, 193, 7, 0.15);
-    color: #F57F17;
+    background: hsla(45, 70%, 45%, 0.1);
+    color: #92400e;
 }
 
 .card-value {
@@ -523,24 +531,7 @@ textarea:focus {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-}
-
-/* Specific text colors for trends if static */
-.trend.up {
-    color: #2E7D32;
-}
-
-.trend.down {
-    color: #C62828;
-}
-
-
-.trend {
-    font-size: 0.8rem;
     margin-top: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
 }
 
 .trend.up {
@@ -612,10 +603,8 @@ textarea:focus {
 }
 
 .nav-item.active {
-    background: #FEE2E2;
-    /* Soft pink background */
-    color: #DB2777;
-    /* Deep pink text */
+    background: var(--primary-light);
+    color: var(--primary-color);
     border-left: none;
     /* Remove previous border */
     font-weight: 600;
