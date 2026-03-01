@@ -4208,17 +4208,22 @@ class UIManager {
         }
     }
 
+    toggleSection(sectionId) {
+        this.expandedSection = this.expandedSection === sectionId ? null : sectionId;
+        this.render();
+    }
+
     renderSettings() {
-        this.pageTitle.textContent = 'Configuración ⚙️';
+        this.pageTitle.textContent = 'Centro Financiero ⚙️';
         const conf = this.store.config;
+        const expanded = this.expandedSection || 'perfil';
 
         // Filter categories for Budget
         const categories = this.store.categories.filter(c =>
             ['VIVIENDA', 'NECESIDADES', 'ESTILO_DE_VIDA', 'CRECIMIENTO', 'FINANCIERO', 'OTROS'].includes(c.group) &&
-            c.id !== 'cat_fin_4' // Quitar Tarjeta de Crédito del presupuesto (Settings)
+            c.id !== 'cat_fin_4'
         );
 
-        // 1. Calculate floors per category
         const budgets = conf.budgets || {};
         const fixedFloor = {};
         (conf.fixed_expenses || []).forEach(fe => {
@@ -4227,7 +4232,6 @@ class UIManager {
             }
         });
 
-        // Sorting & Grouping Logic
         const fixedCats = categories.filter(c => (fixedFloor[c.id] || 0) > 0);
         const savingCat = categories.find(c => c.id === 'cat_5');
         const groups = {
@@ -4242,543 +4246,235 @@ class UIManager {
         const renderRow = (c, isFixed = false, isSaving = false) => {
             const limit = budgets[c.id] || 0;
             const floor = fixedFloor[c.id] || 0;
-            // For fixed, we strictly show the floor if it's not set or if we want to lock it
             const displayVal = isFixed ? this.formatNumberWithDots(Math.max(limit, floor)) : (limit > 0 ? this.formatNumberWithDots(limit) : '');
-
             let extraStyle = 'background: white; border: 1px solid #edf2f7;';
             let labelExtra = '';
             let inputAttrs = '';
 
             if (isFixed) {
                 extraStyle = 'background: #f1f5f9; border-left: 5px solid #3b82f6;';
-                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO 🔒</span>';
-                inputAttrs = `readonly title="Gasto fijo no modificable"`;
+                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO</span>';
+                inputAttrs = `readonly`;
             } else if (isSaving) {
                 extraStyle = 'background: #f0fdf4; border-left: 5px solid #10b981;';
-                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META ⭐</span>';
+                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META</span>';
             }
 
             return `
-                <div class="form-group" style="margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; transition: all 0.2s; ${extraStyle}">
-                    <label style="margin: 0; flex: 1; font-weight: ${isFixed || isSaving ? '700' : '500'}; color: #334155; font-size: 0.9rem;">
-                        ${c.name} ${labelExtra}
-                    </label>
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">$</span>
-                        <input type="text" inputmode="numeric" name="budget_${c.id}" 
-                               value="${displayVal}" 
-                               placeholder="0"
-                               ${inputAttrs}
-                               style="width: 110px; text-align: right; border: ${isFixed ? 'none' : '1px solid #cbd5e1'}; background: ${isFixed ? 'transparent' : '#fff'}; border-radius: 8px; padding: 6px 10px; color: ${isFixed ? '#1e40af' : '#1e293b'}; font-weight: 700;"
-                               onfocus="if(this.value==='0')this.value=''"
+                <div class="form-group" style="margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.8rem; padding: 10px; border-radius: 12px; ${extraStyle}">
+                    <label style="margin: 0; flex: 1; font-weight: 600; font-size: 0.9rem;">${c.name} ${labelExtra}</label>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="color: #64748b; font-size: 0.8rem;">$</span>
+                        <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0" ${inputAttrs}
+                               style="width: 100px; text-align: right; border: ${isFixed ? 'none' : '1px solid #ddd'}; background: ${isFixed ? 'transparent' : '#fff'}; border-radius: 6px; padding: 5px 8px; font-weight: 700;"
                                oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
                     </div>
                 </div>
             `;
         };
 
-        let budgetInputs = `
-            <div style="margin-bottom: 1rem;">
-                <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">📌 Gastos Fijos (Compromisos)</h4>
-                ${fixedCats.map(c => renderRow(c, true)).join('')}
-            </div>
-            ${savingCat && (fixedFloor[savingCat.id] || 0) === 0 ? `
-            <div style="margin-bottom: 1rem;">
-                <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">💰 Prioridad de Ahorro</h4>
-                ${renderRow(savingCat, false, true)}
-            </div>
-            ` : ''}
-        `;
-
-        Object.keys(groups).forEach(gKey => {
-            const groupCats = categories.filter(c => c.group === gKey && (fixedFloor[c.id] || 0) === 0 && c.id !== 'cat_5');
-            if (groupCats.length > 0) {
-                budgetInputs += `
-                    <div style="margin-bottom: 1rem;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${groups[gKey]}</h4>
-                        ${groupCats.map(c => renderRow(c)).join('')}
+        const sections = [
+            {
+                id: 'perfil', title: 'Perfil y Estrategia', icon: '👤', content: `
+                    <div class="form-group"><label>Nombre</label><input type="text" name="user_name" value="${conf.user_name || ''}"></div>
+                    <div class="form-group"><label>Ingreso Mensual</label><input type="text" inputmode="numeric" name="monthly_income_target" value="${this.formatNumberWithDots(conf.monthly_income_target || 0)}" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"></div>
+                    <div class="form-group">
+                        <label>Perfil de Gasto</label>
+                        <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
+                            <option value="CONSERVADOR" ${conf.spending_profile === 'CONSERVADOR' ? 'selected' : ''}>Conservador</option>
+                            <option value="BALANCEADO" ${conf.spending_profile === 'BALANCEADO' ? 'selected' : ''}>Balanceado</option>
+                            <option value="FLEXIBLE" ${conf.spending_profile === 'FLEXIBLE' ? 'selected' : ''}>Flexible</option>
+                        </select>
                     </div>
-                `;
+                    <div class="form-group">
+                        <label><input type="checkbox" name="has_debts" ${conf.has_debts ? 'checked' : ''} onchange="document.getElementById('debt-grp').style.display=this.checked?'block':'none'"> Tengo deudas</label>
+                        <div id="debt-grp" style="display: ${conf.has_debts ? 'block' : 'none'}; margin-top: 5px;">
+                            <input type="text" name="total_debt" value="${this.formatNumberWithDots(conf.total_debt || 0)}" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'cuentas', title: 'Mis Cuentas', icon: '💳', content: `
+                    <div id="accounts-list" style="margin-bottom: 1rem;">${this.renderAccountsList()}</div>
+                    <div id="account-form-static" class="card" style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0;">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Agregar Cuenta</h4>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <input type="text" id="new-acc-name" placeholder="Nombre">
+                            <select id="new-acc-type"><option value="EFECTIVO">Efectivo/Digital</option><option value="BANCO">Banco</option><option value="CREDITO">Crédito</option></select>
+                            <input type="text" id="new-acc-bal" placeholder="Saldo Inicial">
+                            <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyAccountAdd()">+ Agregar</button>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'ingresos', title: 'Ingresos Recurrentes', icon: '💵', content: `
+                    <div id="recurring-incomes-list" style="margin-bottom: 1rem;">${this.renderRecurringIncomesList()}</div>
+                    <div class="card" style="background:#f0fdf4; padding:15px; border:1px solid #dcfce7;">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Nuevo Ingreso</h4>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <input type="text" id="new-ri-name" placeholder="Nombre (ej. Salario)">
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" id="new-ri-amt" placeholder="Monto" style="flex:1;">
+                                <select id="new-ri-cat" style="flex:1;">${this.store.categories.filter(c => c.group === 'INGRESOS').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
+                            </div>
+                            <button type="button" class="btn btn-primary" style="background:#16a34a;" onclick="window.ui.handleTinyRIAdd()">+ Agregar</button>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'gastos_fijos', title: 'Gastos Fijos', icon: '📅', content: `
+                    <div id="fixed-expenses-list" style="margin-bottom: 1rem;">${this.renderFixedExpensesList()}</div>
+                    <div class="card" style="background:#f9fafb; padding:15px; border:1px solid #eee;">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Nuevo Gasto Fijo</h4>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <input type="text" id="new-fe-name" placeholder="Nombre (ej. Arriendo)">
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" id="new-fe-amt" placeholder="Monto" style="flex:1;">
+                                <select id="new-fe-cat" style="flex:1;">${categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyFEAdd()">+ Agregar</button>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'presupuesto', title: 'Presupuesto Mensual', icon: '🎯', content: `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <span id="budget-summary-pill" style="font-size:0.85rem; font-weight:700; color:#475569;">Calculando...</span>
+                        <button type="button" id="auto-budget-btn" class="btn-text" style="background:#fce4ec; padding:4px 12px; border-radius:20px; font-weight:700; color:#db2777; font-size:0.75rem;">✨ Sugerir</button>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #3b82f6; text-transform: uppercase;">📌 Gastos Fijos</h4>
+                        ${fixedCats.map(c => renderRow(c, true)).join('')}
+                    </div>
+                    ${savingCat && (fixedFloor[savingCat.id] || 0) === 0 ? `
+                    <div style="margin-bottom:1rem;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #10b981; text-transform: uppercase;">💰 Ahorro</h4>
+                        ${renderRow(savingCat, false, true)}
+                    </div>` : ''}
+                    ${Object.keys(groups).map(g => {
+                    const gc = categories.filter(c => c.group === g && (fixedFloor[c.id] || 0) === 0 && c.id !== 'cat_5');
+                    return gc.length ? `<div style="margin-bottom:1rem;"><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#64748b; text-transform:uppercase;">${groups[g]}</h4>${gc.map(c => renderRow(c)).join('')}</div>` : '';
+                }).join('')}
+                `
             }
-        });
+        ];
 
         this.container.innerHTML = `
-            <div class="settings-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
-                <!-- Column 1: Profile -->
-                <div class="card">
-                    <h3>Perfil Financiero</h3>
-                    <button type="button" id="btn-list-models" onclick="window.ui.testListModels()" style="width:100%; padding:10px; background:#ffeb3b; color:#000; border:none; border-radius:8px; margin-bottom:15px; font-weight:bold; cursor:pointer;">🔍 DIAGNÓSTICO IA: Listar Modelos Permitidos</button>
-
-                    <form id="settings-form">
-                        <div class="form-group">
-                            <label>Nombre de Usuario</label>
-                            <input type="text" name="user_name" value="${conf.user_name || 'Mi Espacio'}">
-                        </div>
-                        <div class="form-group">
-                            <label>Ingreso Mensual</label>
-                            <input type="text" inputmode="numeric" name="monthly_income_target" 
-                                   value="${conf.monthly_income_target ? this.formatNumberWithDots(conf.monthly_income_target) : ''}"
-                                   placeholder="0"
-                                   onfocus="if(this.value==='0')this.value=''"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Perfil de Gasto</label>
-                            <div style="margin-bottom: 0.8rem;">
-                                <button type="button" class="btn btn-secondary" onclick="window.ui.showModal('Guía de Perfiles', '<p><strong>Conservador:</strong> Prioriza la reducción de deudas y el ahorro rápido. Limita fuertemente los gastos de Estilo de Vida y Ocio.</p><p><strong>Balanceado:</strong> Busca un punto intermedio sano entre ahorrar, pagar deudas, y disfrutar la vida sin excederse.</p><p><strong>Flexible:</strong> Da mayor holgura a los gastos de estilo de vida, ideal para cuando no tienes deudas pesadas y quieres disfrutar tu liquidez.</p>')" style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center; width: 100%; border: 1px solid #ccc; background: #f8f9fa; color: #333;">
-                                    <i data-feather="book-open"></i> Ver Guía de Perfiles
-                                </button>
+            <div class="centro-financiero-layout" style="max-width: 800px; margin: 0 auto; padding-bottom: 100px;">
+                <form id="global-settings-form">
+                    ${sections.map(s => {
+            const isOpen = expanded === s.id;
+            return `
+                            <div class="accordion-item" style="margin-bottom: 0.5rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                <div onclick="window.ui.toggleSection('${s.id}')" style="padding: 1rem 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: ${isOpen ? '#f8fafc' : '#fff'};">
+                                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                        <span style="font-size: 1.2rem;">${s.icon}</span>
+                                        <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: #1e293b;">${s.title}</h3>
+                                    </div>
+                                    <div style="color: #94a3b8;">${isOpen ? '▼' : '▶'}</div>
+                                </div>
+                                <div id="sec-content-${s.id}" style="display: ${isOpen ? 'block' : 'none'}; padding: 1.2rem; border-top: 1px solid #f1f5f9;">
+                                    ${s.content}
+                                </div>
                             </div>
-                            <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
-                                <option value="CONSERVADOR" ${conf.spending_profile === 'CONSERVADOR' ? 'selected' : ''}>Conservador (Estricto)</option>
-                                <option value="BALANCEADO" ${conf.spending_profile === 'BALANCEADO' ? 'selected' : ''}>Balanceado</option>
-                                <option value="FLEXIBLE" ${conf.spending_profile === 'FLEXIBLE' ? 'selected' : ''}>Flexible</option>
-                            </select>
-                            <div id="profile-specs"></div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Moneda Preferida</label>
-                            <select name="currency">
-                                <option value="COP" ${conf.currency === 'COP' ? 'selected' : ''}>COP ($)</option>
-                                <option value="USD" ${conf.currency === 'USD' ? 'selected' : ''}>USD ($)</option>
-                                <option value="EUR" ${conf.currency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
-                            </select>
-                        </div>
-
-                        <!-- Firebase Proxy Config Removed -->
-                        
-                        <div class="form-group">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                <input type="checkbox" name="has_debts" ${conf.has_debts ? 'checked' : ''} style="width: auto;"
-                                       onchange="document.getElementById('debt-amount-group').style.display = this.checked ? 'block' : 'none'">
-                                <span>Tengo deudas activas</span>
-                            </label>
-                        </div>
-
-                        <div class="form-group" id="debt-amount-group" style="display: ${conf.has_debts ? 'block' : 'none'}; margin-left: 1.5rem;">
-                            <label>Monto Total de Deuda</label>
-                            <input type="text" name="total_debt" 
-                                   value="${this.formatNumberWithDots(conf.total_debt || 0)}"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Perfil</button>
-                    </form>
+                        `;
+        }).join('')}
                     
-
-                </div>
-
-                <!-- Mis Cuentas -->
-                <div class="card" style="margin-top: 2rem;">
-                    <h3>Mis Cuentas 💳</h3>
-                    <p class="text-secondary" style="font-size: 0.9rem; margin-bottom: 1rem;">
-                        Administra tus medios de pago y saldos.
-                    </p>
-                    
-                    <div id="accounts-list" style="margin-bottom: 1.5rem;">
-                        ${this.renderAccountsList()}
+                    <div style="position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; z-index: 1000; display: flex; justify-content: center;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; max-width: 500px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 12px; box-shadow: 0 4px 15px rgba(59,130,246,0.3);">
+                            💾 Guardar Cambios
+                        </button>
                     </div>
+                </form>
 
-                    <form id="account-form" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <input type="hidden" name="edit_acc_id" value="">
-                        <h4 id="acc-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #3b82f6;">Nueva Cuenta</h4>
-                        <div class="form-group" style="margin-bottom: 0.5rem;">
-                            <input type="text" name="name" placeholder="Nombre (ej. Billetera Nequi)" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                            <select name="type" required style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <option value="EFECTIVO">Efectivo / Digital</option>
-                                <option value="BANCO">Cuenta Bancaria / Débito</option>
-                                <option value="CREDITO">Tarjeta de Crédito</option>
-                            </select>
-                            <input type="text" name="initial_balance" placeholder="Saldo ($)" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" title="Solo para cuentas nuevas. Déjalo en 0 si no aplica.">
-                        </div>
-                        <div style="display: flex; gap: 0.5rem;">
-                             <button type="submit" id="acc-submit-btn" class="btn btn-primary" style="flex: 1; background: #3b82f6;">+ Agregar</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Column 2: Fixed Expenses & Recurring Incomes -->
-                <div>
-                     <!-- RECURRING INCOMES -->
-                    <div class="card" style="margin-bottom: 2rem;">
-                        <h3>Ingresos Recurrentes 💵</h3>
-                        <p class="text-secondary" style="font-size: 0.9rem; margin-bottom: 1rem;">
-                            Salarios, honorarios o ingresos que recibes automáticamente.
+                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; margin-top:2rem;">
+                    <div style="font-size: 2.5rem;">🧠</div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; color: #3730a3; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                            Asistente Financiero Activo <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">ON</span>
+                        </h4>
+                        <p style="margin: 0; font-size: 0.85rem; color: #4338ca; line-height: 1.4;">
+                            Tu inteligencia artificial está operando y protegiendo tu salud financiera en tiempo real.
                         </p>
-                        
-                        <div id="recurring-incomes-list" style="margin-bottom: 1.5rem;">
-                            ${this.renderRecurringIncomesList()}
-                        </div>
-
-                        <form id="recurring-income-form" style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #dcfce7;">
-                            <input type="hidden" name="edit_ri_id" value="">
-                            <h4 id="ri-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #166534;">Nuevo Ingreso</h4>
-                            <div class="form-group" style="margin-bottom: 0.5rem;">
-                                <input type="text" name="name" placeholder="Nombre (ej. Nómina)" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <input type="text" name="amount" placeholder="Monto ($)" required
-                                       oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"
-                                       style="padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <select name="category_id" required style="padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                    <option value="" disabled selected>Categoría</option>
-                                    ${this.store.categories.filter(c => c.group === 'INGRESOS').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="number" name="day" placeholder="Día (1-31)" min="1" max="31" value="1" required 
-                                       style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <button type="submit" id="ri-submit-btn" class="btn btn-primary" style="flex: 1; background: #2E7D32;">+ Agregar Ingreso</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- FIXED EXPENSES -->
-                    <div class="card" style="margin-bottom: 2rem;">
-                        <h3>Gastos Fijos Recurrentes 📅</h3>
-                        <p class="text-secondary" style="font-size: 0.9rem; margin-bottom: 1rem;">
-                            Estos gastos se generarán automáticamente cada mes.
-                        </p>
-                        
-                        <div id="fixed-expenses-list" style="margin-bottom: 1.5rem;">
-                            ${this.renderFixedExpensesList()}
-                        </div>
-
-                        <form id="fixed-expense-form" style="background: #f9fafb; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
-                            <input type="hidden" name="edit_fe_id" value="">
-                            <h4 id="fe-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem;">Nuevo Gasto Fijo</h4>
-                            <div class="form-group" style="margin-bottom: 0.5rem;">
-                                <input type="text" name="name" placeholder="Nombre (ej. Arriendo)" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <input type="text" name="amount" placeholder="Monto ($)" required
-                                       oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"
-                                       style="padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <select name="category_id" required style="padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                    <option value="" disabled selected>Categoría</option>
-                                    ${categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="number" name="day" placeholder="Día (1-31)" min="1" max="31" value="1" required 
-                                       style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                                <button type="submit" id="fe-submit-btn" class="btn btn-primary" style="flex: 1;">+ Agregar</button>
-                            </div>
-                        </form>
-                    </div>       
-                </div>
-                
-                <!-- Column 3: Budgets -->
-                <div>
-                     <div class="card">
-                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <h3 style="margin: 0;">Metas Mensuales 🎯</h3>
-                            <button type="button" id="auto-budget-btn" class="btn-text" id="auto-suggest-link"
-                                    style="font-size: 0.8rem; color: var(--primary-color); font-weight: 600; background: #fce4ec; padding: 4px 10px; border-radius: 15px;">
-                                ✨ Sugerir
-                            </button>
-                         </div>
-                     <p class="text-secondary" style="font-size: 0.9rem; margin-bottom: 1.5rem;">
-                        Define cuánto quieres gastar máximo por categoría. Usa "Sugerir" para calcularlo basado en tu ingreso y perfil.
-                     </p>
-                     <form id="budget-form">
-                        <div id="budget-summary-pill" style="margin-bottom: 1.5rem; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px dashed #cbd5e1;">
-                            <!-- Resumen dinámico aquí -->
-                        </div>
-                        ${budgetInputs}
-                        <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">Guardar Presupuestos</button>
-                     </form>
-                </div>
-
-                <!-- AI CONFIGURATION CARD - PASSIVE -->
-                <div class="card" style="margin-top: 2rem; border: none; border-radius: 20px; background: linear-gradient(145deg, #ffffff, #f5f5f5); box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-                    <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px;">
-                        <div style="font-size: 2.5rem;">🧠</div>
-                        <div>
-                            <h4 style="margin: 0 0 4px 0; color: #3730a3; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                                Asistente Financiero Activo <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold;">ON</span>
-                            </h4>
-                            <p style="margin: 0; font-size: 0.85rem; color: #4338ca; line-height: 1.4;">
-                                Tu inteligencia artificial está operando y protegiendo tu salud financiera en tiempo real.
-                            </p>
-                        </div>
                     </div>
                 </div>
 
-
-
-                <!-- Version & Updates & Danger Zone -->
                 <div style="margin-top: 3rem; text-align: center;">
                     <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
                         Versión v70.0.INTEGRATED • Actualizar App 🔄
                     </button>
-                    
-                    <details style="margin-top: 1rem;">
-                        <summary style="cursor: pointer; color: #999; font-size: 0.8rem;">Opciones Avanzadas (Danger Zone)</summary>
-                        <div style="padding: 1rem; border: 1px solid #fecaca; background: #fef2f2; border-radius: 10px; margin-top: 0.5rem; text-align: left;">
-                             <p style="color: #991b1b; font-size: 0.85rem; margin-bottom: 10px;"><b>Reinicio de Fábrica:</b> Borra caché y recarga la app. Úsalo si algo no funciona.</p>
-                             <button id="danger-reset-btn" onclick="window.ui.performHardReset()" 
-                                style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                                💣 Borrar Caché y Reiniciar
-                            </button>
-                        </div>
-                    </details>
                 </div>
-            </div>
-            
-            <!-- End of Grid Layout -->
             </div>
         `;
 
-        // Direct trigger for first sum update
-        setTimeout(() => {
-            this.updateBudgetTotal();
-            this.updateProfileInfo(conf.spending_profile || 'BALANCEADO');
-        }, 500);
+        setTimeout(() => this.updateBudgetTotal(), 100);
+        if (window.feather) window.feather.replace();
 
-        // EVENT DELEGATION: Universal Form and Button Handler
         this.container.onclick = (e) => {
             const target = e.target;
-
-            // Profile Guide Button
-            if (target.id === 'profile-info-btn' || target.closest('#profile-info-btn')) {
-                const modal = document.getElementById('profile-modal');
-                if (modal) modal.classList.remove('hidden');
-            }
-
-            // Force Update Button (The "Nuclear" button in Settings)
             if (target.id === 'force-update-env-btn' || target.closest('#force-update-env-btn')) {
                 this.performNuclearUpdate();
             }
 
-            // Auto-Suggest Budgets
             if (target.id === 'auto-budget-btn' || target.closest('#auto-budget-btn')) {
-                // Read LIVE values from form to avoid requiring "Save Profile" first
                 const incomeInput = document.querySelector('input[name="monthly_income_target"]');
                 const profileSelect = document.querySelector('select[name="spending_profile"]');
-
-                // Robust parsing: remove anything that is not a digit
                 const incomeStr = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
                 const income = parseFloat(incomeStr) || 0;
                 const profile = profileSelect ? profileSelect.value : 'BALANCEADO';
 
                 if (income <= 0) {
-                    alert('⚠️ Por favor ingresa un "Ingreso Mensual Objetivo" válido en la columna de Perfil (izquierda).');
-                    if (incomeInput) incomeInput.focus();
+                    alert('⚠️ Por favor ingresa un "Ingreso Mensual Objetivo" válido.');
                     return;
                 }
 
-                // DEBUGGING / CONFIRMATION FOR USER
-                const fixedFloorDebug = {};
-                (this.store.config.fixed_expenses || []).forEach(fe => {
-                    if (fe.category_id && fe.amount) {
-                        fixedFloorDebug[fe.category_id] = (fixedFloorDebug[fe.category_id] || 0) + fe.amount;
-                    }
-                });
-                const totalFixedDebug = Object.values(fixedFloorDebug).reduce((a, b) => a + b, 0);
-
-                if (!confirm(`🤖 INICIO DE CÁLCULO:\n\n• Ingreso detectado: $${this.formatNumberWithDots(income)}\n• Gastos Fijos detectados: $${this.formatNumberWithDots(totalFixedDebug)}\n• Perfil: ${profile}\n\n💡 TIP: Si pones $0 en una categoría, la IA no le sugerirá presupuesto y repartirá ese dinero en las demás.\n\n¿Proceder con la sugerencia exacta?`)) {
-                    return;
-                }
-
-                // Balanced distributions (Summing to ~100%)
                 const distributions = this.getDistributions();
-
                 const weights = distributions[profile] || distributions['BALANCEADO'];
-                let appliedCount = 0;
-
-                // 1. Calculate floors per category
-                const fixedFloor = {};
-                (this.store.config.fixed_expenses || []).forEach(fe => {
-                    if (fe.category_id && fe.amount) {
-                        fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
-                    }
-                });
-
-                // 2. Identify active categories (those with inputs. Exclude ONLY if explicitly set to 0)
                 const activeCats = this.store.categories.filter(cat => {
                     const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                    if (!input) return false;
-
-                    const valClean = input.value.replace(/\D/g, '');
-                    // Exclude ONLY if it's explicitly "0". 
-                    // Empty fields (valClean === "") MUST be included for new users.
-                    if (valClean === '0' && input.value !== '') return false;
-
-                    return true;
+                    return input && (input.value.replace(/\D/g, '') !== '0' || input.value === '');
                 });
 
-                // 3. Sum total fixed obligations for these categories
                 const totalFixed = activeCats.reduce((sum, cat) => sum + (fixedFloor[cat.id] || 0), 0);
                 const surplus = income - totalFixed;
 
                 if (surplus < 0) {
-                    // Scenario A: Deficit - Fixed expenses already exceed income
-                    activeCats.forEach(cat => {
-                        const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                        if (input) {
-                            const val = fixedFloor[cat.id] || 0;
-                            input.value = this.formatNumberWithDots(val);
-                            input.style.backgroundColor = '#ffebee'; // Light red for warning
-                            setTimeout(() => input.style.backgroundColor = '#fff', 2000);
-                            appliedCount++;
-                        }
-                    });
-                    alert(`⚠️ ¡ATENCIÓN COHERENCIA!\nTus gastos fijos ($${this.formatNumberWithDots(totalFixed)}) ya superan tus ingresos ($${this.formatNumberWithDots(income)}).\n\nEl presupuesto se llenó con tus compromisos mínimos para cubrir tus gastos fijos registrados, pero el total excedería tu nómina.`);
+                    alert('⚠️ Gastos fijos superan ingresos.');
                 } else {
-                    // Scenario B: Coherent Distribution
-                    // 1. Calculate weighted target for the surplus
-                    const rawSuggestions = {};
-                    let currentSum = totalFixed;
-
-                    activeCats.forEach(cat => {
-                        const floor = fixedFloor[cat.id] || 0;
-                        const weight = weights[cat.id] || 0.005;
-                        const ideal = income * weight;
-                        const gap = Math.max(0, ideal - floor);
-                        rawSuggestions[cat.id] = { floor, gap };
-                    });
-
-                    // Calculate sum of gaps to distribute surplus
-                    const totalGap = activeCats.reduce((s, c) => s + rawSuggestions[c.id].gap, 0);
-
                     const finalValues = {};
                     let totalRounded = 0;
-
                     activeCats.forEach((cat, index) => {
-                        const { floor, gap } = rawSuggestions[cat.id];
-                        let extra = 0;
-                        if (totalGap > 0) {
-                            extra = surplus * (gap / totalGap);
-                        } else {
-                            const sumWeights = activeCats.reduce((s, c) => s + (weights[c.id] || 0.005), 0);
-                            extra = surplus * ((weights[cat.id] || 0.005) / sumWeights);
-                        }
+                        const floor = fixedFloor[cat.id] || 0;
+                        const weight = weights[cat.id] || 0.005;
+                        let val = floor + (surplus * (weight / activeCats.reduce((s, c) => s + (weights[c.id] || 0.005), 0)));
 
-                        let val = floor + extra;
-
-                        // Round everything to nearest 1000 except the last active category
                         if (index < activeCats.length - 1) {
                             val = Math.round(val / 1000) * 1000;
                             totalRounded += val;
                         }
                         finalValues[cat.id] = val;
                     });
-
-                    // Adjust last category (Residual match)
                     const lastCat = activeCats[activeCats.length - 1];
-                    const remainingForLast = income - totalRounded;
-                    // In Scenario B (income >= totalFixed), remainingForLast will naturally be >= floor
-                    finalValues[lastCat.id] = Math.max(0, remainingForLast);
+                    finalValues[lastCat.id] = Math.max(0, income - totalRounded);
 
-                    // Final pass to set values and feedback
                     activeCats.forEach(cat => {
                         const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                        if (input) {
-                            const suggested = finalValues[cat.id];
-                            input.value = this.formatNumberWithDots(suggested);
-                            input.style.backgroundColor = '#e8f5e9';
-                            setTimeout(() => input.style.backgroundColor = '#fff', 2000);
-                            appliedCount++;
-                        }
+                        if (input) input.value = this.formatNumberWithDots(finalValues[cat.id]);
                     });
-
-                    // We automatically save these generated budgets to the config so they persist immediately
-                    this.store.updateConfig({ budgets: { ...this.store.config.budgets, ...finalValues } });
-
-                    // Update the live summary pill
+                    this.store.updateConfig({ budgets: { ...conf.budgets, ...finalValues } });
                     this.updateBudgetTotal();
-
-                    const totalActual = Object.values(finalValues).reduce((s, v) => s + v, 0);
-
-                    alert(`✨ Sugerencias coherentes generadas.\n\nLOGICA APLICADA:\n1. Se cubrieron tus $${this.formatNumberWithDots(totalFixed)} en gastos fijos.\n2. Se distribuyó el excedente según tu perfil ${profile}.\n3. Si marcaste categorías con $0, ese dinero se repartió proporcionalmente.\n4. El total ($${this.formatNumberWithDots(totalActual)}) suma exactamente tus ingresos ($${this.formatNumberWithDots(income)}).`);
+                    alert('✨ Sugerencia generada.');
                 }
             }
 
-            // Edit Fixed Expense
-            if (target.classList.contains('edit-fixed-exp') || target.closest('.edit-fixed-exp')) {
-                const id = (target.dataset.id || target.closest('.edit-fixed-exp').dataset.id);
-                const fe = this.store.config.fixed_expenses.find(e => e.id === id);
-                if (fe) {
-                    const form = document.getElementById('fixed-expense-form');
-                    form.querySelector('[name="edit_fe_id"]').value = fe.id;
-                    form.querySelector('[name="name"]').value = fe.name;
-                    form.querySelector('[name="amount"]').value = fe.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
-                    form.querySelector('[name="category_id"]').value = fe.category_id;
-                    form.querySelector('[name="day"]').value = fe.day;
-                    document.getElementById('fe-form-title').textContent = 'Editar Gasto Fijo ✏️';
-                    document.getElementById('fe-submit-btn').textContent = 'Guardar Cambios';
-                    form.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            // Delete Fixed Expense
-            if (target.classList.contains('delete-fixed-exp') || target.closest('.delete-fixed-exp')) {
-                const id = (target.dataset.id || target.closest('.delete-fixed-exp').dataset.id);
-                if (confirm('¿Borrar este gasto fijo?')) {
-                    this.store.deleteFixedExpense(id);
-                    this.render();
-                }
-            }
-
-            // Edit Recurring Income
-            if (target.classList.contains('edit-rec-inc') || target.closest('.edit-rec-inc')) {
-                const id = (target.dataset.id || target.closest('.edit-rec-inc').dataset.id);
-                const ri = this.store.config.recurring_incomes.find(i => i.id === id);
-                if (ri) {
-                    const form = document.getElementById('recurring-income-form');
-                    form.querySelector('[name="edit_ri_id"]').value = ri.id;
-                    form.querySelector('[name="name"]').value = ri.name;
-                    form.querySelector('[name="amount"]').value = ri.amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
-                    form.querySelector('[name="category_id"]').value = ri.category_id || 'cat_inc_1';
-                    form.querySelector('[name="day"]').value = ri.day;
-                    document.getElementById('ri-form-title').textContent = 'Editar Ingreso ✏️';
-                    document.getElementById('ri-submit-btn').textContent = 'Guardar Cambios';
-                    form.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            // Delete Recurring Income
-            if (target.classList.contains('delete-rec-inc') || target.closest('.delete-rec-inc')) {
-                const id = (target.dataset.id || target.closest('.delete-rec-inc').dataset.id);
-                if (confirm('¿Borrar este ingreso recurrente?')) {
-                    this.store.deleteRecurringIncome(id);
-                    this.render();
-                }
-            }
-
-            // Edit Account
-            if (target.classList.contains('edit-account') || target.closest('.edit-account')) {
-                const id = (target.dataset.id || target.closest('.edit-account').dataset.id);
-                const acc = this.store.accounts.find(a => a.id === id);
-                if (acc) {
-                    const form = document.getElementById('account-form');
-                    form.querySelector('[name="edit_acc_id"]').value = acc.id;
-                    form.querySelector('[name="name"]').value = acc.name;
-                    form.querySelector('[name="type"]').value = acc.type;
-                    form.querySelector('[name="initial_balance"]').value = acc.initial_balance ? acc.initial_balance.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.') : '';
-                    // Disable initial balance edit to avoid confusion if transactions exist
-                    form.querySelector('[name="initial_balance"]').readOnly = true;
-                    form.querySelector('[name="initial_balance"]').title = 'El saldo inicial no se puede editar después de crear la cuenta.';
-                    document.getElementById('acc-form-title').textContent = 'Editar Cuenta ✏️';
-                    document.getElementById('acc-submit-btn').textContent = 'Guardar Cambios';
-                    form.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            // Delete Account
+            // Edit/Delete handlers
             if (target.classList.contains('delete-account') || target.closest('.delete-account')) {
                 const id = (target.dataset.id || target.closest('.delete-account').dataset.id);
-                const txCount = this.store.transactions.filter(t => t.account_id === id).length;
-                if (txCount > 0) {
-                    alert(`⚠️ No se puede borrar esta cuenta porque tiene ${txCount} movimientos registrados. Para borrarla, primero elimina o transfiere sus movimientos.`);
-                    return;
-                }
-                if (confirm('¿Seguro que deseas borrar esta cuenta?')) {
+                if (confirm('¿Borrar esta cuenta?')) {
                     this.store.deleteAccount(id);
                     this.render();
                 }
@@ -4786,28 +4482,8 @@ class UIManager {
         };
 
         this.container.onsubmit = (e) => {
-            const formId = e.target.id;
             e.preventDefault();
-            console.log(`🚀 Form Submitted via Delegation: ${formId}`);
-
-            if (formId === 'settings-form') {
-                const formData = new FormData(e.target);
-                const rawIncome = formData.get('monthly_income_target').toString().replace(/\D/g, '');
-                const rawDebt = formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0';
-
-                this.store.updateConfig({
-                    monthly_income_target: parseFloat(rawIncome) || 0,
-                    user_name: formData.get('user_name'),
-                    spending_profile: formData.get('spending_profile'),
-                    currency: formData.get('currency') || 'COP',
-                    has_debts: formData.get('has_debts') === 'on',
-                    total_debt: parseFloat(rawDebt) || 0
-                });
-                alert('✅ Perfil guardado correctamente.');
-                this.render();
-            }
-
-            if (formId === 'budget-form') {
+            if (e.target.id === 'global-settings-form') {
                 const formData = new FormData(e.target);
                 const newBudgets = {};
                 for (let [key, value] of formData.entries()) {
@@ -4818,80 +4494,48 @@ class UIManager {
                     }
                 }
                 this.store.updateConfig({
-                    budgets: newBudgets,
-                    auto_rebalance_small_excess: !!document.getElementById('toggle-auto-rebalance')?.checked
+                    monthly_income_target: parseFloat(formData.get('monthly_income_target').toString().replace(/\D/g, '')) || 0,
+                    user_name: formData.get('user_name'),
+                    spending_profile: formData.get('spending_profile'),
+                    has_debts: formData.get('has_debts') === 'on',
+                    total_debt: parseFloat(formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0') || 0,
+                    budgets: newBudgets
                 });
-                alert('✅ Metas de presupuesto actualizadas.');
-                this.render();
-            }
-
-            // ai-config-form handler removed
-
-            if (formId === 'fixed-expense-form') {
-                const formData = new FormData(e.target);
-                const editId = formData.get('edit_fe_id');
-                const data = {
-                    name: formData.get('name'),
-                    amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
-                    category_id: formData.get('category_id'),
-                    day: parseInt(formData.get('day')) || 1
-                };
-
-                if (editId) {
-                    this.store.updateFixedExpense(editId, data);
-                } else {
-                    this.store.addFixedExpense(data);
-                }
-                this.render();
-            }
-
-            if (formId === 'recurring-income-form') {
-                const formData = new FormData(e.target);
-                const editId = formData.get('edit_ri_id');
-                const data = {
-                    name: formData.get('name'),
-                    amount: parseFloat(formData.get('amount').toString().replace(/\./g, '')),
-                    category_id: formData.get('category_id'),
-                    day: parseInt(formData.get('day')) || 1
-                };
-
-                if (editId) {
-                    this.store.updateRecurringIncome(editId, data);
-                } else {
-                    this.store.addRecurringIncome(data);
-                }
-                this.render();
-            }
-            if (formId === 'account-form') {
-                const formData = new FormData(e.target);
-                const editId = formData.get('edit_acc_id');
-                const amountRaw = formData.get('initial_balance');
-                const data = {
-                    name: formData.get('name'),
-                    type: formData.get('type')
-                };
-                if (!editId && amountRaw) {
-                    data.initial_balance = parseFloat(amountRaw.toString().replace(/\\./g, '')) || 0;
-                    data.current_balance = data.initial_balance;
-                }
-
-                if (editId) {
-                    this.store.updateAccount(editId, data);
-                } else {
-                    this.store.addAccount(data);
-                }
+                alert('✅ Cambios guardados.');
                 this.render();
             }
         };
-
-        // Feather icons replace
-        if (window.feather) window.feather.replace();
     }
 
-    // New Nuclear Update Method for delegation
+    handleTinyAccountAdd() {
+        const name = document.getElementById('new-acc-name').value;
+        const type = document.getElementById('new-acc-type').value;
+        const bal = parseFloat(document.getElementById('new-acc-bal').value.replace(/\D/g, '')) || 0;
+        if (!name) return alert('Ponle un nombre');
+        this.store.addAccount({ name, type, initial_balance: bal });
+        this.render();
+    }
+
+    handleTinyRIAdd() {
+        const name = document.getElementById('new-ri-name').value;
+        const amt = parseFloat(document.getElementById('new-ri-amt').value.replace(/\D/g, '')) || 0;
+        const cat = document.getElementById('new-ri-cat').value;
+        if (!name || !amt) return alert('Completa los campos');
+        this.store.addRecurringIncome({ name, amount: amt, category_id: cat, day: 1 });
+        this.render();
+    }
+
+    handleTinyFEAdd() {
+        const name = document.getElementById('new-fe-name').value;
+        const amt = parseFloat(document.getElementById('new-fe-amt').value.replace(/\D/g, '')) || 0;
+        const cat = document.getElementById('new-fe-cat').value;
+        if (!name || !amt) return alert('Completa los campos');
+        this.store.addFixedExpense({ name, amount: amt, category_id: cat, day: 1 });
+        this.render();
+    }
+
     async performNuclearUpdate() {
         if (!confirm('¿Actualizar a la última versión? Esto recargará la aplicación.')) return;
-
         try {
             if ('serviceWorker' in navigator) {
                 const regs = await navigator.serviceWorker.getRegistrations();
@@ -4899,13 +4543,12 @@ class UIManager {
             }
             const keys = await caches.keys();
             for (let k of keys) await caches.delete(k);
-
-            console.log('Forcing nuclear reload...');
             window.location.href = window.location.pathname + '?update=' + Date.now();
         } catch (e) {
             window.location.reload();
         }
     }
+
 
     renderAccountsList() {
         const list = this.store.accounts || [];
