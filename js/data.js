@@ -11,6 +11,7 @@ const DEFAULT_DATA = {
         total_debt: 0,
         budgets: {},
         fixed_expenses: [],
+        loans: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         migrationCompleted: false, // Marker for Firebase migration

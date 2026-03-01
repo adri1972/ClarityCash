@@ -1472,11 +1472,19 @@ class UIManager {
         // --- AI TIP REMOVED ---
         let aiTipHTML = '';
 
-        // MODELO EDUCATIVO: Disponible = Ingreso Mensual - Gastos del Mes
-        const totalBudget = Object.values(this.store.config.budgets || {}).reduce((a, b) => a + (Number(b) || 0), 0) || (Number(this.store.config.monthly_income_target) || 0);
+        // MODELO EDUCATIVO FINAL
+        const monthlyIncome = Number(this.store.config.monthly_income_target) || 0;
+        const loansList = this.store.config.loans || [];
+        const totalLoanPayments = loansList.reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
+
+        // Ingreso mensual – Total cuotas de Préstamos = Disponible para organizar
+        const disposableToOrganize = monthlyIncome - totalLoanPayments;
+
         const used = summary.expenses;
-        const available = totalBudget - used;
-        const ratio = totalBudget > 0 ? (used / totalBudget) : 0;
+        // Disponible para organizar – Gastos registrados = Disponible restante
+        const available = disposableToOrganize - used;
+
+        const ratio = disposableToOrganize > 0 ? (used / disposableToOrganize) : 0;
 
         let statusText = "Dentro del presupuesto";
         let statusColor = "#2E7D32"; // Green
@@ -1535,13 +1543,17 @@ class UIManager {
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">Disponible para el mes</div>
+                            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">Disponible base</div>
                             <div style="font-size: 2.2rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; line-height: 1;">
                                 ${this.formatCurrency(available)}
                             </div>
-                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
-                                de un ingreso base de <b>${this.formatCurrency(totalBudget)}</b>
+                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">
+                                de <b>${this.formatCurrency(disposableToOrganize)}</b> libres
                             </div>
+                            ${totalLoanPayments > 0 ? `
+                            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">
+                                (Ingreso ${this.formatCurrency(monthlyIncome)} - Préstamos ${this.formatCurrency(totalLoanPayments)})
+                            </div>` : ''}
                         </div>
                     </div>
 
@@ -4668,12 +4680,8 @@ class UIManager {
                          <div id="profile-specs"></div>
                      </div>
                      <div class="form-group">
-                        <label><input type="checkbox" name="has_debts" ${conf.has_debts ? 'checked' : ''} onchange="document.getElementById('debt-grp').style.display=this.checked?'block':'none'"> Tengo préstamos u obligaciones</label>
-                        <div id="debt-grp" style="display: ${conf.has_debts ? 'block' : 'none'}; margin-top: 5px;">
-                            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 5px;">Monto total de créditos personales, hipotecas o cuotas fijas (No incluye Tarjeta de Crédito).</p>
-                            <input type="text" name="total_debt" value="${this.formatNumberWithDots(conf.total_debt || 0)}" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
-                        </div>
-                    </div>
+                        <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 5px;">Tu ingreso mensual es la base para tu organización. Los préstamos se gestionan en su propio módulo.</p>
+                     </div>
                 `
             },
             {
@@ -4696,6 +4704,24 @@ class UIManager {
                             </select>
                             <input type="text" id="new-acc-bal" placeholder="Saldo Inicial / Saldo de Tarjeta">
                             <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyAccountAdd()">Guardar Fuente</button>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'prestamos', title: 'Préstamos (Deuda)', icon: '🏛️', content: `
+                    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Gestiona tus deudas estructuradas (Hipotecas, créditos vehiculares, préstamos bancarios).</p>
+                    <div id="loans-list" style="margin-bottom: 1.5rem;">${this.renderLoansList()}</div>
+                    <div class="card" style="background:#fff7ed; padding:15px; border:1px solid #ffedd5;">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem;">+ Nuevo Préstamo</h4>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <input type="text" id="loan-name" placeholder="Nombre (ej. Crédito Carro)">
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" id="loan-payment" placeholder="Cuota mensual" style="flex:1;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                                <input type="text" id="loan-day" placeholder="Día de pago (opc)" style="flex:0.6;" maxlength="2">
+                            </div>
+                            <input type="text" id="loan-balance" placeholder="Saldo pendiente (opcional)" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                            <button type="button" class="btn btn-primary" style="background:#ea580c;" onclick="window.ui.handleTinyLoanAdd()">Guardar Préstamo</button>
                         </div>
                     </div>
                 `
@@ -5475,5 +5501,59 @@ class UIManager {
         modal.querySelector('.close-modal').onclick = () => document.body.removeChild(modal);
         document.body.appendChild(modal);
         requestAnimationFrame(() => modal.classList.remove('hidden'));
+    }
+
+    renderLoansList() {
+        const list = this.store.config.loans || [];
+        if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes préstamos registrados.</p>';
+        return list.map(loan => `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.8rem 0;">
+                <div>
+                    <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">${loan.name}</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">
+                        Cuota: <b>${this.formatCurrency(loan.monthly_payment)}</b> 
+                        ${loan.payment_day ? `• Día ${loan.payment_day}` : ''}
+                    </div>
+                    ${loan.total_balance > 0 ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Saldo pendiente: ${this.formatCurrency(loan.total_balance)}</div>` : ''}
+                </div>
+                <button class="btn-text" onclick="window.ui.handleLoanDelete('${loan.id}')" style="color: #ef4444; padding: 8px;">
+                    <i data-feather="trash-2" style="width:18px;"></i>
+                </button>
+            </div>
+        `).join('') + '<script>feather.replace();</script>';
+    }
+
+    async handleTinyLoanAdd() {
+        const name = document.getElementById('loan-name').value;
+        const paymentStr = document.getElementById('loan-payment').value.replace(/\D/g, '');
+        const payment = parseFloat(paymentStr) || 0;
+        const day = document.getElementById('loan-day').value;
+        const balanceStr = document.getElementById('loan-balance').value.replace(/\D/g, '');
+        const balance = parseFloat(balanceStr) || 0;
+
+        if (!name || payment <= 0) {
+            alert("El nombre y la cuota mensual son obligatorios.");
+            return;
+        }
+
+        const loans = this.store.config.loans || [];
+        loans.push({
+            id: 'loan_' + Date.now(),
+            name,
+            monthly_payment: payment,
+            payment_day: day,
+            total_balance: balance,
+            created_at: new Date().toISOString()
+        });
+
+        await this.store.updateConfig({ loans });
+        this.render();
+    }
+
+    async handleLoanDelete(id) {
+        if (!confirm("¿Eliminar este préstamo? Esto devolverá el cupo a tu presupuesto disponible.")) return;
+        const loans = (this.store.config.loans || []).filter(l => l.id !== id);
+        await this.store.updateConfig({ loans });
+        this.render();
     }
 }
