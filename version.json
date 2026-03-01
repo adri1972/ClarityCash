@@ -1,5 +1,5 @@
 {
-    "version": "72.1.BRAND_NAME",
-    "updatedAt": "2026-03-01T16:20:00Z",
-    "notes": "Feature: Nombre de marca Clarity Cash añadido a la pantalla de login."
+    "version": "72.2.FORCE",
+    "updatedAt": "2026-03-01T16:25:00Z",
+    "notes": "Feature: Cambio visual de marca 'Clarity Cash' y limpieza forzada de caché v72.2."
 }
