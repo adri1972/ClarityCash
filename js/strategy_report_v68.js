@@ -70,12 +70,26 @@ class StrategyReport {
         return { color: '#C62828', bg: '#FFEBEE', label: '🔴 Riesgo Financiero', score };
     }
 
+    // ─── Utilidad: Rango de fechas de la semana ────────────────────────────
+    getWeekRange() {
+        const d = new Date();
+        const day = d.getDay(); // 0(Dom) a 6(Sab)
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajustar al lunes
+        const monday = new Date(d.setDate(diff));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        const options = { day: '2-digit', month: 'short' };
+        return `Del ${monday.toLocaleDateString('es-CO', options)} al ${sunday.toLocaleDateString('es-CO', options)}`;
+    }
+
     // ─── Render principal ──────────────────────────────────────────────────
     render() {
         const events = this.getWeeklyEvents();
         const health = this.getHealthStatus(events);
         const integrityOk = this.checkIntegrity();
         const weekKey = this.getWeekKey();
+        const weekRange = this.getWeekRange();
 
         // ¿Ya hay veredicto cacheado esta semana?
         let cachedVerdict = null;
@@ -146,7 +160,7 @@ class StrategyReport {
                     </div>
                     <div style="font-size:1.1rem; font-weight:800; color:${health.color}; margin-bottom:2px;">${health.label}</div>
                     <div style="font-size:0.75rem; color:${health.color}; opacity:0.8; margin-bottom:4px;">Evalúa tu comportamiento financiero semanal.</div>
-                    <div style="font-size:0.75rem; color:${health.color}; opacity:0.6;">Semana ${weekKey}</div>
+                    <div style="font-size:0.75rem; color:${health.color}; opacity:0.6; font-weight:600;">${weekRange}</div>
                     
                     <!-- Barra visual -->
                     <div style="background:${health.color}20; border-radius:20px; height:10px; margin:16px 0 8px 0; overflow:hidden;">
