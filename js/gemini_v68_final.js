@@ -892,4 +892,51 @@ Responde SIEMPRE en formato JSON:
             return null;
         }
     }
+
+    /**
+     * MONTHLY STRATEGIC PLAN — CFO crea el plan de prioridades
+     */
+    async getMonthPlan(contextData) {
+        const apiKey = this.getApiKey();
+        const systemPrompt = `Eres el CFO de ClarityCash. Tu trabajo es construir un Plan del Mes con orden de prioridades.
+Usa lenguaje simple. No uses "superávit/déficit". Di "Te quedó dinero" o "Te faltó dinero".
+No inventes números. Solo usa los del JSON. Entrega recomendaciones accionables, máximo 6 pasos.
+
+ESTRUCTURA DE RESPUESTA (JSON estricto):
+{
+  "diagnostico_corto": "1 frase corta de impacto",
+  "prioridades": [
+    {"accion": "Qué hacer", "monto": 0, "por_que": "Justificación", "impacto": "Ej: Acelera meta X en 2 semanas"}
+  ],
+  "plan_semanal": [
+    {"semana": 1, "accion": "...", "monto": 0},
+    {"semana": 2, "accion": "...", "monto": 0},
+    {"semana": 3, "accion": "...", "monto": 0},
+    {"semana": 4, "accion": "...", "monto": 0}
+  ],
+  "regla_control": "Si [categoría] pasa de $[monto] esta semana, frena y compensa con [otra]."
+}`;
+
+        const userPrompt = `Datos financieros reales del usuario: ${JSON.stringify(contextData, null, 2)}`;
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                    generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
+                })
+            });
+
+            if (!response.ok) throw new Error('API Error');
+            const data = await response.json();
+            const text = data.candidates[0].content.parts[0].text;
+            return JSON.parse(text.replace(/```json|```/g, '').trim());
+        } catch (e) {
+            console.error('Month Plan AI Error:', e);
+            return null;
+        }
+    }
 }

@@ -438,9 +438,67 @@ class Store {
                 year: y,
                 label: monthNames[m],
                 income: summary.income,
-                expenses: summary.expenses
+                expenses: summary.expenses,
+                balance: summary.balance_net,
+                savings: summary.savings
             });
         }
         return history;
+    }
+
+    // --- Persistencia del Plan del Mes (CFO) ---
+    async saveMonthPlan(year, month, planData) {
+        const planId = `${year}-${month + 1}`;
+        if (!this.data.plans) this.data.plans = {};
+        this.data.plans[planId] = { ...planData, timestamp: Date.now(), versionPrompt: "v71.5" };
+
+        if (this.uid) {
+            await db.collection('users').doc(this.uid).collection('plans').doc(planId).set(this.data.plans[planId]);
+        }
+        window.dispatchEvent(new CustomEvent('c_store_updated'));
+    }
+
+    async getSavedMonthPlan(year, month) {
+        const planId = `${year}-${month + 1}`;
+        if (this.data.plans && this.data.plans[planId]) return this.data.plans[planId];
+
+        if (this.uid) {
+            const doc = await db.collection('users').doc(this.uid).collection('plans').doc(planId).get();
+            if (doc.exists) {
+                if (!this.data.plans) this.data.plans = {};
+                this.data.plans[planId] = doc.data();
+                return this.data.plans[planId];
+            }
+        }
+        return null;
+    }
+
+    async nuclearReset() {
+        if (!this.uid) {
+            localStorage.clear();
+            return true;
+        }
+        console.log("🔥 NUCLEAR RESET: Limpiando Firestore...");
+        try {
+            const batchCommit = async (collectionName) => {
+                const snap = await db.collection('users').doc(this.uid).collection(collectionName).get();
+                if (!snap.empty) {
+                    const batch = db.batch();
+                    snap.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                }
+            };
+            await batchCommit('transactions');
+            await batchCommit('accounts');
+            await batchCommit('goals');
+            await batchCommit('plans');
+            const newConfig = { ...DEFAULT_DATA.config, user_name: this.data.config.user_name || 'Usuario', migrationCompleted: true };
+            await db.collection('users').doc(this.uid).set(newConfig);
+            localStorage.clear();
+            return true;
+        } catch (e) {
+            console.error("Error in nuclearReset:", e);
+            throw e;
+        }
     }
 }

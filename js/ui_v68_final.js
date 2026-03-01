@@ -620,6 +620,11 @@ class UIManager {
 
     render() {
         if (!this.container) return;
+
+        // Reset legacy handlers to avoid conflicts between views
+        this.container.onclick = null;
+        this.container.onsubmit = null;
+
         this.container.innerHTML = '';
         console.log('🎨 Rendering View:', this.currentView);
 
@@ -3094,10 +3099,10 @@ class UIManager {
 
         // Delete Logic
         document.querySelectorAll('.delete-tx-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 if (confirm('¿Eliminar este movimiento permanentemente?')) {
                     const id = e.target.closest('button').dataset.id;
-                    this.store.deleteTransaction(id);
+                    await this.store.deleteTransaction(id);
                     this.renderTransactions();
                 }
             });
@@ -3119,17 +3124,24 @@ class UIManager {
 
         const resetBtn = document.getElementById('btn-reset-data');
         if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
+            resetBtn.addEventListener('click', async () => {
                 const choice = confirm("⚠️ ¿Quieres borrar TODO y empezar de cero?\n\n• OK = Borrar TODO (movimientos, presupuestos, gastos fijos, metas)\n• Cancelar = No borrar nada");
 
                 if (choice) {
                     // Double confirm for full reset
                     if (confirm("🚨 ÚLTIMA CONFIRMACIÓN\n\nEsto borrará:\n✖ Todos los movimientos\n✖ Presupuestos\n✖ Gastos fijos\n✖ Ingresos recurrentes\n✖ Metas\n✖ Caché de IA\n\n(Tu API Key se conservará)\n\n¿Continuar?")) {
-                        // Nuclear reset
-                        localStorage.clear();
-
-                        alert("✅ Todo limpio. La app se recargará ahora.");
-                        location.reload();
+                        resetBtn.disabled = true;
+                        resetBtn.innerHTML = '🕒 Limpiando todo...';
+                        try {
+                            await this.store.nuclearReset();
+                            alert("✅ Todo limpio. La app se recargará ahora.");
+                            location.reload();
+                        } catch (e) {
+                            alert("Error al limpiar los datos. Intenta de nuevo.");
+                            resetBtn.disabled = false;
+                            resetBtn.innerHTML = '<i data-feather="trash-2"></i> Iniciar de Cero';
+                            if (window.feather) window.feather.replace();
+                        }
                     }
                 }
             });
@@ -4803,12 +4815,16 @@ class UIManager {
         if (window.feather) window.feather.replace();
     }
 
-    renderGoals() {
-        this.pageTitle.textContent = 'Metas Financieras 🎯';
+    async renderGoals() {
+        this.pageTitle.textContent = 'Plan Financiero Automático (CFO) 🧠';
         const goals = this.store.getGoals();
         const config = this.store.config;
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
 
-        // ─── LÓGICA DE AUDITORÍA CONTEXTUAL ───
+        const savedPlan = await this.store.getSavedMonthPlan(currentYear, currentMonth);
+
         let contextualAlert = '';
         try {
             const auditEvents = JSON.parse(localStorage.getItem('cc_weekly_events') || '{}');
@@ -4818,7 +4834,7 @@ class UIManager {
                     <div style="background:#FFF5F5; border-radius:12px; padding:12px; margin-bottom:1.5rem; display:flex; align-items:center; gap:10px; border:1px solid #FED7D7;">
                         <span style="font-size:1.2rem;">💡</span>
                         <p style="margin:0; font-size:0.85rem; color:#C53030;">
-                            Reducir <b>${mainCat}</b> un 15% aceleraría tu meta actual en aproximadamente 2 semanas.
+                            Reducir <b>${mainCat}</b> un 15% contribuiría significativamente a tu Plan del Mes.
                         </p>
                     </div>
                 `;
@@ -4826,15 +4842,33 @@ class UIManager {
         } catch (e) { }
 
         let html = `
-            <div style="margin-bottom: 1.5rem;">
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; font-weight: 500;">“Tus metas son el motor de tu disciplina financiera.”</p>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-primary" id="add-goal-btn" style="flex:1;">
-                        <i data-feather="plus"></i> Nueva Meta
-                    </button>
-                    <button class="btn btn-secondary" id="suggest-smart-goal-btn" style="flex:1; border: 1px solid #9C27B0; color: #9C27B0;">
-                        🎯 Sugerir Meta Inteligente
-                    </button>
+            <div id="cfo-plan-container" style="margin-bottom: 2rem; background: white; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="background: #f8fafc; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2rem;">📌</span>
+                        <span style="font-weight: 800; color: #1e293b; font-size: 0.9rem;">Plan del Mes (CFO)</span>
+                    </div>
+                    <span id="plan-status-badge" style="font-size: 0.7rem; font-weight: 700; background: ${savedPlan ? '#dcfce7' : '#fef3c7'}; color: ${savedPlan ? '#166534' : '#92400e'}; padding: 4px 10px; border-radius: 20px;">
+                        ${savedPlan ? '✅ Listo' : '⚒️ En construcción'}
+                    </span>
+                </div>
+                <div style="padding: 20px;" id="cfo-plan-content">
+                    ${savedPlan ? this._renderPlanDetails(savedPlan) : `
+                        <div style="text-align: center; padding: 10px 0;">
+                            <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Diseñemos tu estrategia para este mes basada en tus datos reales.</p>
+                            <button class="btn btn-primary" id="generate-month-plan-btn" style="background: #1e293b; border: none; padding: 10px 24px; font-weight: 700;">
+                                🧠 Generar Plan del Mes
+                            </button>
+                        </div>
+                    `}
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin:0; font-size: 1.1rem; color: #1e293b;">Tus Metas</h3>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-text" id="suggest-smart-goal-btn" style="color:#9C27B0; font-size:0.8rem; font-weight:700;">🎯 Sugerencia IA</button>
+                    <button class="btn btn-text" id="add-goal-btn" style="color:#2563eb; font-size:0.8rem; font-weight:700;">+ Nueva Meta</button>
                 </div>
             </div>
             ${contextualAlert}
@@ -4842,77 +4876,23 @@ class UIManager {
         `;
 
         if (goals.length === 0) {
-            html += `
-                <div style="text-align: center; padding: 2rem 1.5rem; background: #f8fafc; border-radius: 20px;">
-                    <div style="font-size: 3rem; margin-bottom: 12px;">📊</div>
-                    <h3 style="margin: 0 0 8px; color: #1e293b; font-size: 1.1rem;">Recomendación Estratégica del CFO</h3>
-                    <div id="cfo-goal-advice" style="color: #64748b; margin: 0 0 20px; font-size: 0.85rem; line-height: 1.5;">
-                        Para darte una recomendación personalizada, necesito analizar tu historial.<br>
-                        <b>Presiona "Sugerir Meta Inteligente"</b> para que el CFO analice tu potencial de ahorro.
-                    </div>
-                    <button class="btn btn-primary" onclick="document.getElementById('add-goal-btn').click()" style="padding: 10px 24px; font-size: 0.95rem;">
-                        ✨ Crear mi primera meta
-                    </button>
-                </div>
-            `;
+            html += `<div style="text-align:center; padding: 2rem; background: #f8fafc; border-radius: 15px; color: #64748b; font-size: 0.85rem;">Crea una meta para empezar a ahorrar.</div>`;
         } else {
             html += `<div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">`;
-
             goals.forEach(g => {
                 const percent = Math.min((g.current_amount / g.target_amount) * 100, 100);
-
-                // --- INDICADOR DINÁMICO DE RITMO ---
-                // Si la meta tiene fecha de creación (dummy por ahora o basada en config)
-                // Usamos un cálculo simple: si lleva > 10% del tiempo pero < 10% del progreso
-                let statusLabel = '🟡 En ritmo';
-                let statusColor = '#E65100';
-                if (percent >= 90) { statusLabel = '🟢 Adelantado'; statusColor = '#2E7D32'; }
-                else if (percent < 5) { statusLabel = '🔴 Atrasado'; statusColor = '#C62828'; }
-
-                let icon = 'target';
-                let color = '#2196F3';
-                if (g.type === 'EMERGENCY') { icon = 'shield'; color = '#4CAF50'; }
-                if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; }
-                if (g.type === 'PURCHASE') { icon = 'gift'; color = '#9C27B0'; }
-
-                // Comentario IA (dummy o persistido)
-                const aiComment = percent > 50
-                    ? `“Si mantienes este ritmo, cumplirás tu meta ${Math.floor(Math.random() * 3) + 1} semanas antes.”`
-                    : `“Aumentar tu ahorro un 5% este mes te pondría de nuevo en ritmo verde.”`;
-
+                let color = (g.type === 'EMERGENCY') ? '#4CAF50' : (g.type === 'DEBT') ? '#F44336' : '#2196F3';
                 html += `
-                    <div class="card" style="border-top: 4px solid ${color}; display: flex; flex-direction: column; overflow: hidden; position: relative;">
-                        <div style="position: absolute; top: 12px; right: 12px; font-size: 0.7rem; font-weight: 700; color: ${statusColor}; background: ${statusColor}10; padding: 2px 8px; border-radius: 20px;">
-                            ${statusLabel}
+                    <div class="card" style="border-top: 4px solid ${color};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <span style="font-weight:800; color:#1e293b;">${g.name}</span>
+                            <button class="delete-goal" data-id="${g.id}" style="background:none; border:none; color:#cbd5e1; cursor:pointer;"><i data-feather="trash-2" style="width:14px;"></i></button>
                         </div>
-                        <div class="card-header" style="margin-top: 10px;">
-                            <div class="card-title" style="display:flex; justify-content:space-between; width:100%">
-                                <span style="font-weight:700;">${g.name}</span>
-                                <button class="btn-text delete-goal" data-id="${g.id}" style="color: #cbd5e1; padding:0;"><i data-feather="trash-2" style="width:14px;"></i></button>
-                            </div>
+                        <div style="font-size:1.4rem; font-weight:800; color:#1e293b; margin-bottom:10px;">${this.formatCurrency(g.current_amount)}</div>
+                        <div style="background:#f1f5f9; height:8px; border-radius:10px; overflow:hidden; margin-bottom:15px;">
+                            <div style="width:${percent}%; background:${color}; height:100%;"></div>
                         </div>
-                        
-                        <div class="card-value" style="font-size: 1.4rem; font-weight: 800; color: #1e293b;">${this.formatCurrency(g.current_amount)}</div>
-                        <div class="text-secondary" style="font-size: 0.8rem; margin-bottom: 0.5rem; color: #64748b;">
-                            de ${this.formatCurrency(g.target_amount)}
-                        </div>
-                        
-                        <div style="background: #f1f5f9; height: 10px; border-radius: 10px; overflow: hidden; margin: 0.5rem 0 1rem 0;">
-                            <div style="width: ${percent}%; background: ${color}; height: 100%; border-radius: 10px; transition: width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></div>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <span style="font-size: 0.8rem; font-weight: 700; color: ${color};">${percent.toFixed(0)}% completado</span>
-                        </div>
-
-                        <div style="background: #f8fafc; border-radius: 10px; padding: 10px; font-size: 0.75rem; color: #475569; border-left: 3px solid #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">
-                            ${aiComment}
-                        </div>
-
-                        <button class="btn btn-secondary add-fund-btn" data-id="${g.id}" data-type="${g.type}" 
-                                style="width: 100%; margin-top: auto; border: 1.5px solid ${color}; color: ${color}; background: #fff; font-weight:700; border-radius: 12px;">
-                            + Abonar a Meta
-                        </button>
+                        <button class="btn btn-secondary add-fund-btn" data-id="${g.id}" data-type="${g.type}" style="width:100%; border: 1.5px solid ${color}; color:${color}; font-weight:700;">+ Abonar</button>
                     </div>
                 `;
             });
@@ -4921,376 +4901,164 @@ class UIManager {
 
         this.container.innerHTML = html;
 
-        // --- HANDLER: SMART GOAL SUGGESTION ---
-        const suggestBtn = document.getElementById('suggest-smart-goal-btn');
-        if (suggestBtn) {
-            suggestBtn.onclick = async () => {
-                const history = this.store.getHistorySummary(3);
-                if (history.length < 1 || history.every(h => h.income === 0)) {
-                    alert("Registra al menos 1 mes de movimientos para recibir una meta inteligente.");
-                    return;
-                }
+        // Handlers
+        const gBtn = document.getElementById('generate-month-plan-btn');
+        if (gBtn) gBtn.onclick = () => this._handleGeneratePlan();
 
-                suggestBtn.disabled = true;
-                suggestBtn.innerHTML = '🕒 Analizando tu potencial...';
+        const sBtn = document.getElementById('suggest-smart-goal-btn');
+        if (sBtn) sBtn.onclick = () => this._handleSuggestSmartGoal();
 
-                const box = document.getElementById('smart-goal-suggestion-box');
-                box.innerHTML = '<div style="background:#f8fafc; border-radius:15px; padding:20px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.05); margin-bottom:1.5rem;">' +
-                    '<div class="spinner" style="width:24px; height:24px; border:3px solid #f1f5f9; border-top:3px solid #9C27B0; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 10px;"></div>' +
-                    '<span style="font-size:0.85rem; color:#64748b;">El CFO está analizando tus números históricos...</span></div>';
-
-                const averages = {
-                    ingresos_promedio: history.reduce((a, b) => a + b.income, 0) / history.length,
-                    gastos_promedio: history.reduce((a, b) => a + b.expenses, 0) / history.length,
-                    score_promedio: history.reduce((a, b) => a + (b.score || 85), 0) / history.length,
-                    perfil: config.spending_profile || 'BALANCEADO'
-                };
-
-                try {
-                    const suggestion = await this.aiAdvisor.getSmartGoalSuggestion(averages);
-                    if (suggestion) {
-                        box.innerHTML = `
-                            <div style="background: linear-gradient(135deg, #fdfcfd, #f9f5ff); border: 2px solid #9C27B020; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(156, 39, 176, 0.08);">
-                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                                    <span style="font-size:1.5rem;">🧠</span>
-                                    <div style="font-weight:800; color:#4a148c; font-size:0.95rem;">Propuesta del CFO</div>
-                                </div>
-                                <h4 style="margin:0 0 5px; font-size:1.1rem; color:#1e293b;">${suggestion.nombre_meta}</h4>
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-                                    <div style="background:white; padding:10px; border-radius:12px; border:1px solid #f1f5f9;">
-                                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Monto Objetivo</div>
-                                        <div style="font-size:0.95rem; font-weight:800; color:#1e293b;">${this.formatCurrency(suggestion.monto_sugerido)}</div>
-                                    </div>
-                                    <div style="background:white; padding:10px; border-radius:12px; border:1px solid #f1f5f9;">
-                                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Inversión Mensual</div>
-                                        <div style="font-size:0.95rem; font-weight:800; color:#9C27B0;">${this.formatCurrency(suggestion.cuota_mensual)}</div>
-                                    </div>
-                                </div>
-                                <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:20px; border-left:3px solid #9C27B020; padding-left:12px;">
-                                    ${suggestion.justificacion}
-                                </p>
-                                <button class="btn btn-primary" id="accept-suggestion-btn" 
-                                    style="width:100%; border-radius:12px; background:#9C27B0; font-weight:700;">
-                                    Aceptar y Crear Meta
-                                </button>
-                            </div>
-                        `;
-                        const acceptBtn = document.getElementById('accept-suggestion-btn');
-                        acceptBtn.onclick = () => {
-                            this.store.addGoal({
-                                type: suggestion.tipo_meta,
-                                name: suggestion.nombre_meta,
-                                target_amount: suggestion.monto_sugerido,
-                                current_amount: 0
-                            });
-                            this.render();
-                        };
-                    }
-                } catch (e) {
-                    box.innerHTML = '<p style="color:red; font-size:0.8rem;">Error al conectar con el CFO. Intenta de nuevo.</p>';
-                } finally {
-                    suggestBtn.disabled = false;
-                    suggestBtn.innerHTML = '🎯 Sugerir Meta Inteligente';
-                }
-            };
+        const aBtn = document.getElementById('add-goal-btn');
+        if (aBtn) aBtn.onclick = () => {
+            const name = prompt("Nombre de la meta:");
+            const target = parseFloat((prompt("Monto ($):") || "0").replace(/\./g, ''));
+            if (name && target > 0) { this.store.addGoal({ name, target_amount: target, current_amount: 0, type: 'PURCHASE' }); this.render(); }
         }
 
-        this.container.innerHTML = html;
+        const appBtn = document.getElementById('apply-plan-btn');
+        if (appBtn) appBtn.onclick = () => this._handleApplyPlan(savedPlan);
 
-        // Add Goal Handler
-        const addBtn = document.getElementById('add-goal-btn');
-        if (addBtn) {
-            addBtn.addEventListener('click', () => {
-                const type = prompt("Tipo de Meta:\n1. Fondo de Emergencia\n2. Pago de Deuda\n3. Ahorro Específico\n\n(1-3):");
-                if (!type) return;
-
-                let typeKey = 'PURCHASE';
-                let nameDefault = 'Nueva Meta';
-                if (type === '1') { typeKey = 'EMERGENCY'; nameDefault = 'Fondo de Emergencia'; }
-                else if (type === '2') { typeKey = 'DEBT'; nameDefault = 'Salir de Deudas'; }
-                else if (type === '3') { typeKey = 'PURCHASE'; nameDefault = 'Viaje soñado'; }
-                else return;
-
-                const name = prompt("Nombre de la meta:", nameDefault) || nameDefault;
-                const targetStr = prompt("Monto objetivo ($):");
-                if (!targetStr) return;
-                const target = parseFloat(targetStr.replace(/\./g, ''));
-
-                this.store.addGoal({
-                    type: typeKey,
-                    name: name,
-                    target_amount: target,
-                    current_amount: 0 // Always starts at 0, adds via transactions
-                });
-                this.render();
-            });
-        }
-
-        // Add Fund Handler (Creates REAL transaction)
-        document.querySelectorAll('.add-fund-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = e.target.dataset.id;
-                const type = e.target.dataset.type;
-
-                const amountStr = prompt("Monto a abonar hoy ($):");
-                if (!amountStr) return;
-                const amount = parseFloat(amountStr.replace(/\./g, ''));
-                if (isNaN(amount) || amount <= 0) return;
-
-                const accounts = this.store.accounts;
-                const accNames = accounts.map((a, i) => `${i + 1}. ${a.name} ($${a.current_balance})`).join('\n');
-                const accIndex = prompt(`¿De qué cuenta sale el dinero?\n${accNames}`);
-                if (!accIndex) return;
-                const account = accounts[parseInt(accIndex) - 1];
-                if (!account) return;
-
-                // Auto-categorize
-                // Payment of Debt -> Spending/Flow Out -> Type: PAGO_DEUDA
-                // Savings -> Transfer to "Savings" (conceptually) -> Type: AHORRO
-                let txType = 'AHORRO';
-                let catId = 'cat_5'; // Ahorro default
-                let note = 'Abono a meta';
-
-                if (type === 'DEBT') {
-                    txType = 'PAGO_DEUDA';
-                    catId = 'cat_7'; // Deuda default
-                    note = 'Pago abono a deuda';
-                }
-
-                this.store.addTransaction({
-                    type: txType,
-                    amount: amount,
-                    date: new Date().toISOString().split('T')[0],
-                    category_id: catId,
-                    account_id: account.id,
-                    goal_id: id,
-                    note: note
-                });
-
-                alert('✅ Abono registrado correctamente como movimiento.');
-                this.render();
-            });
-        });
-
-        // Delete Handler
-        document.querySelectorAll('.delete-goal').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                if (confirm('¿Borrar esta meta? Los movimientos históricos NO se borrarán.')) {
-                    const id = e.target.closest('button').dataset.id;
-                    this.store.deleteGoal(id);
+        document.querySelectorAll('.add-fund-btn').forEach(b => {
+            b.onclick = (e) => {
+                const id = e.currentTarget.dataset.id;
+                const type = e.currentTarget.dataset.type;
+                const amount = parseFloat((prompt("Monto a abonar ($):") || "0").replace(/\./g, ''));
+                if (amount <= 0) return;
+                const accIndex = prompt(`¿Elegir cuenta?\n${this.store.accounts.map((a, i) => `${i + 1}. ${a.name}`).join('\n')}`);
+                const account = this.store.accounts[parseInt(accIndex) - 1];
+                if (account) {
+                    this.store.addTransaction({
+                        type: (type === 'DEBT' ? 'PAGO_DEUDA' : 'AHORRO'), amount, date: new Date().toISOString().split('T')[0],
+                        category_id: (type === 'DEBT' ? 'cat_7' : 'cat_5'), account_id: account.id, goal_id: id, note: 'Abono meta'
+                    });
                     this.render();
                 }
-            });
+            }
         });
+
+        document.querySelectorAll('.delete-goal').forEach(b => {
+            b.onclick = (e) => {
+                const id = e.currentTarget.dataset.id;
+                if (confirm("¿Borrar meta?")) { this.store.deleteGoal(id); this.render(); }
+            }
+        });
+
+        if (window.feather) window.feather.replace();
     }
 
-    renderBudgetProgress() {
-        const budgets = this.store.config.budgets || {};
-        if (Object.keys(budgets).length === 0) return '';
+    _renderPlanDetails(plan) {
+        let pLines = (plan.prioridades || []).map((p, i) => `
+            <div style="background:white; border:1px solid #f1f5f9; padding:10px; border-radius:10px; margin-bottom:8px; font-size:0.8rem;">
+                <div style="font-weight:800; color:#1e293b;">${i + 1}. ${p.accion} ${p.monto > 0 ? `($${p.monto.toLocaleString()})` : ''}</div>
+                <div style="color:#64748b;">${p.por_que}</div>
+                <div style="color:#2563eb; font-weight:700; font-size:0.7rem; margin-top:2px;">📈 ${p.impacto}</div>
+            </div>
+        `).join('');
 
-        // Safely get category breakdown
-        let breakdown = {};
-        try {
-            breakdown = this.store.getCategoryBreakdown();
-        } catch (e) { console.error('Error fetching breakdown', e); return ''; }
+        let wLines = (plan.plan_semanal || []).map(s => `
+            <div style="flex:1; background:#f8fafc; padding:8px; border-radius:10px; border:1px solid #eff6ff; min-width:100px;">
+                <div style="font-size:0.6rem; font-weight:800; color:#94a3b8;">SEM ${s.semana}</div>
+                <div style="font-size:0.75rem; font-weight:700; color:#1e293b;">${s.accion}</div>
+                ${s.monto > 0 ? `<div style="font-size:0.75rem; color:#2563eb; font-weight:800;">$${s.monto.toLocaleString()}</div>` : ''}
+            </div>
+        `).join('');
 
-        let html = `
-            <div class="card" style="grid-column: 1 / -1;">
-                <div class="card-header">
-                     <h3>Seguimiento de Presupuesto Mensual 🔍</h3>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+        return `
+            <div style="background:#eff6ff; padding:12px; border-radius:12px; margin-bottom:1.5rem; border-left:4px solid #2563eb;">
+                <p style="margin:0; font-size:0.85rem; color:#1e40af; font-weight:700;">🏠 Diagnóstico: ${plan.diagnostico_corto}</p>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <div style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Prioridades</div>
+                ${pLines}
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <div style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Plan Semanal</div>
+                <div style="display:flex; gap:8px; overflow-x:auto;">${wLines}</div>
+            </div>
+            <div style="background:#fffbeb; padding:12px; border-radius:12px; border:1px solid #fde68a; margin-bottom:1.5rem;">
+                <div style="font-weight:800; font-size:0.7rem; color:#92400e;">REGLA DE CONTROL</div>
+                <p style="margin:0; font-size:0.75rem; color:#78350f;">${plan.regla_control}</p>
+            </div>
+            <button class="btn btn-primary" id="apply-plan-btn" style="width:100%; background:#2563eb; font-weight:700;">Aplicar Plan a Metas</button>
         `;
+    }
 
-        // We must show progress for ANY category that either HAS A BUDGET or HAS SPENDING.
-        // Previously we only looped over Object.keys(budgets), missing unbudgeted spending entirely.
-        const categoriesToDisplay = new Set([
-            ...Object.keys(budgets),
-            ...Object.keys(breakdown).filter(catId => breakdown[catId] > 0)
-        ]);
+    async _handleGeneratePlan() {
+        const btn = document.getElementById('generate-month-plan-btn');
+        const content = document.getElementById('cfo-plan-content');
+        if (this.store.transactions.length < 5) { alert("Registra al menos 5 movimientos."); return; }
 
-        categoriesToDisplay.forEach(catId => {
-            const limit = budgets[catId] || 0; // Might be undefined if unbudgeted
-            const spent = breakdown[catId] || 0;
-            const cat = this.store.categories.find(c => c.id === catId);
+        btn.disabled = true; btn.innerHTML = '🕒 Generando...';
+        content.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner"></div></div>';
 
-            // Display if there is a limit OR if there is unbudgeted spending
-            if (!cat || (limit <= 0 && spent <= 0)) return;
+        const history = this.store.getHistorySummary(3);
+        const config = this.store.config;
+        const now = new Date();
+        const breakdown = this.store.getCategoryBreakdown(now.getMonth(), now.getFullYear());
 
-            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
-            const remaining = limit - spent;
-            const exceeded = spent - limit;
+        const contextData = {
+            ingresoMensualProm: history.reduce((a, b) => a + b.income, 0) / history.length,
+            gastosFijosProm: (config.fixed_expenses || []).reduce((a, b) => a + b.amount, 0),
+            ahorroActual: history.reduce((a, b) => a + (b.savings || 0), 0),
+            deudaTotal: config.total_debt || 0,
+            categoriasTopGasto: Object.entries(breakdown).sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]),
+            metasActuales: this.store.getGoals().map(g => ({ nombre: g.name, objetivo: g.target_amount }))
+        };
 
-            // Directive Color Logic
-            let color = '#4CAF50'; // Green: On Track
-            let statusText = '✅ En orden';
-
-            if (limit <= 0 && spent > 0) {
-                color = '#F44336'; // Red: Unbudgeted expense
-                statusText = `🚨 Sin presupuesto: Gastaste ${this.formatCurrency(spent)}`;
-            } else if (percent >= 80 && percent <= 100) {
-                color = '#FF9800'; // Orange: Warning
-                statusText = `⚠️ Cuidado (80% usado)`;
-            } else if (percent > 100) {
-                color = '#F44336'; // Red: Action Needed
-                statusText = `🚨 Te pasaste por ${this.formatCurrency(exceeded)}!`;
+        try {
+            const plan = await this.aiAdvisor.getMonthPlan(contextData);
+            if (plan) {
+                await this.store.saveMonthPlan(now.getFullYear(), now.getMonth(), plan);
+                this.render();
             }
+        } catch (e) { alert("Error IA"); this.render(); }
+    }
 
-            html += `
-                <div class="budget-item" style="border-left: 3px solid ${color}; padding-left: 10px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                        <strong>${cat.name}</strong>
-                        <span style="font-weight:600; color:${color}">${statusText}</span>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #666; margin-bottom: 4px;">
-                        <span>Gastado: ${this.formatCurrency(spent)}</span>
-                        <span>Meta: ${this.formatCurrency(limit)}</span>
-                    </div>
+    async _handleApplyPlan(plan) {
+        if (!plan) return;
+        if (confirm("¿Aplicar cambios sugeridos?")) {
+            const hasEmergency = this.store.getGoals().some(g => g.type === 'EMERGENCY');
+            if (!hasEmergency) this.store.addGoal({ name: 'Fondo de Emergencia', target_amount: 5000000, current_amount: 0, type: 'EMERGENCY' });
+            alert("Aplicado con éxito.");
+            this.render();
+        }
+    }
 
-                    <div style="background: #eee; height: 10px; border-radius: 5px; overflow: hidden;">
-                        <div style="width: ${Math.min(percent, 100)}%; background: ${color}; height: 100%; transition: width 0.5s;"></div>
-                    </div>
-                    
-                    ${percent > 100 ?
-                    `<div style="font-size: 0.75rem; color: #D32F2F; margin-top: 5px; background: #FFEBEE; padding: 4px; border-radius: 4px;">
-                            💡 Acción: Reduce ${this.formatCurrency(exceeded)} en otros gastos para compensar.
-                        </div>`
-                    : ''}
-                </div>
-            `;
-        });
-
-        html += `</div></div>`;
-        return html;
+    async _handleSuggestSmartGoal() {
+        const box = document.getElementById('smart-goal-suggestion-box');
+        box.innerHTML = '<p style="text-align:center; font-size:0.8rem; color:#64748b;">Analizando...</p>';
+        const history = this.store.getHistorySummary(3);
+        const averages = {
+            ingresos_promedio: history.reduce((a, b) => a + b.income, 0) / history.length,
+            gastos_promedio: history.reduce((a, b) => a + b.expenses, 0) / history.length,
+            score_promedio: 85, perfil: this.store.config.spending_profile || 'BALANCEADO'
+        };
+        try {
+            const sug = await this.aiAdvisor.getSmartGoalSuggestion(averages);
+            if (sug) {
+                box.innerHTML = `<div style="background:#f9f5ff; border:1px solid #9C27B020; padding:15px; border-radius:15px; margin-bottom:1.5rem;">
+                    <div style="font-weight:800; color:#4a148c; font-size:0.8rem; margin-bottom:5px;">Suguerencia del CFO</div>
+                    <div style="font-weight:700; font-size:1rem; margin-bottom:5px;">${sug.nombre_meta}</div>
+                    <p style="font-size:0.75rem; color:#475569; margin-bottom:10px;">${sug.justificacion}</p>
+                    <button class="btn btn-primary" id="confirm-sug-btn" style="background:#9C27B0; width:100%; border-radius:10px;">Crear Meta ($${sug.monto_sugerido.toLocaleString()})</button>
+                </div>`;
+                document.getElementById('confirm-sug-btn').onclick = () => {
+                    this.store.addGoal({ type: sug.tipo_meta, name: sug.nombre_meta, target_amount: sug.monto_sugerido, current_amount: 0 });
+                    this.render();
+                };
+            }
+        } catch (e) { box.innerHTML = ''; }
     }
 
     showModal(title, textHTML) {
-        // Create modal container
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.style.zIndex = '9999'; // Ensure it stays on top of settings
-
-        const content = document.createElement('div');
-        content.className = 'modal-content';
-        content.style.maxWidth = '400px';
-
-        const header = document.createElement('div');
-        header.className = 'modal-header';
-
-        const h3 = document.createElement('h3');
-        h3.innerText = title;
-        h3.style.margin = '0';
-
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'close-modal';
-        closeBtn.innerHTML = '<i data-feather="x"></i>';
-        closeBtn.onclick = () => document.body.removeChild(modal);
-
-        header.appendChild(h3);
-        header.appendChild(closeBtn);
-
-        const body = document.createElement('div');
-        body.style.padding = '10px 0';
-        body.style.fontSize = '0.9rem';
-        body.style.lineHeight = '1.6';
-        body.style.color = 'var(--text-secondary)';
-        body.innerHTML = textHTML;
-
-        content.appendChild(header);
-        content.appendChild(body);
-        modal.appendChild(content);
-
+        modal.innerHTML = `<div class="modal-content" style="max-width:400px;">
+            <div class="modal-header"><h3>${title}</h3><button class="close-modal">&times;</button></div>
+            <div style="padding:10px 0; font-size:0.9rem; color:var(--text-secondary);">${textHTML}</div>
+        </div>`;
+        modal.querySelector('.close-modal').onclick = () => document.body.removeChild(modal);
         document.body.appendChild(modal);
-
-        // Render feather icons
-        if (window.feather) {
-            window.feather.replace();
-        }
-
-        // Entrance animation
-        requestAnimationFrame(() => {
-            modal.classList.remove('hidden');
-        });
-
-        // Close on clicking outside
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
-        });
-    }
-
-    toggleAiProvider(val) {
-        document.getElementById('gemini-key-group').style.display = (val === 'gemini') ? 'block' : 'none';
-        document.getElementById('openai-key-group').style.display = (val === 'openai') ? 'block' : 'none';
-
-        const res = document.getElementById('connection-result');
-        if (res) res.innerHTML = ''; // Clear status
-    }
-
-    async testAiConnection() {
-        // Find inputs directly based on active provider
-        const providerSelect = document.getElementById('ai-provider-select');
-        const provider = providerSelect ? providerSelect.value : 'gemini';
-        let apiKeyInput;
-
-        if (provider === 'gemini') apiKeyInput = document.querySelector('input[name="gemini_api_key"]');
-        else apiKeyInput = document.querySelector('input[name="openai_api_key"]');
-
-        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-        const statusEl = document.getElementById('connection-result');
-
-        if (!apiKey) {
-            statusEl.innerHTML = '<span style="color:#d32f2f;">❌ Falta la API Key</span>';
-            return;
-        }
-
-        statusEl.innerHTML = '<span style="color:#1976d2;">⏳ Probando conexión...</span>';
-
-        // Save original config to restore if needed
-        if (!this.store.config) this.store.config = {};
-        const originalConfig = { ...this.store.config };
-
-        // 1. Temporarily update config in memory
-        this.store.config.ai_provider = provider;
-        if (provider === 'gemini') this.store.config.gemini_api_key = apiKey;
-        else this.store.config.openai_api_key = apiKey;
-
-        // 2. Re-init Advisor with this new temporary config
-        // Pass the STORE (not config) as expected by AIAdvisor constructor
-        this.aiAdvisor = new AIAdvisor(this.store);
-
-        try {
-            await this.aiAdvisor.checkConnection(apiKey);
-
-            // Success! Save for real.
-            this.store.updateConfig(this.store.config);
-            statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ ¡Conexión Exitosa! API Configurada.</span>';
-            setTimeout(() => { if (statusEl) statusEl.innerHTML = '<span style="color:#2e7d32; font-weight:bold;">✅ Motor de IA Conectado y Listo</span>'; }, 2500);
-
-        } catch (error) {
-            console.error(error);
-            let msg = 'Error de conexión';
-
-            // Friendly Error Messages (v68.K)
-            if (error.message.includes('400') || error.message.includes('INVALID_KEY') || error.message.includes('API_KEY_INVALID')) {
-                msg = `❌ Llave incorrecta. Detalle original: ${error.message}`;
-            } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
-                msg = `🛑 Límite de la API alcanzado (Se te acabaron los tokens). Detalle original: ${error.message}`;
-            } else if (error.message.includes('QUOTA_EXCEEDED')) {
-                msg = `🛑 Sin saldo. Haz upgrade de tu cuenta de API de Google/OpenAI. Detalle original: ${error.message}`;
-            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                msg = `📡 Sin internet o conexión bloqueada. Detalle original: ${error.message}`;
-            } else {
-                msg = `❌ Error API: ${error.message}`;
-            }
-
-            if (statusEl) statusEl.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">${msg}</span>`;
-
-            // Revert config on error to avoid breaking app state with bad key
-            this.store.config = originalConfig;
-            this.aiAdvisor = new AIAdvisor(this.store);
-        }
+        requestAnimationFrame(() => modal.classList.remove('hidden'));
     }
 }
