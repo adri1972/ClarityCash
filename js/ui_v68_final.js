@@ -4436,18 +4436,25 @@ class UIManager {
                          </button>
                      </div>
                  `
-            },
-            {
+            }
+        ];
+
+        // --- 🛡️ ADMIN CHECK: Only adri1972@gmail.com can see IA settings ---
+        const user = auth.currentUser;
+        const isAdmin = user && (user.email === 'adri1972@gmail.com' || user.uid === 'u7xLwG9m5ePzrXqYt'); // UID fallback or known email
+
+        if (isAdmin) {
+            sections.push({
                 id: 'ia', title: 'Inteligencia Artificial', icon: '🧠', content: `
                      <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Configuración de llaves de acceso para el motor de IA.</p>
                      <div class="form-group">
                          <label>Gemini API Key</label>
-                         <input type="password" name="gemini_api_key" value="${conf.gemini_api_key || ''}" placeholder="Ingresa tu API Key (puedes verla si eres admin)">
-                         <small style="color: #64748b; font-size: 0.75rem;">Esta llave permite el escaneo de recibos y el análisis predictivo.</small>
+                         <input type="password" id="gemini_api_key_input" name="gemini_api_key" value="${conf.gemini_api_key || ''}" placeholder="Ingresa tu API Key">
+                         <small style="color: #64748b; font-size: 0.75rem;">Esta sección es privada para el administrador.</small>
                      </div>
                  `
-            }
-        ];
+            });
+        }
 
         this.container.innerHTML = `
             <div class="centro-financiero-layout" style="max-width: 800px; margin: 0 auto; padding-bottom: 100px;">
