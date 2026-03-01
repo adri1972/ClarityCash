@@ -864,8 +864,9 @@ class UIManager {
         this.pageTitle.textContent = ''; // Limpiamos el título superior para centrar la atención en la tarjeta
         this.container.innerHTML = `
             <div style="max-width:400px; margin: 60px auto; padding: 40px 30px; background: white; border-radius: 24px; box-shadow: var(--shadow-lg); text-align: center;">
-                <img src="assets/logo.png" style="width:64px; margin-bottom:12px;">
-                <p style="color:#475569; font-size:1rem; font-weight:400; margin-bottom:35px; letter-spacing: -0.01em;">Entiende tu dinero. Decide mejor.</p>
+                <img src="assets/logo.png" style="width:64px; margin-bottom:16px;">
+                <h1 style="font-size: 1.75rem; font-weight: 600; color: var(--text-main); margin: 0 0 4px 0; letter-spacing: -0.02em;">Clarity Cash</h1>
+                <p style="color:#64748b; font-size:0.95rem; font-weight:400; margin-bottom:35px;">Entiende tu dinero. Decide mejor.</p>
                 
                 <h2 style="margin-bottom:25px; font-weight:800; color:var(--text-main); font-size:1.5rem;">Iniciar sesión</h2>
                 
