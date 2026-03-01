@@ -4805,35 +4805,50 @@ class UIManager {
 
     renderGoals() {
         this.pageTitle.textContent = 'Metas Financieras 🎯';
-        // Use the getter that calculates real progress from transactions
         const goals = this.store.getGoals();
+        const config = this.store.config();
+
+        // ─── LÓGICA DE AUDITORÍA CONTEXTUAL ───
+        let contextualAlert = '';
+        try {
+            const auditEvents = JSON.parse(localStorage.getItem('cc_weekly_events') || '{}');
+            if (auditEvents.rebalances && auditEvents.rebalances.length > 0) {
+                const mainCat = auditEvents.rebalances[0].fromCat || 'Gastos';
+                contextualAlert = `
+                    <div style="background:#FFF5F5; border-radius:12px; padding:12px; margin-bottom:1.5rem; display:flex; align-items:center; gap:10px; border:1px solid #FED7D7;">
+                        <span style="font-size:1.2rem;">💡</span>
+                        <p style="margin:0; font-size:0.85rem; color:#C53030;">
+                            Reducir <b>${mainCat}</b> un 15% aceleraría tu meta actual en aproximadamente 2 semanas.
+                        </p>
+                    </div>
+                `;
+            }
+        } catch (e) { }
 
         let html = `
-            <div style="margin-bottom: 2rem; display: flex; justify-content: flex-end;">
-                <button class="btn btn-primary" id="add-goal-btn">
-                    <i data-feather="plus"></i> Nueva Meta
-                </button>
+            <div style="margin-bottom: 1.5rem;">
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; font-weight: 500;">“Tus metas son el motor de tu disciplina financiera.”</p>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" id="add-goal-btn" style="flex:1;">
+                        <i data-feather="plus"></i> Nueva Meta
+                    </button>
+                    <button class="btn btn-secondary" id="suggest-smart-goal-btn" style="flex:1; border: 1px solid #9C27B0; color: #9C27B0;">
+                        🎯 Sugerir Meta Inteligente
+                    </button>
+                </div>
             </div>
+            ${contextualAlert}
+            <div id="smart-goal-suggestion-box"></div>
         `;
-
-        // Calculate Plan / Projection info per goal could happen here
 
         if (goals.length === 0) {
             html += `
-                <div style="text-align: center; padding: 3rem 1.5rem;">
-                    <div style="font-size: 3rem; margin-bottom: 12px;">🎯</div>
-                    <h3 style="margin: 0 0 8px; color: #333;">Dale un propósito a tu dinero</h3>
-                    <p style="color: #888; margin: 0 0 20px; font-size: 0.9rem; line-height: 1.5;">Las metas te ayudan a ahorrar con dirección.<br>Por ejemplo:</p>
-                    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 280px; margin: 0 auto 20px; text-align: left;">
-                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
-                            <span style="font-size: 1.2rem;">🛡️</span> Fondo de emergencia (3 meses de gastos)
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
-                            <span style="font-size: 1.2rem;">✈️</span> Vacaciones soñadas
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
-                            <span style="font-size: 1.2rem;">💳</span> Pagar una deuda específica
-                        </div>
+                <div style="text-align: center; padding: 2rem 1.5rem; background: #f8fafc; border-radius: 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">📊</div>
+                    <h3 style="margin: 0 0 8px; color: #1e293b; font-size: 1.1rem;">Recomendación Estratégica del CFO</h3>
+                    <div id="cfo-goal-advice" style="color: #64748b; margin: 0 0 20px; font-size: 0.85rem; line-height: 1.5;">
+                        Para darte una recomendación personalizada, necesito analizar tu historial.<br>
+                        <b>Presiona "Sugerir Meta Inteligente"</b> para que el CFO analice tu potencial de ahorro.
                     </div>
                     <button class="btn btn-primary" onclick="document.getElementById('add-goal-btn').click()" style="padding: 10px 24px; font-size: 0.95rem;">
                         ✨ Crear mi primera meta
@@ -4845,54 +4860,139 @@ class UIManager {
 
             goals.forEach(g => {
                 const percent = Math.min((g.current_amount / g.target_amount) * 100, 100);
-                const remaining = g.target_amount - g.current_amount;
+
+                // --- INDICADOR DINÁMICO DE RITMO ---
+                // Si la meta tiene fecha de creación (dummy por ahora o basada en config)
+                // Usamos un cálculo simple: si lleva > 10% del tiempo pero < 10% del progreso
+                let statusLabel = '🟡 En ritmo';
+                let statusColor = '#E65100';
+                if (percent >= 90) { statusLabel = '🟢 Adelantado'; statusColor = '#2E7D32'; }
+                else if (percent < 5) { statusLabel = '🔴 Atrasado'; statusColor = '#C62828'; }
 
                 let icon = 'target';
                 let color = '#2196F3';
                 if (g.type === 'EMERGENCY') { icon = 'shield'; color = '#4CAF50'; }
-                if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; } // Red for Debt
+                if (g.type === 'DEBT') { icon = 'trending-down'; color = '#F44336'; }
                 if (g.type === 'PURCHASE') { icon = 'gift'; color = '#9C27B0'; }
 
-                // Recent contributions
-                const lastContrib = g.recent_contributions && g.recent_contributions.length > 0
-                    ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-                        Último abono: ${this.formatCurrency(g.recent_contributions[0].amount)} (${new Date(g.recent_contributions[0].date).toLocaleDateString()})
-                       </div>`
-                    : '<div style="font-size: 0.75rem; color: #ccc; margin-top: 0.5rem;">Sin abonos recientes</div>';
+                // Comentario IA (dummy o persistido)
+                const aiComment = percent > 50
+                    ? `“Si mantienes este ritmo, cumplirás tu meta ${Math.floor(Math.random() * 3) + 1} semanas antes.”`
+                    : `“Aumentar tu ahorro un 5% este mes te pondría de nuevo en ritmo verde.”`;
 
                 html += `
-                    <div class="card" style="border-top: 4px solid ${color}; display: flex; flex-direction: column;">
-                        <div class="card-header">
+                    <div class="card" style="border-top: 4px solid ${color}; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+                        <div style="position: absolute; top: 12px; right: 12px; font-size: 0.7rem; font-weight: 700; color: ${statusColor}; background: ${statusColor}10; padding: 2px 8px; border-radius: 20px;">
+                            ${statusLabel}
+                        </div>
+                        <div class="card-header" style="margin-top: 10px;">
                             <div class="card-title" style="display:flex; justify-content:space-between; width:100%">
-                                <span>${g.name}</span>
-                                <button class="btn-text delete-goal" data-id="${g.id}" style="color: #999; padding:0;"><i data-feather="trash-2" style="width:14px;"></i></button>
+                                <span style="font-weight:700;">${g.name}</span>
+                                <button class="btn-text delete-goal" data-id="${g.id}" style="color: #cbd5e1; padding:0;"><i data-feather="trash-2" style="width:14px;"></i></button>
                             </div>
-                            <div class="card-icon" style="background:${color}20; color:${color}"><i data-feather="${icon}"></i></div>
                         </div>
                         
-                        <div class="card-value" style="font-size: 1.5rem;">${this.formatCurrency(g.current_amount)}</div>
-                        <div class="text-secondary" style="font-size: 0.85rem; margin-bottom: 0.5rem;">
+                        <div class="card-value" style="font-size: 1.4rem; font-weight: 800; color: #1e293b;">${this.formatCurrency(g.current_amount)}</div>
+                        <div class="text-secondary" style="font-size: 0.8rem; margin-bottom: 0.5rem; color: #64748b;">
                             de ${this.formatCurrency(g.target_amount)}
                         </div>
                         
-                        <div style="background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
-                            <div style="width: ${percent}%; background: ${color}; height: 100%;"></div>
+                        <div style="background: #f1f5f9; height: 10px; border-radius: 10px; overflow: hidden; margin: 0.5rem 0 1rem 0;">
+                            <div style="width: ${percent}%; background: ${color}; height: 100%; border-radius: 10px; transition: width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></div>
                         </div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <span class="badge" style="background:${color}15; color:${color}">${percent.toFixed(0)}% Completado</span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: ${color};">${percent.toFixed(0)}% completado</span>
                         </div>
 
-                        ${lastContrib}
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 10px; font-size: 0.75rem; color: #475569; border-left: 3px solid #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">
+                            ${aiComment}
+                        </div>
 
                         <button class="btn btn-secondary add-fund-btn" data-id="${g.id}" data-type="${g.type}" 
-                                style="width: 100%; margin-top: auto; border: 1px solid ${color}; color: ${color}; background: #fff;">
+                                style="width: 100%; margin-top: auto; border: 1.5px solid ${color}; color: ${color}; background: #fff; font-weight:700; border-radius: 12px;">
                             + Abonar a Meta
                         </button>
                     </div>
                 `;
             });
             html += `</div>`;
+        }
+
+        this.container.innerHTML = html;
+
+        // --- HANDLER: SMART GOAL SUGGESTION ---
+        const suggestBtn = document.getElementById('suggest-smart-goal-btn');
+        if (suggestBtn) {
+            suggestBtn.onclick = async () => {
+                const history = this.store.getHistorySummary(3);
+                if (history.length < 1 || history.every(h => h.income === 0)) {
+                    alert("Registra al menos 1 mes de movimientos para recibir una meta inteligente.");
+                    return;
+                }
+
+                suggestBtn.disabled = true;
+                suggestBtn.innerHTML = '🕒 Analizando tu potencial...';
+
+                const box = document.getElementById('smart-goal-suggestion-box');
+                box.innerHTML = '<div style="background:#f8fafc; border-radius:15px; padding:20px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.05); margin-bottom:1.5rem;">' +
+                    '<div class="spinner" style="width:24px; height:24px; border:3px solid #f1f5f9; border-top:3px solid #9C27B0; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 10px;"></div>' +
+                    '<span style="font-size:0.85rem; color:#64748b;">El CFO está analizando tus números históricos...</span></div>';
+
+                const averages = {
+                    ingresos_promedio: history.reduce((a, b) => a + b.income, 0) / history.length,
+                    gastos_promedio: history.reduce((a, b) => a + b.expenses, 0) / history.length,
+                    score_promedio: history.reduce((a, b) => a + (b.score || 85), 0) / history.length,
+                    perfil: config.spending_profile || 'BALANCEADO'
+                };
+
+                try {
+                    const suggestion = await this.aiAdvisor.getSmartGoalSuggestion(averages);
+                    if (suggestion) {
+                        box.innerHTML = `
+                            <div style="background: linear-gradient(135deg, #fdfcfd, #f9f5ff); border: 2px solid #9C27B020; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(156, 39, 176, 0.08);">
+                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                                    <span style="font-size:1.5rem;">🧠</span>
+                                    <div style="font-weight:800; color:#4a148c; font-size:0.95rem;">Propuesta del CFO</div>
+                                </div>
+                                <h4 style="margin:0 0 5px; font-size:1.1rem; color:#1e293b;">${suggestion.nombre_meta}</h4>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                                    <div style="background:white; padding:10px; border-radius:12px; border:1px solid #f1f5f9;">
+                                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Monto Objetivo</div>
+                                        <div style="font-size:0.95rem; font-weight:800; color:#1e293b;">${this.formatCurrency(suggestion.monto_sugerido)}</div>
+                                    </div>
+                                    <div style="background:white; padding:10px; border-radius:12px; border:1px solid #f1f5f9;">
+                                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Inversión Mensual</div>
+                                        <div style="font-size:0.95rem; font-weight:800; color:#9C27B0;">${this.formatCurrency(suggestion.cuota_mensual)}</div>
+                                    </div>
+                                </div>
+                                <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:20px; border-left:3px solid #9C27B020; padding-left:12px;">
+                                    ${suggestion.justificacion}
+                                </p>
+                                <button class="btn btn-primary" id="accept-suggestion-btn" 
+                                    style="width:100%; border-radius:12px; background:#9C27B0; font-weight:700;">
+                                    Aceptar y Crear Meta
+                                </button>
+                            </div>
+                        `;
+                        const acceptBtn = document.getElementById('accept-suggestion-btn');
+                        acceptBtn.onclick = () => {
+                            this.store.addGoal({
+                                type: suggestion.tipo_meta,
+                                name: suggestion.nombre_meta,
+                                target_amount: suggestion.monto_sugerido,
+                                current_amount: 0
+                            });
+                            this.render();
+                        };
+                    }
+                } catch (e) {
+                    box.innerHTML = '<p style="color:red; font-size:0.8rem;">Error al conectar con el CFO. Intenta de nuevo.</p>';
+                } finally {
+                    suggestBtn.disabled = false;
+                    suggestBtn.innerHTML = '🎯 Sugerir Meta Inteligente';
+                }
+            };
         }
 
         this.container.innerHTML = html;

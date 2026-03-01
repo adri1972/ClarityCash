@@ -848,4 +848,48 @@ ${JSON.stringify(weeklyData, null, 2)}`;
             throw error;
         }
     }
+
+    /**
+     * SMART GOAL SUGGESTION — IA propone metas basadas en datos
+     */
+    async getSmartGoalSuggestion(historicalData) {
+        const apiKey = this.getApiKey();
+        const systemPrompt = `Eres el CFO estratégico de ClarityCash. 
+Tu misión es proponer metas financieras realistas basadas en datos reales del usuario.
+No inventes cifras. No seas dramático. Lenguaje claro y directo.
+Propón metas alcanzables (no agresivas ni irreales).
+Siempre explica el porqué en términos simples.
+
+Responde SIEMPRE en formato JSON:
+{
+  "tipo_meta": "EMERGENCY | DEBT | PURCHASE | SAVINGS",
+  "nombre_meta": "Nombre sugerido",
+  "monto_sugerido": 0,
+  "plazo_meses": 0,
+  "cuota_mensual": 0,
+  "justificacion": "Breve explicación estratégica (máx 120 palabras)"
+}`;
+
+        const userPrompt = `Datos del usuario: ${JSON.stringify(historicalData, null, 2)}`;
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                    generationConfig: { maxOutputTokens: 500, temperature: 0.7 }
+                })
+            });
+
+            if (!response.ok) throw new Error('API Error');
+            const data = await response.json();
+            const text = data.candidates[0].content.parts[0].text;
+            return JSON.parse(text.replace(/```json|```/g, '').trim());
+        } catch (e) {
+            console.error('Smart Goal Error:', e);
+            return null;
+        }
+    }
 }
