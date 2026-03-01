@@ -2011,100 +2011,99 @@ class UIManager {
             return { ...c, spent, limit, percent, status };
         }).filter(i => i !== null);
 
-        // Sort by Severity inside groups
-        items.sort((a, b) => {
-            const aOver = (a.status === 'OVER' || a.status === 'OVER_UNBUDGETED');
-            const bOver = (b.status === 'OVER' || b.status === 'OVER_UNBUDGETED');
-            if (aOver && !bOver) return -1;
-            if (bOver && !aOver) return 1;
-            return b.percent - a.percent;
-        });
-
-        const groups = {
+        const groupLabels = {
             'FIXED': '📌 Gastos Fijos (Compromisos)',
             'AHORRO': '💰 Prioridad de Ahorro',
-            'NECESIDADES': 'Necesidades Básicas',
-            'VIVIENDA': 'Hogar y Servicios',
-            'FINANCIERO': 'Obligaciones Financieras',
-            'CRECIMIENTO': 'Educación y Desarrollo',
-            'ESTILO_DE_VIDA': 'Estilo de Vida',
-            'OTROS': 'Otros Gastos'
+            'NECESIDADES': '🍎 Necesidades Básicas',
+            'VIVIENDA': '🏠 Hogar y Servicios',
+            'FINANCIERO': '🏦 Obligaciones Financieras',
+            'CRECIMIENTO': '📚 Educación y Desarrollo',
+            'ESTILO_DE_VIDA': '✨ Estilo de Vida',
+            'OTROS': '📦 Otros Gastos'
         };
 
         const fixedIds = ['cat_1', 'cat_viv_servicios', 'cat_viv_gas', 'cat_viv_net', 'cat_viv_cel', 'cat_viv_man', 'cat_fin_5', 'cat_fin_int'];
 
-        const groupedItems = {
-            'FIXED': items.filter(i => fixedIds.includes(i.id)),
-            'AHORRO': items.filter(i => i.id === 'cat_5'),
-            'NECESIDADES': items.filter(i => i.group === 'NECESIDADES' && !fixedIds.includes(i.id)),
-            'VIVIENDA': items.filter(i => i.group === 'VIVIENDA' && !fixedIds.includes(i.id)),
-            'FINANCIERO': items.filter(i => i.group === 'FINANCIERO' && !fixedIds.includes(i.id) && i.id !== 'cat_5'),
-            'CRECIMIENTO': items.filter(i => i.group === 'CRECIMIENTO' && !fixedIds.includes(i.id)),
-            'ESTILO_DE_VIDA': items.filter(i => i.group === 'ESTILO_DE_VIDA' && !fixedIds.includes(i.id)),
-            'OTROS': items.filter(i => i.group === 'OTROS' && !fixedIds.includes(i.id))
+        const getGroupKey = (i) => {
+            if (fixedIds.includes(i.id)) return 'FIXED';
+            if (i.id === 'cat_5') return 'AHORRO';
+            return i.group || 'OTROS';
         };
+
+        const groupData = {};
+        Object.keys(groupLabels).forEach(key => {
+            groupData[key] = { label: groupLabels[key], items: [], hasOver: false, maxPercent: 0 };
+        });
+
+        items.forEach(item => {
+            const key = getGroupKey(item);
+            if (!groupData[key]) groupData[key] = { label: item.group || 'Otros', items: [], hasOver: false, maxPercent: 0 };
+
+            groupData[key].items.push(item);
+            if (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') groupData[key].hasOver = true;
+            if (item.percent > groupData[key].maxPercent) groupData[key].maxPercent = item.percent;
+        });
+
+        const sortedGroups = Object.keys(groupData)
+            .filter(key => groupData[key].items.length > 0)
+            .sort((a, b) => {
+                const gA = groupData[a];
+                const gB = groupData[b];
+                if (gA.hasOver && !gB.hasOver) return -1;
+                if (gB.hasOver && !gA.hasOver) return 1;
+                return gB.maxPercent - gA.maxPercent;
+            });
 
         let html = `
             <div class="details-card">
                 <div class="card-header-clean">
-                    <h4>Seguimiento de Presupuesto</h4>
-                    <button class="btn-link" onclick="document.querySelector('[data-view=settings]').click()">Configurar</button>
+                    <h4>Seguimiento de Presupuesto 📊</h4>
                 </div>
-                <div class="budget-list-compact" style="max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                <div class="budget-list-compact" style="max-height: 550px; overflow-y: auto; padding-right: 5px;">
         `;
 
         if (items.length === 0) {
             html += `<p class="empty-state">No hay gastos ni presupuestos activos este mes.</p>`;
         } else {
-            const renderItem = (item) => {
-                const barColor = (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') ? '#D32F2F' : (item.status === 'WARN' ? '#FFA000' : '#388E3C');
+            const renderRow = (item) => {
+                const barColor = (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') ? '#ef4444' : (item.status === 'WARN' ? '#f59e0b' : '#10b981');
                 const width = Math.min(item.percent, 100);
-
-                let rowStyle = '';
-                let alertIcon = '';
-                let overMsg = '';
-
-                if (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') {
-                    rowStyle = 'background: #FFEBEE; border-left: 4px solid #D32F2F; padding: 6px 8px; border-radius: 4px;';
-                    alertIcon = '🚨 ';
-                    if (item.status === 'OVER_UNBUDGETED') {
-                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">🚨 Gastaste ${this.formatCurrency(item.spent)} sin presupuesto!</div>`;
-                    } else {
-                        overMsg = `<div style="color: #D32F2F; font-size: 0.75rem; font-weight: 600; margin-top: 4px;">¡Te pasaste por ${this.formatCurrency(item.spent - item.limit)}!</div>`;
-                    }
-                } else if (item.status === 'WARN') {
-                    alertIcon = '⚠️ ';
-                }
+                const isOver = item.status === 'OVER' || item.status === 'OVER_UNBUDGETED';
 
                 return `
-                    <div class="budget-row" style="${rowStyle} margin-bottom: 0.8rem; position: relative;">
-                        <div class="budget-info" style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                            <span class="cat-name" style="font-weight: 500; font-size: 0.9rem;">${alertIcon}${item.name}</span>
-                            <span class="budget-vals text-muted" style="font-size: 0.8rem;">
-                                ${this.formatCurrency(item.spent)} 
-                                ${item.limit > 0 ? `/ <span style="font-weight:600;">${this.formatCurrency(item.limit)}</span>` : ''}
+                    <div class="budget-row" style="margin-bottom: 0.8rem; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                            <span style="font-weight: 500; font-size: 0.85rem; color: ${isOver ? '#dc2626' : '#1e293b'};">${isOver ? '🚨 ' : ''}${item.name}</span>
+                            <span style="font-size: 0.75rem; color: #64748b;">
+                                ${this.formatCurrency(item.spent)} / <span style="font-weight: 600;">${item.limit > 0 ? this.formatCurrency(item.limit) : 'Sin Pres.'}</span>
                             </span>
                         </div>
-                        <div class="progress-track" style="height: 6px; background: #eee; border-radius: 3px; overflow: hidden;">
-                             <div class="progress-fill" style="width: ${width}%; background: ${barColor}; height: 100%;"></div>
+                        <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
+                            <div style="width: ${width}%; height: 100%; background: ${barColor};"></div>
                         </div>
-                        ${overMsg}
+                        ${isOver ? `<div style="color: #dc2626; font-size: 0.7rem; font-weight: 600; margin-top: 4px;">Excedido por ${this.formatCurrency(Math.max(0, item.spent - item.limit))}</div>` : ''}
                     </div>
                 `;
             };
 
-            Object.keys(groups).forEach(gKey => {
-                const groupItems = groupedItems[gKey];
-                if (groupItems && groupItems.length > 0) {
-                    html += `
-                        <div style="margin-bottom: 1.2rem;">
-                            <h5 style="margin: 0 0 10px 0; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
-                                ${groups[gKey]}
-                            </h5>
-                            ${groupItems.map(renderItem).join('')}
+            sortedGroups.forEach(key => {
+                const group = groupData[key];
+                group.items.sort((a, b) => b.percent - a.percent);
+
+                html += `
+                    <details ${group.hasOver ? 'open' : ''} style="margin-bottom: 1rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+                        <summary style="padding: 12px 16px; font-weight: 700; font-size: 0.9rem; color: ${group.hasOver ? '#b91c1c' : '#475569'}; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="transition: transform 0.2s;">▶</span>
+                                ${group.label}
+                            </div>
+                            ${group.hasOver ? '<span style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:2px 8px; border-radius:10px;">EXCEDIDO</span>' : ''}
+                        </summary>
+                        <div style="padding: 10px 16px; background: #fff;">
+                            ${group.items.map(i => renderRow(i)).join('')}
                         </div>
-                    `;
-                }
+                    </details>
+                `;
             });
         }
 
