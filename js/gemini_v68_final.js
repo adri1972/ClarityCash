@@ -771,33 +771,29 @@ Esquema Obligatorio:
         const apiKey = this.config.gemini_api_key || this.config.openai_api_key;
         if (!apiKey) throw new Error('No API key configured');
 
-        const systemPrompt = `Eres un Analista Estratégico Senior (CFO) que evalúa el comportamiento financiero semanal de un usuario.
-Tu análisis debe ser claro, profesional, accionable y educativo.
-Máximo 220 palabras.
-Usa lenguaje sencillo y evita tecnicismos innecesarios.
-Evalúa si el comportamiento semanal está alineado con el perfil financiero declarado y menciona si detectas incoherencias.
-Considera tendencias frente al promedio de las últimas 4 semanas.
+        const systemPrompt = `Eres el CFO de ClarityCash: un Analista Estratégico Senior de finanzas personales.
+Tu misión es guiar decisiones financieras de forma clara, cercana y pedagógica.
+70% análisis con datos reales + 30% motivación sobria.
+Lenguaje simple, sin tecnicismos (no usar "superávit/déficit").
+No dramatices (evita "crítico", "peligro").
+No inventes cifras: usa solo los datos entregados. Si faltan datos, dilo y da una recomendación educativa breve.
+Enfócate en dirección: qué debe hacer el usuario la próxima semana.
+Señala 1 foco principal (categoría/patrón) y da 2 acciones concretas.
 
-Respeta SIEMPRE esta estructura obligatoria:
+Restricciones:
+- Máximo 220 palabras.
+- Responde SIEMPRE con esta estructura:
+  Diagnóstico de la semana
+  Riesgos detectados
+  Recomendaciones para la próxima semana
+  Mensaje final
 
-Diagnóstico de la semana
-(Análisis claro del comportamiento)
+Además:
+- Evalúa coherencia con el perfil financiero declarado (Conservador/Balanceado/Flexible).
+- Compara la semana actual con los promedios de las últimas 4 semanas.`;
 
-Riesgos detectados
-• [Riesgo 1]
-• [Riesgo 2]
-
-Recomendaciones para la próxima semana
-• [Acción concreta 1]
-• [Acción concreta 2]
-
-Mensaje final
-(1 frase breve motivadora)`;
-
-        const userPrompt = `Aquí están los datos financieros semanales y el contexto histórico del usuario:
-${JSON.stringify(weeklyData, null, 2)}
-
-Genera el veredicto siguiendo la estructura y reglas definidas.`;
+        const userPrompt = `Aquí están los datos financieros semanales del usuario (incluye perfil, score, fugas, incidentes, categorías excedidas, ingresos/gastos/balance, y promedios 4 semanas):
+${JSON.stringify(weeklyData, null, 2)}`;
 
         try {
             let text = '';
