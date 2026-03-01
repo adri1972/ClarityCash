@@ -1580,7 +1580,7 @@ class UIManager {
 
                     <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
                         <span>Usado: <b>${this.formatCurrency(used)}</b></span>
-                        <span>Presupuesto: <b>${this.formatCurrency(totalBudget)}</b></span>
+                        <span>Presupuesto Base: <b>${this.formatCurrency(disposableToOrganize)}</b></span>
                     </div>
                 </div>
                 

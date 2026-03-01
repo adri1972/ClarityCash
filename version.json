@@ -1,5 +1,5 @@
 {
-    "version": "72.4.ONBOARDING_LOANS",
-    "updatedAt": "2026-03-01T16:40:00Z",
-    "notes": "Feature: Integración del Onboarding (Paso 3) con el nuevo módulo de Préstamos (Deuda)."
+    "version": "72.5.FIX_DASHBOARD",
+    "updatedAt": "2026-03-01T16:45:00Z",
+    "notes": "Fix: Corrección de variable indefinida totalBudget en el Dashboard de inicio tras la migración al modelo de préstamos."
 }
