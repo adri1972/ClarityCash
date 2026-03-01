@@ -1,5 +1,4 @@
-// ClarityCash Stable Service Worker v69.MULTI-USER
-const CACHE_NAME = 'cc-integrated-v70-0';
+const CACHE_NAME = 'cc-integrated-v70-1';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -13,8 +12,10 @@ self.addEventListener('install', (event) => {
                 '/js/firebase-config.js',
                 '/js/auth.js',
                 '/js/data.js',
+                '/js/advisor.js',
                 '/js/ui_v68_final.js',
                 '/js/gemini_v68_final.js',
+                '/js/strategy_report_v68.js',
             ]);
         })
     );

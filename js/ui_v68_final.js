@@ -4441,7 +4441,8 @@ class UIManager {
 
         // --- 🛡️ ADMIN CHECK: Only robledo.adriana27@gmail.com can see IA settings ---
         const user = auth.currentUser;
-        const isAdmin = user && (user.email === 'robledo.adriana27@gmail.com' || user.uid === 'u7xLwG9m5ePzrXqYt'); // UID fallback or known email
+        const userEmail = user && user.email ? user.email.toLowerCase() : '';
+        const isAdmin = userEmail === 'robledo.adriana27@gmail.com' || (user && user.uid === 'u7xLwG9m5ePzrXqYt');
 
         if (isAdmin) {
             sections.push({
