@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-integrated-v70-6';
+const CACHE_NAME = 'cc-integrated-v70-7';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();

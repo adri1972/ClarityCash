@@ -818,7 +818,7 @@ class UIManager {
             { s: '#quick-expense-container', d: 'flex' },
             { s: '#quick-expense-fab', d: 'flex' },
             { s: '.top-bar .actions', d: 'flex' },
-            { s: '#help-fab', d: 'flex' }
+            { s: '.top-bar .actions', d: 'flex' }
         ];
 
         selectors.forEach(item => {
@@ -2091,7 +2091,7 @@ class UIManager {
                 group.items.sort((a, b) => b.percent - a.percent);
 
                 html += `
-                    <details ${group.hasOver ? 'open' : ''} style="margin-bottom: 1rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+                    <details ${group.hasOver ? 'open' : ''} style="margin-bottom: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
                         <summary style="padding: 12px 16px; font-weight: 700; font-size: 0.9rem; color: ${group.hasOver ? '#b91c1c' : '#475569'}; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="transition: transform 0.2s;">▶</span>
@@ -3963,7 +3963,7 @@ class UIManager {
         }
 
         const recomendacionHtml = `
-            <div style="background: ${recBoxColor}; color: ${recTextColor}; padding: 16px; border-radius: 12px; margin-top: 1.5rem; margin-bottom: 2rem;">
+            <div style="background: ${recBoxColor}; color: ${recTextColor}; padding: 16px; border-radius: 12px; margin-top: 2.5rem; margin-bottom: 2rem; border-left: 6px solid ${recTextColor};">
                 <h4 style="margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
                     <i data-feather="compass" style="width: 18px; height: 18px;"></i> Recomendación del mes
                 </h4>
