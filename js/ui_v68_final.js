@@ -861,33 +861,36 @@ class UIManager {
     // --- VISTAS DE AUTENTICACIÓN ---
 
     renderLogin() {
-        this.pageTitle.textContent = 'Bienvenido a ClarityCash';
+        this.pageTitle.textContent = ''; // Limpiamos el título superior para centrar la atención en la tarjeta
         this.container.innerHTML = `
-            <div style="max-width:400px; margin: 40px auto; padding: 30px; background: white; border-radius: 20px; box-shadow: var(--shadow-lg); text-align: center;">
-                <img src="assets/logo.png" style="width:60px; margin-bottom:15px;">
-                <h2 style="margin-bottom:8px;">Iniciar Sesión</h2>
-                <p style="color:#666; font-size:0.9rem; margin-bottom:25px;">Accede a tu panel financiero centralizado.</p>
+            <div style="max-width:400px; margin: 60px auto; padding: 40px 30px; background: white; border-radius: 24px; box-shadow: var(--shadow-lg); text-align: center;">
+                <img src="assets/logo.png" style="width:64px; margin-bottom:12px;">
+                <p style="color:#475569; font-size:1rem; font-weight:400; margin-bottom:35px; letter-spacing: -0.01em;">Entiende tu dinero. Decide mejor.</p>
+                
+                <h2 style="margin-bottom:25px; font-weight:800; color:var(--text-main); font-size:1.5rem;">Iniciar sesión</h2>
                 
                 <form id="login-form" style="text-align: left;">
                     <div style="margin-bottom:15px;">
-                        <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:5px;">Email</label>
-                        <input type="email" name="email" required placeholder="tu@email.com" style="width:100%; padding:12px; border:1.5px solid #eee; border-radius:12px;">
+                        <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px; color:var(--text-secondary);">Email</label>
+                        <input type="email" name="email" required placeholder="tu@email.com" style="width:100%; padding:14px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:1rem; outline:none;" onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#e2e8f0'">
                     </div>
                     <div style="margin-bottom:20px;">
-                        <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:5px;">Contraseña</label>
-                        <input type="password" name="password" required placeholder="••••••••" style="width:100%; padding:12px; border:1.5px solid #eee; border-radius:12px;">
+                        <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px; color:var(--text-secondary);">Contraseña</label>
+                        <input type="password" name="password" required placeholder="••••••••" style="width:100%; padding:14px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:1rem; outline:none;" onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#e2e8f0'">
                     </div>
-                    <div id="login-error" style="color:#C62828; font-size:0.8rem; margin-bottom:15px; display:none;"></div>
+                    <div id="login-error" style="color:#C62828; font-size:0.8rem; margin-bottom:15px; display:none; background:#FFEBEE; padding:10px; border-radius:8px;"></div>
                     
-                    <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; border-radius:12px; font-weight:700;">Entrar</button>
+                    <button type="submit" class="btn btn-primary" style="width:100%; padding:16px; border-radius:14px; font-weight:700; font-size:1rem; box-shadow: 0 4px 12px rgba(128,0,64,0.2);">Iniciar sesión</button>
                 </form>
 
-                <p style="margin-top:25px; font-size:0.85rem; color:#666;">
-                    ¿No tienes cuenta? <a href="#" onclick="window.ui.navigate('register')" style="color:var(--primary-color); font-weight:700;">Regístrate</a>
-                </p>
-                <p style="margin-top:10px; font-size:0.8rem;">
-                    <a href="#" onclick="window.ui.showResetPassword()" style="color:#999;">Olvidé mi contraseña</a>
-                </p>
+                <div style="margin-top:30px;">
+                    <p style="font-size:0.9rem; color:#64748b;">
+                        ¿No tienes cuenta? <a href="#" onclick="window.ui.navigate('register')" style="color:var(--primary-color); font-weight:700; text-decoration:none;">Regístrate</a>
+                    </p>
+                    <p style="margin-top:15px; font-size:0.8rem;">
+                        <a href="#" onclick="window.ui.showResetPassword()" style="color:#94a3b8; text-decoration:none;">Olvidé mi contraseña</a>
+                    </p>
+                </div>
             </div>
         `;
 
@@ -905,7 +908,7 @@ class UIManager {
                 errBox.textContent = error;
                 errBox.style.display = 'block';
                 btn.disabled = false;
-                btn.textContent = 'Entrar';
+                btn.textContent = 'Iniciar sesión';
             } else {
                 // Al loguear, app.js recibirá el onAuthStateChanged y re-renderizará
             }

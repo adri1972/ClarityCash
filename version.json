@@ -1,5 +1,5 @@
 {
-    "version": "71.9.ONBOARD_FIX",
-    "updatedAt": "2026-03-01T16:02:00Z",
-    "notes": "Fix: Corregida asignación de categorías en onboarding y añadida Alimentación como opción."
+    "version": "72.0.BRAND_FINALIZE",
+    "updatedAt": "2026-03-01T16:15:00Z",
+    "notes": "Feature: Pantalla de Login final refinada (App Store Ready). Nuevo tagline y jerarquía visual premium."
 }
