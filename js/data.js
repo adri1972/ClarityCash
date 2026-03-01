@@ -25,7 +25,7 @@ const DEFAULT_DATA = {
     accounts: [
         { id: 'acc_1', name: 'Efectivo', type: 'EFECTIVO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
         { id: 'acc_2', name: 'Débito', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
-        { id: 'acc_tc_1', name: 'Crédito', type: 'CREDITO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
+        { id: 'acc_tc_1', name: 'Tarjeta de crédito', type: 'CREDITO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
     ],
     categories: [
         { id: 'cat_inc_1', name: 'Salario / Nómina', group: 'INGRESOS', is_default: true },
@@ -309,8 +309,18 @@ class Store {
         const account = this.data.accounts.find(a => a.id === accountId);
         if (!account) return;
 
+        if (type === 'PAGO_TARJETA') {
+            // Este tipo se usa cuando el dinero ENTRA a la tarjeta desde otra cuenta
+            if (account.type === 'CREDITO') {
+                account.current_balance -= amount; // Disminuye saldo de tarjeta (deuda)
+            } else {
+                account.current_balance -= amount; // Sale de la cuenta de origen (Efectivo/Debito)
+            }
+            return;
+        }
+
         if (account.type === 'CREDITO') {
-            // Para Crédito: Un gasto AUMENTA la deuda. Un ingreso (pago a la tarjeta) DISMINUYE la deuda.
+            // Para Crédito: Un gasto AUMENTA el saldo de tarjeta (uso de línea). Un ingreso DISMINUYE el saldo.
             if (type === 'INGRESO') account.current_balance -= amount;
             else account.current_balance += amount;
         } else {

@@ -4669,6 +4669,11 @@ class UIManager {
                 id: 'cuentas', title: 'Fuentes de pago', icon: '💳', content: `
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Indica desde dónde sale el dinero para tus gastos diarios.</p>
                     <div id="accounts-list" style="margin-bottom: 1.5rem;">${this.renderAccountsList()}</div>
+                    ${this.store.accounts.some(a => a.type === 'CREDITO') ? `
+                    <button type="button" class="btn btn-primary" style="width:100%; margin-bottom:20px; background:var(--text-main); color:white;" onclick="window.ui.showPayCardModal()">
+                        💳 Registrar pago a tarjeta
+                    </button>
+                    ` : ''}
                     <div id="account-form-static" class="card" style="background:var(--bg-body); padding:15px; border:1px solid var(--border-color);">
                         <h4 style="margin:0 0 10px 0; font-size:0.9rem;">+ Agregar otra fuente</h4>
                         <div style="display:flex; flex-direction:column; gap:8px;">
@@ -4884,13 +4889,16 @@ class UIManager {
                 }
             }
 
-            // Edit/Delete handlers
             if (target.classList.contains('delete-account') || target.closest('.delete-account')) {
                 const id = (target.dataset.id || target.closest('.delete-account').dataset.id);
                 if (confirm('¿Borrar esta cuenta?')) {
                     this.store.deleteAccount(id);
                     this.render();
                 }
+            }
+            if (target.classList.contains('edit-account') || target.closest('.edit-account')) {
+                const id = (target.dataset.id || target.closest('.edit-account').dataset.id);
+                this.showEditAccountModal(id);
             }
         };
 
@@ -4977,18 +4985,32 @@ class UIManager {
         }
 
         return list.map(a => {
-            const label = a.type === 'CREDITO' ? 'Deuda actual' : 'Saldo disponible';
-            const typeLabel = { 'EFECTIVO': 'Efectivo', 'BANCO': 'Débito', 'CREDITO': 'Crédito' }[a.type] || a.type;
+            const isTC = a.type === 'CREDITO';
+            const label = isTC ? 'Saldo de tarjeta' : 'Saldo disponible';
+            const statusColor = 'var(--text-main)';
+
+            // Info de corte si aplica
+            let corteHtml = '';
+            if (isTC && a.billing_cycle_day) {
+                const cycleInfo = this.calculateCardCycle(a);
+                corteHtml = `
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px dashed #e2e8f0;">
+                   <b>Ciclo actual:</b> ${this.formatCurrency(cycleInfo.cycleSpending)} 
+                   <span style="margin: 0 4px; color: #cbd5e1;">|</span>
+                   <b>Corte:</b> Día ${a.billing_cycle_day}
+                </div>`;
+            }
 
             return `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 0.8rem 0;">
-                <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding: 1rem 0;">
+                <div style="flex: 1;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">${a.name}</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">
-                       ${label}: <b style="color: ${a.type === 'CREDITO' && a.current_balance > 0 ? 'var(--danger-color)' : 'var(--text-main)'}">${this.formatCurrency(a.current_balance)}</b>
+                       ${label}: <b style="color: ${statusColor}">${this.formatCurrency(a.current_balance)}</b>
                     </div>
+                    ${corteHtml}
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
+                <div style="display: flex; gap: 0.5rem; margin-top: 4px;">
                     <button class="btn-text edit-account" data-id="${a.id}" style="color: var(--primary-color);" title="Editar">
                         <i data-feather="edit-2" style="width:18px;"></i>
                     </button>
@@ -5000,6 +5022,135 @@ class UIManager {
                 </div>
             </div>
         `}).join('');
+    }
+
+    calculateCardCycle(account) {
+        if (!account.billing_cycle_day) return { cycleSpending: 0 };
+        const now = new Date();
+        const cycleDay = parseInt(account.billing_cycle_day);
+        let startDate;
+
+        if (now.getDate() >= cycleDay) {
+            startDate = new Date(now.getFullYear(), now.getMonth(), cycleDay);
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
+        }
+
+        const cycleSpending = (this.store.transactions || [])
+            .filter(t => t.account_id === account.id && t.type === 'GASTO' && new Date(t.date) >= startDate)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        return { cycleSpending };
+    }
+
+    showEditAccountModal(id) {
+        const acc = this.store.accounts.find(a => a.id === id);
+        if (!acc) return;
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Nombre</label>
+                    <input type="text" id="edit-acc-name" value="${acc.name}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">${acc.type === 'CREDITO' ? 'Saldo de tarjeta' : 'Saldo actual'}</label>
+                    <input type="text" id="edit-acc-bal" value="${this.formatNumberWithDots(acc.current_balance)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+                ${acc.type === 'CREDITO' ? `
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día de Corte (Opcional)</label>
+                    <input type="number" id="edit-acc-cycle" value="${acc.billing_cycle_day || ''}" min="1" max="31" placeholder="Ej: 15" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    <p style="font-size:0.75rem; color:#666; margin-top:4px;">Ayuda a agrupar tus compras en el ciclo actual para darte mejor claridad.</p>
+                </div>
+                ` : ''}
+                <button onclick="window.ui.saveAccountEdit('${id}')" class="btn btn-primary" style="width:100%; margin-top:10px;">Guardar Cambios</button>
+            </div>
+        `;
+        this.showModal(`Editar ${acc.name}`, html);
+    }
+
+    saveAccountEdit(id) {
+        const name = document.getElementById('edit-acc-name').value;
+        const bal = parseFloat(document.getElementById('edit-acc-bal').value.replace(/\D/g, '')) || 0;
+        const cycleInput = document.getElementById('edit-acc-cycle');
+        const cycleDay = cycleInput ? cycleInput.value : null;
+
+        const idx = this.store.accounts.findIndex(a => a.id === id);
+        if (idx !== -1) {
+            this.store.accounts[idx].name = name;
+            this.store.accounts[idx].current_balance = bal;
+            if (cycleDay !== null) this.store.accounts[idx].billing_cycle_day = cycleDay;
+            this.store._saveAccountsLocally(); // Force save
+            alert('✅ Cuenta actualizada');
+            this.render();
+        }
+    }
+
+    showPayCardModal() {
+        const cards = this.store.accounts.filter(a => a.type === 'CREDITO');
+        const sources = this.store.accounts.filter(a => a.type !== 'CREDITO');
+
+        if (cards.length === 0) return alert('No tienes tarjetas de crédito configuradas.');
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:16px; text-align:left;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:6px;">¿Qué tarjeta vas a pagar?</label>
+                    <select id="pay-card-target" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ccc;">
+                        ${cards.map(c => `<option value="${c.id}">${c.name} (Saldo: ${this.formatCurrency(c.current_balance)})</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:6px;">¿Desde qué cuenta sale el dinero?</label>
+                    <select id="pay-card-source" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ccc;">
+                        ${sources.map(s => `<option value="${s.id}">${s.name} (Disponible: ${this.formatCurrency(s.current_balance)})</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:6px;">Monto del pago</label>
+                    <input type="text" id="pay-card-amount" placeholder="$0" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ccc; font-size:1.1rem; font-weight:700;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                </div>
+                
+                <div style="background:#f0fbff; padding:12px; border-radius:12px; font-size:0.8rem; color:#0c4a6e; line-height:1.4; border:1px solid #bae6fd;">
+                    ℹ️ <b>Nota Educativa:</b> Este pago reduce tu saldo de tarjeta, pero NO cuenta como gasto de consumo nuevo, ya que las compras originales ya fueron procesadas.
+                </div>
+
+                <button onclick="window.ui.handlePayCardSubmit()" class="btn btn-primary" style="width:100%; padding:14px; font-weight:700;">✅ Registrar Pago</button>
+            </div>
+        `;
+        this.showModal('Pagar Tarjeta de Crédito', html);
+    }
+
+    async handlePayCardSubmit() {
+        const targetId = document.getElementById('pay-card-target').value;
+        const sourceId = document.getElementById('pay-card-source').value;
+        const amountStr = document.getElementById('pay-card-amount').value.replace(/\./g, '');
+        const amount = parseFloat(amountStr) || 0;
+
+        if (amount <= 0) return alert('Ingresa un monto válido.');
+
+        const target = this.store.accounts.find(a => a.id === targetId);
+        const source = this.store.accounts.find(a => a.id === sourceId);
+
+        // 1. Transaction to Card (Income/Payment)
+        await this.store.addTransaction({
+            type: 'PAGO_TARJETA',
+            amount,
+            date: new Date().toISOString().split('T')[0],
+            account_id: targetId,
+            category_id: 'cat_ext_transfer', // Generic tag for transfer
+            note: `Pago desde ${source.name}`
+        });
+
+        // 2. Reflect on source account
+        this.store._updateAccountBalanceLocal(sourceId, amount, 'PAGO_TARJETA');
+        if (this.store.uid) {
+            await db.collection('users').doc(this.store.uid).collection('accounts').doc(sourceId).update({ current_balance: source.current_balance });
+        }
+
+        alert('✅ Pago registrado con éxito.');
+        this.render();
     }
 
     renderFixedExpensesList() {
