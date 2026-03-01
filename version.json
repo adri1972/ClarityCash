@@ -1,5 +1,5 @@
 {
-    "version": "71.8.EDUCATIONAL",
-    "updatedAt": "2026-03-01T15:58:00Z",
-    "notes": "Feature: Modelo Educativo Mensual integrado. Lógica de Disponible basada en Ingreso Base y separación de Préstamos."
+    "version": "71.9.ONBOARD_FIX",
+    "updatedAt": "2026-03-01T16:02:00Z",
+    "notes": "Fix: Corregida asignación de categorías en onboarding y añadida Alimentación como opción."
 }

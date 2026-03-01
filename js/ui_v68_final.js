@@ -1237,11 +1237,12 @@ class UIManager {
                 <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 2 de 3</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuál es tu gasto fijo más importante?</p>
                 <select id="guide-fixed-type" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 1rem;">
-                    <option value="Arriendo">Arriendo</option>
-                    <option value="Servicios">Servicios (Luz, Agua, etc)</option>
-                    <option value="Educacion">Educación / Colegios</option>
-                    <option value="Transporte">Transporte / Gasolina</option>
-                    <option value="Otro">Otro importante</option>
+                    <option value="cat_1">Arriendo / Hipoteca</option>
+                    <option value="cat_2">Alimentación</option>
+                    <option value="cat_viv_servicios">Servicios (Luz, Agua, etc)</option>
+                    <option value="cat_8">Educación / Colegios</option>
+                    <option value="cat_3">Transporte / Gasolina</option>
+                    <option value="cat_10">Otro importante</option>
                 </select>
                 <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado:</p>
                 <input type="text" id="guide-fixed-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
@@ -1379,8 +1380,9 @@ class UIManager {
             const val = document.getElementById('guide-fixed-amount').value.replace(/\D/g, '');
             const amount = parseFloat(val) || 0;
             if (amount > 0) {
-                const type = document.getElementById('guide-fixed-type').value;
-                this._guideData.fixed_expenses = [{ id: 'fix_' + Date.now(), title: type, amount, category_id: 'cat_3' }];
+                const catId = document.getElementById('guide-fixed-type').value;
+                const catName = document.querySelector(`#guide-fixed-type option[value="${catId}"]`).text;
+                this._guideData.fixed_expenses = [{ id: 'fix_' + Date.now(), title: catName, amount, category_id: catId }];
             }
             window.guideHasDebt = null; // reset
             this.guideStep = 3;
