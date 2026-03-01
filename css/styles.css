@@ -261,6 +261,15 @@ nav {
     color: var(--text-main);
 }
 
+.btn-shrunk {
+    padding: 0.5rem !important;
+    gap: 0 !important;
+}
+
+.btn-shrunk span {
+    display: none !important;
+}
+
 /* Modals */
 .modal {
     position: fixed;

@@ -108,10 +108,10 @@ class UIManager {
                             if (hiddenId) hiddenId.value = '';
 
                             const btn = form.querySelector('button[type="submit"]');
-                            if (btn) btn.innerHTML = '+ Agregar Movimiento';
+                            if (btn) btn.innerHTML = '+ Agregar Gasto';
 
                             const title = modal.querySelector('h3');
-                            if (title) title.textContent = 'Nuevo Movimiento 💸';
+                            if (title) title.textContent = 'Nuevo Gasto 💸';
 
                             // Reset visibility of category
                             const categoryGroup = form.querySelector('select[name="category_id"]').closest('.form-group');
@@ -213,7 +213,7 @@ class UIManager {
 
                     // Reset button text
                     const btn = form.querySelector('button[type="submit"]');
-                    if (btn) btn.innerHTML = '+ Agregar Movimiento';
+                    if (btn) btn.innerHTML = '+ Agregar Gasto';
 
                     categoryGroup.style.display = 'block'; // Reset visibility
                     this.render();
@@ -552,29 +552,41 @@ class UIManager {
         const accSelect = document.querySelector('select[name="account_id"]');
         if (!catSelect || !accSelect) return;
 
-        // Group Categories
-        const categories = this.store.categories;
+        // Force uppercase for robust comparison
+        const fType = (typeFilter || 'GASTO').toUpperCase();
+
+        // Ensure we have categories, fallback to defaults if needed
+        let categories = this.store.categories;
+        if (!categories || categories.length === 0) {
+            console.warn('⚠️ Store categories empty. Using defaults.');
+            categories = typeof DEFAULT_DATA !== 'undefined' ? DEFAULT_DATA.categories : [];
+        }
 
         // Filter categories based on the selected Transaction Type
         let filteredCats = categories;
-        if (typeFilter) {
-            if (typeFilter === 'INGRESO') {
-                filteredCats = categories.filter(c => c.group === 'INGRESOS');
-            } else if (typeFilter === 'AHORRO') {
-                filteredCats = categories.filter(c => c.id === 'cat_5');
-            } else if (typeFilter === 'INVERSION') {
-                filteredCats = categories.filter(c => c.id === 'cat_6');
-            } else if (typeFilter === 'PAGO_DEUDA') {
-                filteredCats = categories.filter(c => c.id === 'cat_7' || c.id === 'cat_fin_4');
-            } else {
-                // GASTO or TARJETA_CREDITO
-                filteredCats = categories.filter(c =>
-                    c.group !== 'INGRESOS' &&
+        if (fType === 'INGRESO') {
+            filteredCats = categories.filter(c => (c.group || '').toUpperCase() === 'INGRESOS');
+        } else if (fType === 'AHORRO') {
+            filteredCats = categories.filter(c => c.id === 'cat_5');
+        } else if (fType === 'INVERSION') {
+            filteredCats = categories.filter(c => c.id === 'cat_6');
+        } else if (fType === 'PAGO_DEUDA') {
+            filteredCats = categories.filter(c => c.id === 'cat_7' || c.id === 'cat_fin_4');
+        } else {
+            // GASTO or OTHERS
+            filteredCats = categories.filter(c => {
+                const g = (c.group || '').toUpperCase();
+                return g !== 'INGRESOS' &&
                     c.id !== 'cat_5' &&
                     c.id !== 'cat_6' &&
-                    c.id !== 'cat_7'
-                );
-            }
+                    c.id !== 'cat_7';
+            });
+        }
+
+        // FINAL FALLBACK: If filtering resulted in empty list, show at least "Otros"
+        if (filteredCats.length === 0 && categories.length > 0) {
+            console.warn('⚠️ Filtering resulted in zero categories for type:', fType);
+            filteredCats = categories.slice(0, 10); // Show some categories anyway
         }
 
         const groups = [...new Set(filteredCats.map(c => c.group))];
@@ -640,6 +652,16 @@ class UIManager {
         }
 
         this.toggleAuthElements(this.currentView !== 'upgrade');
+
+        // Protagonismo del botón "Nuevo Gasto"
+        const addBtn = document.getElementById('add-transaction-btn');
+        if (addBtn) {
+            if (this.currentView === 'settings') {
+                addBtn.classList.add('btn-shrunk');
+            } else {
+                addBtn.classList.remove('btn-shrunk');
+            }
+        }
 
         if (this.currentView === 'upgrade') {
             this.renderUpgradeScreen();
@@ -814,7 +836,7 @@ class UIManager {
             }
         });
 
-        // Specific fix for "Nuevo Movimiento" button if targeted directly
+        // Specific fix for "Nuevo Gasto" button if targeted directly
         const addBtn = document.getElementById('add-transaction-btn');
         if (addBtn) {
             if (isAuth) {
@@ -1150,6 +1172,26 @@ class UIManager {
                 </div>
             `;
         }
+    }
+
+    showProfileHelp() {
+        const html = `
+            <div style="font-size: 0.95rem; line-height: 1.6; color: #475569;">
+                <div style="margin-bottom: 20px; border-left: 4px solid #10b981; padding-left: 15px;">
+                    <h4 style="margin: 0 0 5px 0; color: #065f46;">🛡️ Conservador</h4>
+                    <p style="margin: 0;"><b>Enfoque:</b> Seguridad y deuda. Destina un 20% al ahorro y restringe el ocio al 2%. Ideal para crear fondo de emergencia.</p>
+                </div>
+                <div style="margin-bottom: 20px; border-left: 4px solid #3b82f6; padding-left: 15px;">
+                    <h4 style="margin: 0 0 5px 0; color: #1e40af;">⚖️ Balanceado</h4>
+                    <p style="margin: 0;"><b>Enfoque:</b> Equilibrio 50/30/20 adaptado. Ahorra 8% y permite un 5% de disfrute. Recomendado para estabilidad financiera diaria.</p>
+                </div>
+                <div style="margin-bottom: 10px; border-left: 4px solid #8b5cf6; padding-left: 15px;">
+                    <h4 style="margin: 0 0 5px 0; color: #5b21b6;">🚀 Flexible</h4>
+                    <p style="margin: 0;"><b>Enfoque:</b> Experiencias hoy. Prioriza el estilo de vida (10%) y reduce el ahorro al mínimo (2%). Úsalo si ya tienes base financiera sólida.</p>
+                </div>
+            </div>
+        `;
+        this.showModal('Estrategias de Gasto', html);
     }
 
 
@@ -3006,7 +3048,7 @@ class UIManager {
                             <span style="font-size: 1.2rem;">📄</span> <strong>Importar</strong> un extracto bancario (PDF/CSV)
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.85rem;">
-                            <span style="font-size: 1.2rem;">✍️</span> <strong>Manual:</strong> toca "+ Nuevo Movimiento" arriba
+                            <span style="font-size: 1.2rem;">✍️</span> <strong>Manual:</strong> toca "+ Nuevo Gasto" arriba
                         </div>
                     </div>
                 </div>
@@ -4214,7 +4256,7 @@ class UIManager {
     }
 
     renderSettings() {
-        this.pageTitle.textContent = 'Centro Financiero ⚙️';
+        this.pageTitle.textContent = 'Centro Financiero';
         const conf = this.store.config;
         const expanded = this.expandedSection || 'perfil';
 
@@ -4276,16 +4318,23 @@ class UIManager {
         const sections = [
             {
                 id: 'perfil', title: 'Perfil y Estrategia', icon: '👤', content: `
+                    <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Tu ingreso y perfil determinan tu distribución ideal.</p>
                     <div class="form-group"><label>Nombre</label><input type="text" name="user_name" value="${conf.user_name || ''}"></div>
                     <div class="form-group"><label>Ingreso Mensual</label><input type="text" inputmode="numeric" name="monthly_income_target" value="${this.formatNumberWithDots(conf.monthly_income_target || 0)}" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"></div>
                     <div class="form-group">
-                        <label>Perfil de Gasto</label>
-                        <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
-                            <option value="CONSERVADOR" ${conf.spending_profile === 'CONSERVADOR' ? 'selected' : ''}>Conservador</option>
-                            <option value="BALANCEADO" ${conf.spending_profile === 'BALANCEADO' ? 'selected' : ''}>Balanceado</option>
-                            <option value="FLEXIBLE" ${conf.spending_profile === 'FLEXIBLE' ? 'selected' : ''}>Flexible</option>
-                        </select>
-                    </div>
+                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                             <label style="margin: 0;">Perfil de Gasto</label>
+                             <button type="button" onclick="window.ui.showProfileHelp()" style="background: none; border: none; color: #3b82f6; font-size: 0.75rem; cursor: pointer; text-decoration: underline; font-weight: 600; padding: 0;">
+                                 ¿Qué perfil elegir?
+                             </button>
+                         </div>
+                         <select name="spending_profile" onchange="window.ui.updateProfileInfo(this.value)">
+                             <option value="CONSERVADOR" ${conf.spending_profile === 'CONSERVADOR' ? 'selected' : ''}>Conservador</option>
+                             <option value="BALANCEADO" ${conf.spending_profile === 'BALANCEADO' ? 'selected' : ''}>Balanceado</option>
+                             <option value="FLEXIBLE" ${conf.spending_profile === 'FLEXIBLE' ? 'selected' : ''}>Flexible</option>
+                         </select>
+                         <div id="profile-specs"></div>
+                     </div>
                     <div class="form-group">
                         <label><input type="checkbox" name="has_debts" ${conf.has_debts ? 'checked' : ''} onchange="document.getElementById('debt-grp').style.display=this.checked?'block':'none'"> Tengo deudas</label>
                         <div id="debt-grp" style="display: ${conf.has_debts ? 'block' : 'none'}; margin-top: 5px;">
@@ -4360,11 +4409,22 @@ class UIManager {
                     return gc.length ? `<div style="margin-bottom:1rem;"><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#64748b; text-transform:uppercase;">${groups[g]}</h4>${gc.map(c => renderRow(c)).join('')}</div>` : '';
                 }).join('')}
                 `
+            },
+            {
+                id: 'avanzado', title: 'Avanzado', icon: '🛠️', content: `
+                    <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Acciones de mantenimiento y sistema.</p>
+                    <div style="padding: 15px; border-radius: 12px; border: 1px solid #fee2e2; background: #fff5f5;">
+                        <button type="button" onclick="window.ui.performNuclearUpdate()" style="background: none; border: none; color: #dc2626; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;">
+                            ☢️ Forzar reinicio y limpieza profunda de caché
+                        </button>
+                    </div>
+                `
             }
         ];
 
         this.container.innerHTML = `
             <div class="centro-financiero-layout" style="max-width: 800px; margin: 0 auto; padding-bottom: 100px;">
+                <p style="font-size: 0.95rem; color: #64748b; margin-top: -15px; margin-bottom: 25px;">Define cómo quieres que funcione tu dinero este mes.</p>
                 <form id="global-settings-form">
                     ${sections.map(s => {
             const isOpen = expanded === s.id;
@@ -4399,19 +4459,16 @@ class UIManager {
                         </h4>
                         <p style="margin: 0; font-size: 0.85rem; color: #4338ca; line-height: 1.4;">
                             Tu inteligencia artificial está operando y protegiendo tu salud financiera en tiempo real.
-                        </p>
-                    </div>
-                </div>
+                         </p>
+                     </div>
+                 </div>
+             </div>
+         `;
 
-                <div style="margin-top: 3rem; text-align: center;">
-                    <button id="force-update-env-btn" class="btn-text" style="color: #db2777; font-size: 0.85rem; font-weight: 700; border: 2px solid #fbcfe8; padding: 8px 16px; border-radius: 20px;">
-                        Versión v70.0.INTEGRATED • Actualizar App 🔄
-                    </button>
-                </div>
-            </div>
-        `;
-
-        setTimeout(() => this.updateBudgetTotal(), 100);
+        setTimeout(() => {
+            this.updateBudgetTotal();
+            this.updateProfileInfo(conf.spending_profile || 'BALANCEADO');
+        }, 100);
         if (window.feather) window.feather.replace();
 
         this.container.onclick = (e) => {
