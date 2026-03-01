@@ -1997,7 +1997,10 @@ class UIManager {
                 <div style="margin-bottom: 24px;">
                     <p style="margin:0 0 8px; font-size:0.85rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">💳 Pago desde</p>
                     <select id="quick-account-select" style="width:100%; padding:14px; border:1px solid var(--border-color); border-radius:16px; background:var(--bg-surface); font-size:1rem; font-weight:500; font-family: inherit; outline:none; color:var(--text-main); cursor:pointer;">
-                        ${this.store.accounts.map(a => `<option value="${a.id}">${a.name} (${this.formatCurrency(a.current_balance)})</option>`).join('')}
+                        ${this.store.accounts.map(a => {
+            const label = a.type === 'CREDITO' ? 'Deuda' : 'Saldo';
+            return `<option value="${a.id}">${a.name} (${label}: ${this.formatCurrency(a.current_balance)})</option>`;
+        }).join('')}
                     </select>
                 </div>
                 
@@ -4663,15 +4666,20 @@ class UIManager {
                 `
             },
             {
-                id: 'cuentas', title: 'Mis Cuentas', icon: '💳', content: `
-                    <div id="accounts-list" style="margin-bottom: 1rem;">${this.renderAccountsList()}</div>
-                    <div id="account-form-static" class="card" style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0;">
-                        <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Agregar Cuenta</h4>
+                id: 'cuentas', title: 'Fuentes de pago', icon: '💳', content: `
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Indica desde dónde sale el dinero para tus gastos diarios.</p>
+                    <div id="accounts-list" style="margin-bottom: 1.5rem;">${this.renderAccountsList()}</div>
+                    <div id="account-form-static" class="card" style="background:var(--bg-body); padding:15px; border:1px solid var(--border-color);">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem;">+ Agregar otra fuente</h4>
                         <div style="display:flex; flex-direction:column; gap:8px;">
-                            <input type="text" id="new-acc-name" placeholder="Nombre">
-                            <select id="new-acc-type"><option value="EFECTIVO">Efectivo/Digital</option><option value="BANCO">Banco</option><option value="CREDITO">Crédito</option></select>
-                            <input type="text" id="new-acc-bal" placeholder="Saldo Inicial">
-                            <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyAccountAdd()">+ Agregar</button>
+                            <input type="text" id="new-acc-name" placeholder="Nombre (ej. Mi otro banco)">
+                            <select id="new-acc-type">
+                                <option value="EFECTIVO">Efectivo</option>
+                                <option value="BANCO">Débito</option>
+                                <option value="CREDITO">Crédito</option>
+                            </select>
+                            <input type="text" id="new-acc-bal" placeholder="Saldo Inicial / Deuda Actual">
+                            <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyAccountAdd()">Guardar Fuente</button>
                         </div>
                     </div>
                 `
@@ -4957,29 +4965,41 @@ class UIManager {
 
 
     renderAccountsList() {
-        const list = this.store.accounts || [];
+        let list = this.store.accounts || [];
         if (list.length === 0) return '';
 
-        return list.map(a => `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
+        // Filtro: No mostrar cuentas en $0 para reducir ruido, a menos que sean las principales o sea la única
+        if (list.length > 1) {
+            list = list.filter(a => {
+                const isMain = ['acc_1', 'acc_2', 'acc_tc_1'].includes(a.id);
+                return isMain || a.current_balance !== 0;
+            });
+        }
+
+        return list.map(a => {
+            const label = a.type === 'CREDITO' ? 'Deuda actual' : 'Saldo disponible';
+            const typeLabel = { 'EFECTIVO': 'Efectivo', 'BANCO': 'Débito', 'CREDITO': 'Crédito' }[a.type] || a.type;
+
+            return `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 0.8rem 0;">
                 <div>
-                    <div style="font-weight: 600; font-size: 0.95rem;">${a.name}</div>
-                    <div style="font-size: 0.85rem; color: #666;">
-                       ${a.type} • Saldo: ${this.formatCurrency(a.current_balance)}
+                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">${a.name}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">
+                       ${label}: <b style="color: ${a.type === 'CREDITO' && a.current_balance > 0 ? 'var(--danger-color)' : 'var(--text-main)'}">${this.formatCurrency(a.current_balance)}</b>
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn-text edit-account" data-id="${a.id}" style="color: #2196F3;" title="Editar">
+                    <button class="btn-text edit-account" data-id="${a.id}" style="color: var(--primary-color);" title="Editar">
                         <i data-feather="edit-2" style="width:18px;"></i>
                     </button>
-                    ${a.id !== 'acc_1' && a.id !== 'acc_2' && a.id !== 'acc_tc_1' ? `
-                    <button class="btn-text delete-account" data-id="${a.id}" style="color: #999;" title="Borrar">
+                    ${!['acc_1', 'acc_2', 'acc_tc_1'].includes(a.id) ? `
+                    <button class="btn-text delete-account" data-id="${a.id}" style="color: var(--text-muted);" title="Borrar">
                         <i data-feather="trash-2" style="width:18px;"></i>
                     </button>
                     ` : ''}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
 
     renderFixedExpensesList() {

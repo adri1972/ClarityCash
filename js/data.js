@@ -24,8 +24,8 @@ const DEFAULT_DATA = {
     goals: [],
     accounts: [
         { id: 'acc_1', name: 'Efectivo', type: 'EFECTIVO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
-        { id: 'acc_2', name: 'Cuenta con Tarjeta Débito', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
-        { id: 'acc_tc_1', name: 'Tarjeta de Crédito', type: 'CREDITO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
+        { id: 'acc_2', name: 'Débito', type: 'BANCO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() },
+        { id: 'acc_tc_1', name: 'Crédito', type: 'CREDITO', initial_balance: 0, current_balance: 0, created_at: new Date().toISOString() }
     ],
     categories: [
         { id: 'cat_inc_1', name: 'Salario / Nómina', group: 'INGRESOS', is_default: true },
@@ -308,8 +308,16 @@ class Store {
     _updateAccountBalanceLocal(accountId, amount, type) {
         const account = this.data.accounts.find(a => a.id === accountId);
         if (!account) return;
-        if (type === 'INGRESO') account.current_balance += amount;
-        else account.current_balance -= amount;
+
+        if (account.type === 'CREDITO') {
+            // Para Crédito: Un gasto AUMENTA la deuda. Un ingreso (pago a la tarjeta) DISMINUYE la deuda.
+            if (type === 'INGRESO') account.current_balance -= amount;
+            else account.current_balance += amount;
+        } else {
+            // Para Efectivo/Débito: Un ingreso AUMENTA el saldo. Un gasto DISMINUYE el saldo.
+            if (type === 'INGRESO') account.current_balance += amount;
+            else account.current_balance -= amount;
+        }
     }
 
     // --- Getters (Siguen siendo síncronos sobre la caché local para no romper la UI) ---
