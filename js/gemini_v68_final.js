@@ -771,22 +771,33 @@ Esquema Obligatorio:
         const apiKey = this.config.gemini_api_key || this.config.openai_api_key;
         if (!apiKey) throw new Error('No API key configured');
 
-        const systemPrompt = `Eres un CFO estratégico que analiza el comportamiento financiero semanal de un usuario y le da recomendaciones claras, accionables y personalizadas. Habla en lenguaje sencillo, profesional y directo. No uses tecnicismos innecesarios.`;
+        const systemPrompt = `Eres un Analista Estratégico Senior (CFO) que evalúa el comportamiento financiero semanal de un usuario.
+Tu análisis debe ser claro, profesional, accionable y educativo.
+Máximo 220 palabras.
+Usa lenguaje sencillo y evita tecnicismos innecesarios.
+Evalúa si el comportamiento semanal está alineado con el perfil financiero declarado y menciona si detectas incoherencias.
+Considera tendencias frente al promedio de las últimas 4 semanas.
 
-        const userPrompt = `Aquí están los datos financieros semanales del usuario:
+Respeta SIEMPRE esta estructura obligatoria:
+
+Diagnóstico de la semana
+(Análisis claro del comportamiento)
+
+Riesgos detectados
+• [Riesgo 1]
+• [Riesgo 2]
+
+Recomendaciones para la próxima semana
+• [Acción concreta 1]
+• [Acción concreta 2]
+
+Mensaje final
+(1 frase breve motivadora)`;
+
+        const userPrompt = `Aquí están los datos financieros semanales y el contexto histórico del usuario:
 ${JSON.stringify(weeklyData, null, 2)}
 
-Genera:
-1. Un diagnóstico breve de la semana.
-2. Riesgos detectados (si los hay).
-3. Recomendaciones concretas para la próxima semana.
-4. Un mensaje motivacional final.
-
-REGLAS:
-- No repitas los números exactos en exceso.
-- Sé claro, estratégico y educativo.
-- El texto debe ser fluido y directo.
-- Máximo 300 palabras.`;
+Genera el veredicto siguiendo la estructura y reglas definidas.`;
 
         try {
             let text = '';
@@ -798,7 +809,7 @@ REGLAS:
                 const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: `${systemPrompt}\n\n${userPrompt}`, maxTokens: 800 })
+                    body: JSON.stringify({ prompt: `${systemPrompt}\n\n${userPrompt}`, maxTokens: 1000 })
                 });
                 if (!response.ok) throw new Error('Proxy Error');
                 const data = await response.json();
@@ -813,7 +824,7 @@ REGLAS:
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: userPrompt }
                         ],
-                        max_tokens: 800, temperature: 0.7
+                        max_tokens: 1000, temperature: 0.7
                     })
                 });
                 if (!response.ok) throw new Error('API Error');
@@ -828,7 +839,7 @@ REGLAS:
                         contents: [
                             { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
                         ],
-                        generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
+                        generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
                     })
                 });
                 if (!response.ok) throw new Error('API Error');

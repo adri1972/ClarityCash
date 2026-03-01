@@ -83,6 +83,44 @@ class StrategyReport {
         return `Del ${monday.toLocaleDateString('es-CO', options)} al ${sunday.toLocaleDateString('es-CO', options)}`;
     }
 
+    // ─── Utilidad: Promedios de las últimas 4 semanas ──────────────────────
+    get4WeekAverages() {
+        const allTxs = this.store.transactions();
+        const config = this.store.config();
+        const now = new Date();
+        const averages = { income: 0, expenses: 0, score: 0 };
+
+        // Calculamos para las últimas 4 semanas (28 días)
+        const fourWeeksAgo = new Date(now.getTime() - (28 * 24 * 60 * 60 * 1000));
+
+        const periodTxs = allTxs.filter(t => new Date(t.date) >= fourWeeksAgo);
+
+        let totalIncome = 0;
+        let totalExpenses = 0;
+
+        periodTxs.forEach(t => {
+            const cat = this.store.categories().find(c => c.id === t.category_id);
+            if (!cat) return;
+            if (cat.group === 'INGRESOS') totalIncome += t.amount;
+            else totalExpenses += t.amount;
+        });
+
+        averages.income = totalIncome / 4;
+        averages.expenses = totalExpenses / 4;
+
+        // Para el score, intentaremos recuperar los últimos 4 scores de caché o usar el actual como base
+        averages.score = 85; // Default razonable si no hay histórico
+        try {
+            const history = JSON.parse(localStorage.getItem('cc_score_history') || '[]');
+            if (history.length > 0) {
+                const recent = history.slice(-4);
+                averages.score = recent.reduce((a, b) => a + b, 0) / recent.length;
+            }
+        } catch (e) { }
+
+        return averages;
+    }
+
     // ─── Render principal ──────────────────────────────────────────────────
     render() {
         const events = this.getWeeklyEvents();
@@ -322,6 +360,7 @@ class StrategyReport {
         const events = this.getWeeklyEvents();
         const health = this.getHealthStatus(events);
         const integrityOk = this.checkIntegrity();
+        const averages = this.get4WeekAverages();
 
         const weeklyDataForAI = {
             semana: this.getWeekKey(),
@@ -336,34 +375,63 @@ class StrategyReport {
             dias_saldo_negativo: events.interventions.length,
             ahorro_semana: ahorro,
             deuda_pagada_semana: deuda,
-            intocables_comprometidos: !integrityOk
+            intocables_comprometidos: !integrityOk,
+            promedio_ingresos_4s: averages.income,
+            promedio_gastos_4s: averages.expenses,
+            promedio_score_4s: averages.score
         };
 
         try {
             const verdict = await this.aiAdvisor.getWeeklyCFOVerdict(weeklyDataForAI);
             if (verdict) {
-                // Guardar en caché
+                // Guardar en caché y actualizar histórico de score
                 localStorage.setItem('cc_cfo_verdict', JSON.stringify({ week: this.getWeekKey(), text: verdict }));
 
-                // Mostrar con efecto typewriter
+                try {
+                    let history = JSON.parse(localStorage.getItem('cc_score_history') || '[]');
+                    if (history.length === 0 || history[history.length - 1] !== health.score) {
+                        history.push(health.score);
+                        localStorage.setItem('cc_score_history', JSON.stringify(history.slice(-12)));
+                    }
+                } catch (e) { }
+
                 if (box) {
-                    box.innerHTML = '<span id="cfo-text"></span>';
-                    const textEl = document.getElementById('cfo-text');
-                    let i = 0;
-                    const interval = setInterval(() => {
-                        if (i < verdict.length) {
-                            textEl.textContent += verdict[i];
-                            i++;
-                        } else {
-                            clearInterval(interval);
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '⚡ Regenerar Veredicto';
-                                btn.style.opacity = '1';
-                            }
+                    // Si el texto es corto (<120 palabras), usamos typewriter, si no, directo
+                    const wordCount = verdict.split(/\s+/).length;
+
+                    if (wordCount > 120) {
+                        box.innerHTML = `<span id="cfo-text">${verdict}</span>`;
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '⚡ Regenerar Veredicto';
+                            btn.style.opacity = '1';
+                        }
+                        const existingLabel = document.getElementById('cache-label');
+                        if (!existingLabel) {
                             box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
                         }
-                    }, 12);
+                    } else {
+                        box.innerHTML = '<span id="cfo-text"></span>';
+                        const textEl = document.getElementById('cfo-text');
+                        let i = 0;
+                        const interval = setInterval(() => {
+                            if (i < verdict.length) {
+                                textEl.textContent += verdict[i];
+                                i++;
+                            } else {
+                                clearInterval(interval);
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '⚡ Regenerar Veredicto';
+                                    btn.style.opacity = '1';
+                                }
+                                const existingLabel = document.getElementById('cache-label');
+                                if (!existingLabel) {
+                                    box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
+                                }
+                            }
+                        }, 12);
+                    }
                 }
             }
         } catch (e) {
