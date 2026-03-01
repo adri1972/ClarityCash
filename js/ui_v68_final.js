@@ -4316,6 +4316,10 @@ class UIManager {
             `;
         };
 
+        const user = auth.currentUser;
+        const userEmail = user && user.email ? user.email.toLowerCase() : '';
+        const isAdmin = userEmail === 'robledo.adriana27@gmail.com' || (user && user.uid === 'u7xLwG9m5ePzrXqYt');
+
         const sections = [
             {
                 id: 'perfil', title: 'Perfil y Estrategia', icon: '👤', content: `
@@ -4429,33 +4433,26 @@ class UIManager {
             },
             {
                 id: 'avanzado', title: 'Avanzado', icon: '🛠️', content: `
-                     <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Acciones de mantenimiento y sistema.</p>
-                     <div style="padding: 15px; border-radius: 12px; border: 1px solid #fee2e2; background: #fff5f5;">
-                         <button type="button" onclick="window.ui.performNuclearUpdate()" style="background: none; border: none; color: #dc2626; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;">
-                             ☢️ Forzar reinicio y limpieza profunda de caché
-                         </button>
-                     </div>
-                 `
+                      <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Acciones de mantenimiento y sistema.</p>
+                      
+                      ${isAdmin ? `
+                      <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
+                          <div style="font-size: 1.5rem;">🧠</div>
+                          <div>
+                              <div style="font-weight: 700; color: #5b21b6; font-size: 0.9rem;">Asistente Financiero Activo <span style="background:#10b981; color:white; font-size:0.6rem; padding:2px 6px; border-radius:4px; vertical-align:middle; margin-left:4px;">ON</span></div>
+                              <div style="font-size: 0.75rem; color: #6d28d9; opacity: 0.8;">La IA centralizada está operando correctamente para todos tus usuarios.</div>
+                          </div>
+                      </div>
+                      ` : ''}
+
+                      <div style="padding: 15px; border-radius: 12px; border: 1px solid #fee2e2; background: #fff5f5;">
+                          <button type="button" onclick="window.ui.performNuclearUpdate()" style="background: none; border: none; color: #dc2626; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;">
+                              ☢️ Forzar reinicio y limpieza profunda de caché
+                          </button>
+                      </div>
+                  `
             }
         ];
-
-        // --- 🛡️ ADMIN CHECK: Only robledo.adriana27@gmail.com can see IA settings ---
-        const user = auth.currentUser;
-        const userEmail = user && user.email ? user.email.toLowerCase() : '';
-        const isAdmin = userEmail === 'robledo.adriana27@gmail.com' || (user && user.uid === 'u7xLwG9m5ePzrXqYt');
-
-        if (isAdmin) {
-            sections.push({
-                id: 'ia', title: 'Inteligencia Artificial', icon: '🧠', content: `
-                     <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Configuración de llaves de acceso para el motor de IA.</p>
-                     <div class="form-group">
-                         <label>Gemini API Key</label>
-                         <input type="password" id="gemini_api_key_input" name="gemini_api_key" value="${conf.gemini_api_key || ''}" placeholder="Ingresa tu API Key">
-                         <small style="color: #64748b; font-size: 0.75rem;">Esta sección es privada para el administrador.</small>
-                     </div>
-                 `
-            });
-        }
 
         this.container.innerHTML = `
             <div class="centro-financiero-layout" style="max-width: 800px; margin: 0 auto; padding-bottom: 100px;">
