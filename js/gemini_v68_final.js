@@ -771,20 +771,22 @@ Esquema Obligatorio:
         const apiKey = this.config.gemini_api_key || this.config.openai_api_key;
         if (!apiKey) throw new Error('No API key configured');
 
-        const systemPrompt = `Actúa como Analista Estratégico Senior (CFO). Emite el Veredicto Semanal bajo estas reglas ESTRICTAS:
+        const systemPrompt = `Eres un CFO estratégico que analiza el comportamiento financiero semanal de un usuario y le da recomendaciones claras, accionables y personalizadas. Habla en lenguaje sencillo, profesional y directo. No uses tecnicismos innecesarios.`;
 
-TONO: Profesional, directo, sin complacencia. Sin emojis decorativos. Sin markdown.
+        const userPrompt = `Aquí están los datos financieros semanales del usuario:
+${JSON.stringify(weeklyData, null, 2)}
 
-ESCENARIO DE ÉXITO (0 rebalanceos, 0 incidentes, intocables blindados):
-→ Emite un Reconocimiento Profesional breve destacando la eficiencia operativa y la protección del patrimonio.
+Genera:
+1. Un diagnóstico breve de la semana.
+2. Riesgos detectados (si los hay).
+3. Recomendaciones concretas para la próxima semana.
+4. Un mensaje motivacional final.
 
-ESCENARIO DE RIESGO (rebalanceos > 0 o incidentes > 0):
-→ Identifica el "Sesgo de Gasto" específico (ej: "Estás canibalizando tu Ocio para financiar mala planeación en Alimentación").
-→ Si la desviación de capital supera el 15% del presupuesto variable, propón un ajuste técnico concreto para el próximo mes.
-
-DATOS A ANALIZAR: ${JSON.stringify(weeklyData)}
-
-FORMATO: Máximo 4 líneas. Sin bullet points. Texto corrido. Sin saludos.`;
+REGLAS:
+- No repitas los números exactos en exceso.
+- Sé claro, estratégico y educativo.
+- El texto debe ser fluido y directo.
+- Máximo 300 palabras.`;
 
         try {
             let text = '';
@@ -796,7 +798,7 @@ FORMATO: Máximo 4 líneas. Sin bullet points. Texto corrido. Sin saludos.`;
                 const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: systemPrompt, maxTokens: 200 })
+                    body: JSON.stringify({ prompt: `${systemPrompt}\n\n${userPrompt}`, maxTokens: 800 })
                 });
                 if (!response.ok) throw new Error('Proxy Error');
                 const data = await response.json();
@@ -807,8 +809,11 @@ FORMATO: Máximo 4 líneas. Sin bullet points. Texto corrido. Sin saludos.`;
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.config.openai_api_key}` },
                     body: JSON.stringify({
                         model: 'gpt-4o-mini',
-                        messages: [{ role: 'user', content: systemPrompt }],
-                        max_tokens: 200, temperature: 0.6
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        max_tokens: 800, temperature: 0.7
                     })
                 });
                 if (!response.ok) throw new Error('API Error');
@@ -820,8 +825,10 @@ FORMATO: Máximo 4 líneas. Sin bullet points. Texto corrido. Sin saludos.`;
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: systemPrompt }] }],
-                        generationConfig: { maxOutputTokens: 200, temperature: 0.6 }
+                        contents: [
+                            { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
+                        ],
+                        generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
                     })
                 });
                 if (!response.ok) throw new Error('API Error');

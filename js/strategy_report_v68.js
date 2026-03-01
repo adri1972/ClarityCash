@@ -248,34 +248,104 @@ class StrategyReport {
     async generateVerdict() {
         if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey()) {
             const box = document.getElementById('cfo-verdict-box');
-            if (box) box.innerHTML = '<span style="color:#C62828;">⚠️ Conecta tu IA en Configuración para generar el veredicto.</span>';
+            if (box) box.innerHTML = '<span style="color:#dc2626; font-weight:600;">⚠️ Conecta tu IA en Configuración para generar el veredicto.</span>';
             return;
         }
 
         const btn = document.getElementById('generate-verdict-btn');
-        if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando...'; }
+        const box = document.getElementById('cfo-verdict-box');
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '🕒 Analizando tu semana financiera...';
+            btn.style.opacity = '0.7';
+        }
+        if (box) {
+            box.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px; color:#94a3b8;">' +
+                '<div class="spinner" style="width:20px; height:20px; border:2px solid #334155; border-top:2px solid #E91E63; border-radius:50%; animation: spin 1s linear infinite;"></div>' +
+                '<span style="font-size:0.8rem;">El CFO está analizando tus movimientos...</span></div>';
+        }
+
+        // ─── Recopilar contextos mensuales y semanales ───
+        const now = new Date();
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(new Date(now).setDate(diff));
+        monday.setHours(0, 0, 0, 0);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+
+        const allTxs = this.store.transactions();
+        const weeklyTxs = allTxs.filter(t => {
+            const d = new Date(t.date);
+            return d >= monday && d <= sunday;
+        });
+
+        const categories = this.store.categories();
+        const config = this.store.config();
+        const budgets = config.budgets || {};
+
+        let ingresos = 0;
+        let gastos = 0;
+        let ahorro = 0;
+        let deuda = 0;
+        const catSpending = {};
+
+        weeklyTxs.forEach(t => {
+            const cat = categories.find(c => c.id === t.category_id);
+            if (!cat) return;
+
+            if (cat.group === 'INGRESOS') {
+                ingresos += t.amount;
+            } else {
+                gastos += t.amount;
+                catSpending[cat.id] = (catSpending[cat.id] || 0) + t.amount;
+                if (cat.group === 'FINANCIERO') {
+                    if (cat.id === 'cat_5') ahorro += t.amount; // Ahorro
+                    if (cat.id === 'cat_7' || cat.id === 'cat_fin_4') deuda += t.amount; // Deuda
+                }
+            }
+        });
+
+        // Categorías excedidas (Semanal = Mensual / 4)
+        const excedidas = [];
+        Object.keys(budgets).forEach(catId => {
+            const semanalLimit = budgets[catId] / 4;
+            const spent = catSpending[catId] || 0;
+            if (spent > semanalLimit) {
+                const cat = categories.find(c => c.id === catId);
+                if (cat) excedidas.push(cat.name);
+            }
+        });
 
         const events = this.getWeeklyEvents();
+        const health = this.getHealthStatus(events);
         const integrityOk = this.checkIntegrity();
-        const totalLeaked = events.rebalances.reduce((s, r) => s + (r.amount || 0), 0);
 
-        const weeklyData = {
+        const weeklyDataForAI = {
             semana: this.getWeekKey(),
-            rebalanceos: events.rebalances.length,
-            fugas_capital_total: totalLeaked,
-            fugas_detalle: events.rebalances.map(r => `${r.fromCat} → ${r.toCat}: $${r.amount?.toLocaleString()}`),
-            incidentes_saldo_negativo: events.interventions.length,
-            intocables_blindados: integrityOk
+            perfil_financiero: config.spending_profile || 'BALANCEADO',
+            score_semanal: health.score,
+            ingresos_semana: ingresos,
+            gastos_semana: gastos,
+            balance_semana: ingresos - gastos,
+            porcentaje_cumplimiento_presupuesto: config.monthly_income_target > 0 ? (gastos / (config.monthly_income_target / 4) * 100).toFixed(0) : 0,
+            fugas_capital: events.rebalances.length,
+            categorias_excedidas: excedidas,
+            dias_saldo_negativo: events.interventions.length,
+            ahorro_semana: ahorro,
+            deuda_pagada_semana: deuda,
+            intocables_comprometidos: !integrityOk
         };
 
         try {
-            const verdict = await this.aiAdvisor.getWeeklyCFOVerdict(weeklyData);
+            const verdict = await this.aiAdvisor.getWeeklyCFOVerdict(weeklyDataForAI);
             if (verdict) {
                 // Guardar en caché
                 localStorage.setItem('cc_cfo_verdict', JSON.stringify({ week: this.getWeekKey(), text: verdict }));
 
                 // Mostrar con efecto typewriter
-                const box = document.getElementById('cfo-verdict-box');
                 if (box) {
                     box.innerHTML = '<span id="cfo-text"></span>';
                     const textEl = document.getElementById('cfo-text');
@@ -286,18 +356,24 @@ class StrategyReport {
                             i++;
                         } else {
                             clearInterval(interval);
-                            // Mostrar indicador de caché y ocultar botón
-                            if (btn) btn.remove();
-                            box.insertAdjacentHTML('afterend', '<div style="margin-top:8px; font-size:0.7rem; color:#555; text-align:right;">✓ Cachéado esta semana</div>');
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.innerHTML = '⚡ Regenerar Veredicto';
+                                btn.style.opacity = '1';
+                            }
+                            box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
                         }
-                    }, 18);
+                    }, 12);
                 }
             }
         } catch (e) {
             console.error('CFO Verdict error:', e);
-            const box = document.getElementById('cfo-verdict-box');
-            if (box) box.innerHTML = '<span style="color:#C62828;">Error al generar el veredicto. Inténtalo de nuevo.</span>';
-            if (btn) { btn.disabled = false; btn.textContent = '⚡ Generar Veredicto'; }
+            if (box) box.innerHTML = '<span style="color:#dc2626;">Error al conectar con el CFO. Inténtalo más tarde.</span>';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '⚡ Generar Veredicto';
+                btn.style.opacity = '1';
+            }
         }
     }
 }
