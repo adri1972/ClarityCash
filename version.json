@@ -1,5 +1,5 @@
 {
-    "version": "71.3.INTEGRATED",
-    "updatedAt": "2026-03-01T09:55:00Z",
-    "notes": "Smart Goals with AI Suggestions & Dynamic Progress (v71.3)"
+    "version": "71.4.INTEGRATED",
+    "updatedAt": "2026-03-01T10:00:00Z",
+    "notes": "Bugfix: Corrected Store getter calls in Goals and Audit (v71.4)"
 }

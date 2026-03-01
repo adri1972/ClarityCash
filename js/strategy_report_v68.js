@@ -85,8 +85,8 @@ class StrategyReport {
 
     // ─── Utilidad: Promedios de las últimas 4 semanas ──────────────────────
     get4WeekAverages() {
-        const allTxs = this.store.transactions();
-        const config = this.store.config();
+        const allTxs = this.store.transactions;
+        const config = this.store.config;
         const now = new Date();
         const averages = { income: 0, expenses: 0, score: 0 };
 
@@ -99,7 +99,7 @@ class StrategyReport {
         let totalExpenses = 0;
 
         periodTxs.forEach(t => {
-            const cat = this.store.categories().find(c => c.id === t.category_id);
+            const cat = this.store.categories.find(c => c.id === t.category_id);
             if (!cat) return;
             if (cat.group === 'INGRESOS') totalIncome += t.amount;
             else totalExpenses += t.amount;
@@ -314,14 +314,14 @@ class StrategyReport {
         sunday.setDate(monday.getDate() + 6);
         sunday.setHours(23, 59, 59, 999);
 
-        const allTxs = this.store.transactions();
+        const allTxs = this.store.transactions;
         const weeklyTxs = allTxs.filter(t => {
             const d = new Date(t.date);
             return d >= monday && d <= sunday;
         });
 
-        const categories = this.store.categories();
-        const config = this.store.config();
+        const categories = this.store.categories;
+        const config = this.store.config;
         const budgets = config.budgets || {};
 
         let ingresos = 0;

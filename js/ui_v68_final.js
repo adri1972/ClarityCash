@@ -4806,7 +4806,7 @@ class UIManager {
     renderGoals() {
         this.pageTitle.textContent = 'Metas Financieras 🎯';
         const goals = this.store.getGoals();
-        const config = this.store.config();
+        const config = this.store.config;
 
         // ─── LÓGICA DE AUDITORÍA CONTEXTUAL ───
         let contextualAlert = '';
