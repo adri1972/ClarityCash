@@ -3806,6 +3806,28 @@ class UIManager {
         const summary = this.store.getFinancialSummary(month, year);
         const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
 
+        // --- 📊 MOVEMENTS COUNTER FOR ANALYSIS ---
+        const startOfMonth = new Date(year, month, 1).toISOString();
+        const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+        const monthlyTransactions = this.store.transactions.filter(t => t.date >= startOfMonth && t.date <= endOfMonth);
+        const movementsCount = monthlyTransactions.length;
+        const incomeCount = monthlyTransactions.filter(t => t.type === 'INGRESO').length;
+        const expenseCount = monthlyTransactions.filter(t => t.type === 'GASTO').length;
+
+        // --- 💰 BALANCE DEL MES ---
+        const balanceValue = summary.income - summary.expenses;
+        let balanceMessage = "";
+        let balanceColor = "#64748b";
+        if (balanceValue > 0) {
+            balanceMessage = `Te está sobrando dinero: ${this.formatCurrency(balanceValue)}`;
+            balanceColor = "#10b981";
+        } else if (balanceValue < 0) {
+            balanceMessage = `Estás gastando más de lo que ganas: ${this.formatCurrency(Math.abs(balanceValue))}`;
+            balanceColor = "#ef4444";
+        } else {
+            balanceMessage = "Estás en punto de equilibrio";
+        }
+
         const compareArrow = (current, previous) => {
             let prevVal = previous === 0 ? 0 : previous;
             let pctChange = 0;
@@ -3851,7 +3873,7 @@ class UIManager {
 
         const metricsHTML = `
             ${streakHTML}
-            <div class="metrics-row">
+            <div class="metrics-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px;">
                 <div class="metric-card">
                     <span class="label">Ingresos ${compareArrow(summary.income, prevSummary.income)}</span>
                     <span class="value income">+${this.formatCurrency(summary.income)}</span>
@@ -3868,6 +3890,10 @@ class UIManager {
                  <div class="metric-card">
                     <span class="label">Deuda Pagada</span>
                     <span class="value debt">-${this.formatCurrency(summary.debt_payment)}</span>
+                </div>
+                <div class="metric-card" style="border-top: 3px solid ${balanceColor};">
+                    <span class="label">Balance del mes</span>
+                    <span class="value" style="color: ${balanceColor}; font-size: 0.8rem; margin-top: 5px; line-height: 1.2;">${balanceMessage}</span>
                 </div>
             </div>
         `;
@@ -3978,48 +4004,89 @@ class UIManager {
         `;
         const insights = this.advisor.analyze(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
-        if (insights.length === 0) {
+        if (movementsCount < 5) {
+            const progressPct = (movementsCount / 5) * 100;
+            const step1Done = incomeCount >= 1;
+            const step2Done = expenseCount >= 2;
+            const step3Active = movementsCount >= 5;
+
             html += `
-                <div style="text-align: center; padding: 2rem 1.5rem;">
-                    <div style="font-size: 2.5rem; margin-bottom: 10px;">🔍</div>
-                    <h3 style="margin: 0 0 8px; color: #333;">Aún no hay suficientes datos</h3>
-                    <p style="color: #888; margin: 0; font-size: 0.9rem; line-height: 1.5;">Registra al menos <strong>5 movimientos</strong> (ingresos y gastos) para que la IA pueda analizar tus patrones financieros y darte un diagnóstico completo.</p>
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; margin-top: 1rem;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">Progreso de análisis: ${movementsCount}/5 movimientos</span>
+                            <span style="font-size: 0.8rem; color: #64748b;">${Math.round(progressPct)}%</span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                            <div style="width: ${progressPct}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #2dd4bf); transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px; opacity: ${step1Done ? '1' : '0.5'}">
+                            <div style="width: 20px; height: 20px; border-radius: 50%; background: ${step1Done ? '#10b981' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem;">
+                                ${step1Done ? '✓' : '1'}
+                            </div>
+                            <span style="font-size: 0.85rem; color: ${step1Done ? '#0f172a' : '#64748b'}; font-weight: ${step1Done ? '600' : '400'}">Paso 1: Registra tu primer ingreso</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; opacity: ${step2Done ? '1' : '0.5'}">
+                            <div style="width: 20px; height: 20px; border-radius: 50%; background: ${step2Done ? '#10b981' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem;">
+                                ${step2Done ? '✓' : '2'}
+                            </div>
+                            <span style="font-size: 0.85rem; color: ${step2Done ? '#0f172a' : '#64748b'}; font-weight: ${step2Done ? '600' : '400'}">Paso 2: Registra al menos 2 gastos</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; opacity: ${step3Active ? '1' : '0.3'}">
+                            <div style="width: 20px; height: 20px; border-radius: 50%; background: ${step3Active ? '#3b82f6' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem;">
+                                ${step3Active ? '🚀' : '3'}
+                            </div>
+                            <span style="font-size: 0.85rem; color: ${step3Active ? '#0f172a' : '#64748b'}; font-weight: ${step3Active ? '600' : '400'}">Paso 3: Recibe tu diagnóstico mensual</span>
+                        </div>
+                    </div>
                 </div>
             `;
         } else {
-            insights.forEach(i => {
-                try {
-                    const potentialHtml = i.savingsPotential
-                        ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
-                        : '';
+            if (insights.length === 0) {
+                html += `
+                    <div style="text-align: center; padding: 2rem 1.5rem; background: #f8fafc; border-radius: 16px; border: 1px dashed #cbd5e1;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">✨</div>
+                        <h4 style="margin: 0 0 8px; color: #1e293b;">¡Todo bajo control!</h4>
+                        <p style="color: #64748b; margin: 0; font-size: 0.85rem; line-height: 1.5;">No hemos detectado fugas críticas en tus patrones de este mes. Sigue registrando para un análisis más profundo.</p>
+                    </div>
+                `;
+            } else {
+                insights.forEach(i => {
+                    try {
+                        const potentialHtml = i.savingsPotential
+                            ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
+                            : '';
 
-                    // Map advisor type to severity (advisor returns: critical, warning, info)
-                    const severityMap = { 'critical': 'HIGH', 'warning': 'MEDIUM', 'info': 'LOW' };
-                    const severity = severityMap[i.type] || i.severity || 'INFO';
+                        // Map advisor type to severity (advisor returns: critical, warning, info)
+                        const severityMap = { 'critical': 'HIGH', 'warning': 'MEDIUM', 'info': 'LOW' };
+                        const severity = severityMap[i.type] || i.severity || 'INFO';
 
-                    // Color mapping
-                    const colors = {
-                        'HIGH': '#F44336',
-                        'MEDIUM': '#FF9800',
-                        'LOW': '#4CAF50',
-                        'INFO': '#2196F3'
-                    };
-                    const color = colors[severity] || '#666';
+                        // Color mapping
+                        const colors = {
+                            'HIGH': '#F44336',
+                            'MEDIUM': '#FF9800',
+                            'LOW': '#4CAF50',
+                            'INFO': '#2196F3'
+                        };
+                        const color = colors[severity] || '#666';
 
-                    // Icon mapping
-                    const icons = {
-                        'HIGH': 'alert-circle',
-                        'MEDIUM': 'alert-triangle',
-                        'LOW': 'check-circle',
-                        'INFO': 'info'
-                    };
-                    const icon = icons[severity] || 'info';
+                        // Icon mapping
+                        const icons = {
+                            'HIGH': 'alert-circle',
+                            'MEDIUM': 'alert-triangle',
+                            'LOW': 'check-circle',
+                            'INFO': 'info'
+                        };
+                        const icon = icons[severity] || 'info';
 
-                    // Use message or description (advisor uses 'message')
-                    const desc = i.description || i.message || '';
-                    const rec = i.recommendation || '';
+                        // Use message or description (advisor uses 'message')
+                        const desc = i.description || i.message || '';
+                        const rec = i.recommendation || '';
 
-                    html += `
+                        html += `
                         <div class="insight-card severity-${severity.toLowerCase()}">
                             <div class="insight-header">
                                 <span class="insight-title" style="color:${color}; display:flex; align-items:center; gap:0.5rem;">
@@ -4034,10 +4101,11 @@ class UIManager {
                             </div>` : ''}
                         </div>
                     `;
-                } catch (err) {
-                    console.error('Error rendering insight:', err, i);
-                }
-            });
+                    } catch (err) {
+                        console.error('Error rendering insight:', err, i);
+                    }
+                });
+            }
         }
 
         html += '</div>'; // Close max-width container
@@ -4066,14 +4134,16 @@ class UIManager {
                 </div>
             `;
         } else {
+            const aiDisabled = movementsCount < 5;
             html += `
                 <div id="ai-response" style="text-align: center; padding: 1rem;">
-                    <p style="color: #666;">¿Listo para recibir tu consejo financiero personalizado?</p>
+                    <p style="color: #666; font-weight: 500;">Tu CFO personal está listo para analizar tu mes.</p>
                 </div>
                 <div style="text-align: center;">
-                    <button id="ai-ask-btn" class="btn btn-primary" style="padding: 0.6rem 2rem; font-size: 1rem; background: linear-gradient(135deg, #FF4081, #E91E63); color: white; border: none; font-weight: 600; box-shadow: 0 4px 15px rgba(233,30,99,0.25);">
+                    <button id="ai-ask-btn" class="btn btn-primary" ${aiDisabled ? 'disabled' : ''} style="padding: 0.6rem 2rem; font-size: 1rem; background: ${aiDisabled ? '#cbd5e1' : 'linear-gradient(135deg, #FF4081, #E91E63)'}; color: white; border: none; font-weight: 600; box-shadow: ${aiDisabled ? 'none' : '0 4px 15px rgba(233,30,99,0.25)'}; cursor: ${aiDisabled ? 'not-allowed' : 'pointer'};">
                         🧠 Explícame cómo mejorar este mes
                     </button>
+                    ${aiDisabled ? `<p style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">Disponible cuando registres al menos 5 movimientos.</p>` : ''}
                 </div>
             `;
         }
