@@ -55,10 +55,19 @@ class StrategyReport {
 
     // ─── Calcular salud financiera ─────────────────────────────────────────
     getHealthStatus(events) {
-        const total = events.interventions.length + events.rebalances.length;
-        if (total === 0) return { color: '#2E7D32', bg: '#E8F5E9', label: '🟢 Disciplina Óptima', score: 100 };
-        if (total <= 2) return { color: '#E65100', bg: '#FFF3E0', label: '🟡 Atención Requerida', score: 65 };
-        return { color: '#C62828', bg: '#FFEBEE', label: '🔴 Riesgo Financiero', score: 30 };
+        // Cálculo sugerido: Base 100
+        // -10 por cada fuga (rebalance), -15 por incidente (saldo negativo)
+        // -10 si hubo rebalanceos (exceso de presupuesto semanal)
+        let score = 100;
+        score -= (events.rebalances.length * 10);
+        score -= (events.interventions.length * 15);
+        if (events.rebalances.length > 0) score -= 10;
+
+        score = Math.max(0, score);
+
+        if (score >= 90) return { color: '#2E7D32', bg: '#E8F5E9', label: '🟢 Disciplina Óptima', score };
+        if (score >= 60) return { color: '#E65100', bg: '#FFF3E0', label: '🟡 Atención Requerida', score };
+        return { color: '#C62828', bg: '#FFEBEE', label: '🔴 Riesgo Financiero', score };
     }
 
     // ─── Render principal ──────────────────────────────────────────────────
@@ -79,29 +88,53 @@ class StrategyReport {
         const totalLeaked = events.rebalances.reduce((s, r) => s + (r.amount || 0), 0);
         const fmt = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
 
-        // Generar tabla de rebalanceos
-        const rebalanceRows = events.rebalances.length > 0
-            ? events.rebalances.map(r => `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid var(--border-color, #f0f0f0); font-size:0.85rem;">
-                    <div>
-                        <span style="color:#C62828; font-weight:600;">${r.fromCat || 'Ocio'}</span>
-                        <span style="color:#999; margin: 0 6px;">→</span>
-                        <span style="color:#1565C0; font-weight:600;">${r.toCat || 'Otro'}</span>
-                    </div>
-                    <span style="font-weight:700; color:#E65100;">${fmt(r.amount || 0)}</span>
-                </div>
-            `).join('')
-            : `<p style="color:#999; font-size:0.85rem; text-align:center; padding:12px 0;">✅ Sin fugas de capital esta semana.</p>`;
+        // Mensaje dinámico de alertas para el botón
+        const hasAlerts = events.rebalances.length > 0 || events.interventions.length > 0 || !integrityOk;
+        const alertMessage = hasAlerts
+            ? "Hubo alertas esta semana que deberías revisar."
+            : "Tu semana fue financieramente estable.";
 
-        // Generar lista de intervenciones
-        const interventionRows = events.interventions.length > 0
-            ? events.interventions.map(i => `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0; border-bottom: 1px solid var(--border-color, #f0f0f0); font-size:0.85rem;">
-                    <span style="color:#555;">Saldo negativo en <b>${i.account || 'cuenta'}</b></span>
-                    <span style="font-weight:700; color:#C62828;">${fmt(i.amount || 0)}</span>
+        // Generar tabla de rebalanceos (Fugas)
+        let rebalanceHtml = '';
+        if (events.rebalances.length > 0) {
+            const mainCat = events.rebalances[0].fromCat || 'Ocio';
+            rebalanceHtml = `
+                <div style="background:#FFF5F5; border: 1px solid #FED7D7; padding:12px; border-radius:10px; margin-bottom:12px; display:flex; gap:10px; align-items:center;">
+                    <span style="font-size:1.2rem;">⚠️</span>
+                    <span style="font-size:0.85rem; color:#C53030; font-weight:600;">Detectamos gastos fuera de tu presupuesto en: ${mainCat}</span>
                 </div>
-            `).join('')
-            : `<p style="color:#999; font-size:0.85rem; text-align:center; padding:12px 0;">✅ Sin incidentes de saldo negativo.</p>`;
+                ${events.rebalances.map(r => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size:0.85rem;">
+                        <div>
+                            <span style="color:#C62828; font-weight:600;">${r.fromCat || 'Ocio'}</span>
+                            <span style="color:#999; margin: 0 6px;">→</span>
+                            <span style="color:#1565C0; font-weight:600;">${r.toCat || 'Otro'}</span>
+                        </div>
+                        <span style="font-weight:700; color:#E65100;">${fmt(r.amount || 0)}</span>
+                    </div>
+                `).join('')}
+            `;
+        } else {
+            rebalanceHtml = `<p style="color:#64748b; font-size:0.85rem; text-align:center; padding:12px 0;">✅ Sin fugas de capital esta semana.</p>`;
+        }
+
+        // Generar lista de intervenciones (Saldo Negativo)
+        let interventionHtml = '';
+        if (events.interventions.length > 0) {
+            interventionHtml = `
+                <div style="background:#FFF5F5; border: 1px solid #FED7D7; padding:12px; border-radius:10px; margin-bottom:12px; font-size:0.85rem; color:#C53030; font-weight:600;">
+                    🚨 Tuviste ${events.interventions.length} días con saldo negativo. Revisa tu flujo semanal.
+                </div>
+                ${events.interventions.map(i => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size:0.85rem;">
+                        <span style="color:#475569;">Saldo negativo en <b>${i.account || 'cuenta'}</b></span>
+                        <span style="font-weight:700; color:#dc2626;">${fmt(i.amount || 0)}</span>
+                    </div>
+                `).join('')}
+            `;
+        } else {
+            interventionHtml = `<p style="color:#64748b; font-size:0.85rem; text-align:center; padding:12px 0;">✅ Sin incidentes de saldo negativo.</p>`;
+        }
 
         this.container.innerHTML = `
             <div style="max-width: 480px; margin: 0 auto; padding: 0 0 100px 0;">
@@ -109,76 +142,82 @@ class StrategyReport {
                 <!-- WIDGET DE SALUD -->
                 <div style="background: ${health.bg}; border-radius: 20px; padding: 24px; margin-bottom: 20px; text-align:center; border: 2px solid ${health.color}30;">
                     <div style="font-size: 2.5rem; margin-bottom: 8px;">
-                        ${health.score === 100 ? '🏆' : health.score >= 65 ? '⚠️' : '🚨'}
+                        ${health.score >= 90 ? '🏆' : health.score >= 60 ? '⚠️' : '🚨'}
                     </div>
-                    <div style="font-size:1.1rem; font-weight:800; color:${health.color}; margin-bottom:4px;">${health.label}</div>
-                    <div style="font-size:0.8rem; color:${health.color}; opacity:0.8;">Semana ${weekKey}</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:${health.color}; margin-bottom:2px;">${health.label}</div>
+                    <div style="font-size:0.75rem; color:${health.color}; opacity:0.8; margin-bottom:4px;">Evalúa tu comportamiento financiero semanal.</div>
+                    <div style="font-size:0.75rem; color:${health.color}; opacity:0.6;">Semana ${weekKey}</div>
                     
                     <!-- Barra visual -->
-                    <div style="background:${health.color}20; border-radius:20px; height:8px; margin:14px 0; overflow:hidden;">
-                        <div style="background:${health.color}; height:100%; width:${health.score}%; border-radius:20px; transition: width 1s ease;"></div>
+                    <div style="background:${health.color}20; border-radius:20px; height:10px; margin:16px 0 8px 0; overflow:hidden;">
+                        <div id="health-bar-fill" style="background:${health.color}; height:100%; width:0%; border-radius:20px; transition: width 1s ease-out;"></div>
                     </div>
+                    <div style="font-size:0.9rem; font-weight:700; color:${health.color}; margin-bottom:12px;">Score financiero semanal: ${health.score} / 100</div>
+
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; margin-top:8px;">
-                        <div style="background:white; border-radius:10px; padding:8px;">
+                        <div style="background:white; border-radius:12px; padding:8px; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
                             <div style="font-size:1.2rem; font-weight:800; color:${health.color};">${events.rebalances.length}</div>
-                            <div style="font-size:0.65rem; color:#888; text-transform:uppercase;">Rebalanceos</div>
+                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Fugas</div>
                         </div>
-                        <div style="background:white; border-radius:10px; padding:8px;">
+                        <div style="background:white; border-radius:12px; padding:8px; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
                             <div style="font-size:1.2rem; font-weight:800; color:${health.color};">${events.interventions.length}</div>
-                            <div style="font-size:0.65rem; color:#888; text-transform:uppercase;">Incidentes</div>
+                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Incidentes</div>
                         </div>
-                        <div style="background:white; border-radius:10px; padding:8px;">
-                            <div style="font-size:1.2rem; font-weight:800; color:${integrityOk ? '#2E7D32' : '#C62828'};">${integrityOk ? '✓' : '✗'}</div>
-                            <div style="font-size:0.65rem; color:#888; text-transform:uppercase;">Blindado</div>
+                        <div style="background:white; border-radius:12px; padding:8px; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
+                            <div style="font-size:1.2rem; font-weight:800; color:${integrityOk ? '#059669' : '#dc2626'};">${integrityOk ? '✓' : '✗'}</div>
+                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Blindado</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- FUGAS DE CAPITAL -->
-                <div style="background:var(--bg-surface, white); border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+                <div style="background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="margin:0; font-size:0.9rem; font-weight:700; color:var(--text-main, #1e293b);">💸 Fugas de Capital</h4>
-                        ${totalLeaked > 0 ? `<span style="font-size:0.8rem; font-weight:700; color:#C62828;">${fmt(totalLeaked)} total</span>` : ''}
+                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b;">💸 Fugas de Capital</h4>
+                        ${totalLeaked > 0 ? `<span style="font-size:0.8rem; font-weight:700; color:#dc2626; background:#fee2e2; padding:2px 8px; border-radius:20px;">${fmt(totalLeaked)} total</span>` : ''}
                     </div>
-                    ${rebalanceRows}
+                    ${rebalanceHtml}
                 </div>
 
                 <!-- INCIDENTES DE INTEGRIDAD -->
-                <div style="background:var(--bg-surface, white); border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
-                    <h4 style="margin:0 0 12px 0; font-size:0.9rem; font-weight:700; color:var(--text-main, #1e293b);">🛡️ Incidentes de Saldo Negativo</h4>
-                    ${interventionRows}
+                <div style="background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
+                    <h4 style="margin:0 0 12px 0; font-size:0.95rem; font-weight:700; color:#1e293b;">🛡️ Incidentes de Saldo Negativo</h4>
+                    ${interventionHtml}
                 </div>
 
                 <!-- VEREDICTO DEL CFO -->
-                <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius:20px; padding:20px; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-                        <span style="font-size:1.5rem;">🧠</span>
+                <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border-radius:20px; padding:20px; margin-bottom:16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                        <div style="width:40px; height:40px; background:rgba(255,255,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🧠</div>
                         <div>
-                            <div style="color:white; font-weight:800; font-size:0.95rem;">Veredicto del CFO</div>
-                            <div style="color:#888; font-size:0.72rem;">Análisis estratégico semanal por IA</div>
+                            <div style="color:white; font-weight:700; font-size:1rem;">Veredicto del CFO</div>
+                            <div style="color:#94a3b8; font-size:0.75rem;">Análisis estratégico semanal</div>
                         </div>
                     </div>
                     
-                    <div id="cfo-verdict-box" style="background:rgba(255,255,255,0.06); border-radius:12px; padding:14px; min-height:80px; color:#e2e8f0; font-size:0.88rem; line-height:1.6;">
+                    <div id="cfo-verdict-box" style="background:rgba(255,255,255,0.05); border-radius:14px; padding:16px; min-height:80px; color:#f1f5f9; font-size:0.9rem; line-height:1.6; border: 1px solid rgba(255,255,255,0.1);">
                         ${cachedVerdict
                 ? `<span id="cfo-text">${cachedVerdict}</span>`
-                : `<span style="color:#555; font-size:0.82rem;">Toca "Generar Veredicto" para que la IA analice tu semana.</span>`
+                : `<span style="color:#64748b; font-size:0.85rem;">Toca "Generar Veredicto" para que la IA analice tu semana.</span>`
             }
                     </div>
 
                     ${cachedVerdict ? `
-                        <div style="margin-top:8px; font-size:0.7rem; color:#555; text-align:right;">✓ Cachéado esta semana</div>
+                        <div style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>
                     ` : `
-                        <button id="generate-verdict-btn" onclick="window.strategyReport.generateVerdict()" 
-                            style="width:100%; margin-top:14px; padding:12px; background:linear-gradient(135deg, #E91E63, #9C27B0); color:white; border:none; border-radius:12px; font-weight:700; font-size:0.9rem; cursor:pointer; transition: opacity 0.2s;">
-                            ⚡ Generar Veredicto
-                        </button>
+                        <div style="text-align:center; margin-top:15px;">
+                            <p style="color:#cbd5e1; font-size:0.8rem; margin-bottom:10px; font-weight:500;">${alertMessage}</p>
+                            <button id="generate-verdict-btn" onclick="window.strategyReport.generateVerdict()" 
+                                style="width:100%; padding:14px; background:linear-gradient(135deg, #E91E63, #9C27B0); color:white; border:none; border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(233,30,99,0.3);">
+                                ⚡ Generar Veredicto
+                            </button>
+                        </div>
                     `}
                 </div>
 
                 <!-- BOTÓN AJUSTAR PRESUPUESTO -->
                 <button onclick="document.querySelector('[data-view=settings]').click()" 
-                    style="width:100%; padding:14px; background:var(--bg-surface, white); border:2px solid #E91E63; color:#E91E63; border-radius:16px; font-weight:700; font-size:0.95rem; cursor:pointer;">
+                    style="width:100%; padding:15px; background:white; border:2px solid #E91E63; color:#E91E63; border-radius:18px; font-weight:700; font-size:0.95rem; cursor:pointer; transition: all 0.2s;">
                     📊 Ajustar Presupuesto para el Próximo Mes
                 </button>
             </div>
@@ -186,9 +225,9 @@ class StrategyReport {
 
         // Animar barra de salud
         setTimeout(() => {
-            const bar = this.container.querySelector('[style*="width:' + health.score + '%"]');
-            if (bar) bar.style.width = health.score + '%';
-        }, 100);
+            const barFill = document.getElementById('health-bar-fill');
+            if (barFill) barFill.style.width = health.score + '%';
+        }, 300);
     }
 
     // ─── Generar Veredicto IA ──────────────────────────────────────────────
