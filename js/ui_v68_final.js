@@ -4258,7 +4258,8 @@ class UIManager {
     renderSettings() {
         this.pageTitle.textContent = 'Centro Financiero';
         const conf = this.store.config;
-        const expanded = this.expandedSection || 'perfil';
+        if (this.expandedSection === undefined) this.expandedSection = 'perfil';
+        const expanded = this.expandedSection;
 
         // Filter categories for Budget
         const categories = this.store.categories.filter(c =>
