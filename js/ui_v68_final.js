@@ -1399,6 +1399,18 @@ class UIManager {
                 const val = document.getElementById('guide-debt-amount').value.replace(/\D/g, '');
                 const amount = parseFloat(val) || 0;
                 this._guideData.total_debt = amount;
+
+                // Generar préstamo inicial
+                if (amount > 0) {
+                    this._guideData.loan = {
+                        id: 'loan_' + Date.now(),
+                        name: 'Obligaciones fijas (Onboarding)',
+                        monthly_payment: amount,
+                        payment_day: '',
+                        total_balance: 0,
+                        created_at: new Date().toISOString()
+                    };
+                }
             } else {
                 this._guideData.total_debt = 0;
             }
@@ -1409,13 +1421,18 @@ class UIManager {
                 fixed.push(...this._guideData.fixed_expenses);
             }
 
+            const loans = this.store.config.loans || [];
+            if (this._guideData.loan) {
+                loans.push(this._guideData.loan);
+            }
+
             const btn = document.querySelector('#smart-guide-card button');
             if (btn) { btn.disabled = true; btn.innerHTML = 'Guardando...'; }
 
             await this.store.updateConfig({
                 monthly_income_target: this._guideData.monthly_income_target,
                 fixed_expenses: fixed,
-                total_debt: this._guideData.total_debt
+                loans: loans
             });
 
             this.guideStep = 4;

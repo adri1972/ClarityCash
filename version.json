@@ -1,5 +1,5 @@
 {
-    "version": "72.3.LOANS_ACTIVE",
-    "updatedAt": "2026-03-01T16:35:00Z",
-    "notes": "Feature: Nuevo módulo de Préstamos (Deuda) con lógica de descuento de cuotas del ingreso mensual."
+    "version": "72.4.ONBOARDING_LOANS",
+    "updatedAt": "2026-03-01T16:40:00Z",
+    "notes": "Feature: Integración del Onboarding (Paso 3) con el nuevo módulo de Préstamos (Deuda)."
 }
