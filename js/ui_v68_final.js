@@ -4308,10 +4308,10 @@ class UIManager {
                     <label style="margin: 0; flex: 1; font-weight: 600; font-size: 0.9rem;">${c.name} ${labelExtra}</label>
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
                         <span style="color: #64748b; font-size: 0.8rem;">$</span>
-                        <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0" ${inputAttrs}
-                               style="width: 100px; text-align: right; border: ${isFixed ? 'none' : '1px solid #ddd'}; background: ${isFixed ? 'transparent' : '#fff'}; border-radius: 6px; padding: 5px 8px; font-weight: 700;"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
-                    </div>
+                         <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0" ${inputAttrs}
+                                style="width: 100px; text-align: right; border: ${isFixed ? 'none' : '1px solid #ddd'}; background: ${isFixed ? 'transparent' : '#fff'}; border-radius: 6px; padding: 5px 8px; font-weight: 700;"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal(); const msg = document.getElementById('budget-status-msg'); if(msg) msg.innerHTML='⚠️ Has ajustado manualmente tu estructura.';">
+                     </div>
                 </div>
             `;
         };
@@ -4392,10 +4392,26 @@ class UIManager {
             },
             {
                 id: 'presupuesto', title: 'Presupuesto Mensual', icon: '🎯', content: `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                        <span id="budget-summary-pill" style="font-size:0.85rem; font-weight:700; color:#475569;">Calculando...</span>
-                        <button type="button" id="auto-budget-btn" class="btn-text" style="background:#fce4ec; padding:4px 12px; border-radius:20px; font-weight:700; color:#db2777; font-size:0.75rem;">✨ Sugerir</button>
-                    </div>
+                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <div>
+                                <span style="display: block; font-size: 0.65rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Perfil Activo</span>
+                                <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 1px solid #bae6fd;">
+                                    ✨ ${conf.spending_profile || 'BALANCEADO'}
+                                </span>
+                            </div>
+                            <button type="button" id="auto-budget-btn" class="btn-primary" style="padding: 8px 16px; border-radius: 12px; font-size: 0.85rem; box-shadow: none;">
+                                Aplicar estructura del perfil
+                            </button>
+                        </div>
+                        <div id="budget-status-msg" style="font-size: 0.8rem; color: #334155; font-weight: 600; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+                            ${Object.keys(budgets).length > 0 ? '✔️ Estructura aplicada según tu perfil.' : '⚠️ Presupuesto no definido.'}
+                        </div>
+                     </div>
+ 
+                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding: 0 4px;">
+                         <span id="budget-summary-pill" style="font-size:0.85rem; font-weight:700; color:#475569;">Calculando...</span>
+                     </div>
                     <div style="margin-bottom:1rem;">
                         <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #3b82f6; text-transform: uppercase;">📌 Gastos Fijos</h4>
                         ${fixedCats.map(c => renderRow(c, true)).join('')}
@@ -4413,13 +4429,23 @@ class UIManager {
             },
             {
                 id: 'avanzado', title: 'Avanzado', icon: '🛠️', content: `
-                    <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Acciones de mantenimiento y sistema.</p>
-                    <div style="padding: 15px; border-radius: 12px; border: 1px solid #fee2e2; background: #fff5f5;">
-                        <button type="button" onclick="window.ui.performNuclearUpdate()" style="background: none; border: none; color: #dc2626; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;">
-                            ☢️ Forzar reinicio y limpieza profunda de caché
-                        </button>
-                    </div>
-                `
+                     <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Acciones de mantenimiento y sistema.</p>
+                     <div style="padding: 15px; border-radius: 12px; border: 1px solid #fee2e2; background: #fff5f5;">
+                         <button type="button" onclick="window.ui.performNuclearUpdate()" style="background: none; border: none; color: #dc2626; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;">
+                             ☢️ Forzar reinicio y limpieza profunda de caché
+                         </button>
+                     </div>
+                 `
+            },
+            {
+                id: 'ia', title: 'Inteligencia Artificial', icon: '🧠', content: `
+                     <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Configuración de llaves de acceso para el motor de IA.</p>
+                     <div class="form-group">
+                         <label>Gemini API Key</label>
+                         <input type="password" name="gemini_api_key" value="${conf.gemini_api_key || ''}" placeholder="Ingresa tu API Key (puedes verla si eres admin)">
+                         <small style="color: #64748b; font-size: 0.75rem;">Esta llave permite el escaneo de recibos y el análisis predictivo.</small>
+                     </div>
+                 `
             }
         ];
 
@@ -4525,7 +4551,9 @@ class UIManager {
                     });
                     this.store.updateConfig({ budgets: { ...conf.budgets, ...finalValues } });
                     this.updateBudgetTotal();
-                    alert('✨ Sugerencia generada.');
+                    const statusMsg = document.getElementById('budget-status-msg');
+                    if (statusMsg) statusMsg.innerHTML = '✔️ Estructura aplicada según tu perfil.';
+                    alert('✨ Estructura del perfil aplicada.');
                 }
             }
 
@@ -4557,6 +4585,7 @@ class UIManager {
                     spending_profile: formData.get('spending_profile'),
                     has_debts: formData.get('has_debts') === 'on',
                     total_debt: parseFloat(formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0') || 0,
+                    gemini_api_key: formData.get('gemini_api_key') || '',
                     budgets: newBudgets
                 });
                 alert('✅ Cambios guardados.');
