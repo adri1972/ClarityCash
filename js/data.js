@@ -388,7 +388,7 @@ class Store {
             else if (t.type === 'GASTO') s.expenses += t.amount;
             else if (t.type === 'AHORRO') s.savings += t.amount;
             else if (t.type === 'INVERSION') s.investment += t.amount;
-            else if (t.type === 'PAGO_DEUDA') s.debt_payment += t.amount;
+            else if (t.type === 'PAGO_DEUDA' || t.type === 'PAGO_TARJETA') s.debt_payment += t.amount;
         });
         s.balance_net = s.income - (s.expenses + s.savings + s.investment + s.debt_payment);
         return s;

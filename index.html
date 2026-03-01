@@ -5,7 +5,7 @@
     <script>
         // --- STABLE UPDATE ENGINE v68.Y (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '71.7.CREDIT_MGMT';
+            const CURRENT_VERSION = '71.8.EDUCATIONAL';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -100,7 +100,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=v71.7">
+    <link rel="stylesheet" href="css/styles.css?v=v71.8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -248,13 +248,13 @@
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=v71.7').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v71.8').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div
         style="position:fixed; bottom:5px; left:5px; font-size:10px; color:var(--text-muted); z-index:9999; pointer-events:none; font-weight:bold;">
-        v71.7.CREDIT_MGMT</div>
+        v71.8.EDUCATIONAL</div>
 </body>
 
 </html>

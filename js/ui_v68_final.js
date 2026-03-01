@@ -1249,8 +1249,8 @@ class UIManager {
             `;
         } else if (this.guideStep === 3) {
             content = `
-                <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 3 de 3</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Tienes deudas actualmente?</p>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Obligaciones externas</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Tienes actualmente préstamos, cuotas fijas o hipotecas? (No incluyas consumos de tarjeta).</p>
                 
                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;" id="guide-debt-options">
                     <button class="btn" style="flex:1; background:#f1f5f9; color:#1e293b; border-radius:12px; padding:12px; border:2px solid transparent;" onclick="this.style.borderColor='var(--primary-color)'; this.nextElementSibling.style.borderColor='transparent'; document.getElementById('guide-debt-amount-container').style.display='block'; window.guideHasDebt=true;">Sí tengo</button>
@@ -1466,7 +1466,7 @@ class UIManager {
         // --- AI TIP REMOVED ---
         let aiTipHTML = '';
 
-        // --- SECTION 1: HERO (Simplified Dashboard Card) ---
+        // MODELO EDUCATIVO: Disponible = Ingreso Mensual - Gastos del Mes
         const totalBudget = Object.values(this.store.config.budgets || {}).reduce((a, b) => a + (Number(b) || 0), 0) || (Number(this.store.config.monthly_income_target) || 0);
         const used = summary.expenses;
         const available = totalBudget - used;
@@ -1529,9 +1529,12 @@ class UIManager {
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Disponible restante</span>
-                            <div style="font-size: 1.5rem; font-weight: 800; color: ${available < 0 ? 'var(--danger-color)' : 'var(--success-color)'}; margin-top: 4px;">
+                            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">Disponible para el mes</div>
+                            <div style="font-size: 2.2rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; line-height: 1;">
                                 ${this.formatCurrency(available)}
+                            </div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+                                de un ingreso base de <b>${this.formatCurrency(totalBudget)}</b>
                             </div>
                         </div>
                     </div>
@@ -1998,7 +2001,8 @@ class UIManager {
                     <p style="margin:0 0 8px; font-size:0.85rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">💳 Pago desde</p>
                     <select id="quick-account-select" style="width:100%; padding:14px; border:1px solid var(--border-color); border-radius:16px; background:var(--bg-surface); font-size:1rem; font-weight:500; font-family: inherit; outline:none; color:var(--text-main); cursor:pointer;">
                         ${this.store.accounts.map(a => {
-            const label = a.type === 'CREDITO' ? 'Deuda' : 'Saldo';
+            const isTC = a.type === 'CREDITO';
+            const label = isTC ? 'Saldo de tarjeta' : 'Saldo';
             return `<option value="${a.id}">${a.name} (${label}: ${this.formatCurrency(a.current_balance)})</option>`;
         }).join('')}
                     </select>
@@ -2567,12 +2571,12 @@ class UIManager {
                     <button type="button" onclick="window.ui.resolveNegativeBalance('DEBT', ${JSON.stringify(txData).replace(/"/g, '&quot;')}, '${creditAccount.id}', ${editId ? `'${editId}'` : 'null'})"
                             style="background: var(--primary-light); border: 1px solid var(--primary-color); color: var(--primary-dark); padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;"
                             onmouseover="this.style.background='#F8BBD0'" onmouseout="this.style.background='#FCE4EC'">
-                        <span>💳 Es Deuda. Lo pagué con ${creditAccount.name}</span>
+                        <span>💳 Saldo de tarjeta. Pago con ${creditAccount.name}</span>
                         <span>→</span>
                     </button>
                 ` : `
                     <div style="background: #FFE0B2; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #E65100;">
-                        No tienes una Tarjeta de Crédito configurada para asumir este gasto como deuda.
+                        No tienes una Tarjeta de Crédito configurada para asumir este gasto como saldo en tarjeta.
                     </div>
                 `}
                 
@@ -2687,7 +2691,7 @@ class UIManager {
             // Toast 1: Confirmación
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2E7D32; color:white; padding:12px 24px; border-radius:30px; font-size:1rem; font-weight:600; z-index:10001; animation: slideDown 0.3s, fadeOut 0.3s 2.5s forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;';
-            toast.innerHTML = `✅ Registrado como deuda en Tarjeta de Crédito.`;
+            toast.innerHTML = `✅ Registrado en Saldo de Tarjeta de Crédito.`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
 
@@ -4657,9 +4661,10 @@ class UIManager {
                          </select>
                          <div id="profile-specs"></div>
                      </div>
-                    <div class="form-group">
-                        <label><input type="checkbox" name="has_debts" ${conf.has_debts ? 'checked' : ''} onchange="document.getElementById('debt-grp').style.display=this.checked?'block':'none'"> Tengo deudas</label>
+                     <div class="form-group">
+                        <label><input type="checkbox" name="has_debts" ${conf.has_debts ? 'checked' : ''} onchange="document.getElementById('debt-grp').style.display=this.checked?'block':'none'"> Tengo préstamos u obligaciones</label>
                         <div id="debt-grp" style="display: ${conf.has_debts ? 'block' : 'none'}; margin-top: 5px;">
+                            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 5px;">Monto total de créditos personales, hipotecas o cuotas fijas (No incluye Tarjeta de Crédito).</p>
                             <input type="text" name="total_debt" value="${this.formatNumberWithDots(conf.total_debt || 0)}" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
                         </div>
                     </div>
@@ -4683,7 +4688,7 @@ class UIManager {
                                 <option value="BANCO">Débito</option>
                                 <option value="CREDITO">Crédito</option>
                             </select>
-                            <input type="text" id="new-acc-bal" placeholder="Saldo Inicial / Deuda Actual">
+                            <input type="text" id="new-acc-bal" placeholder="Saldo Inicial / Saldo de Tarjeta">
                             <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyAccountAdd()">Guardar Fuente</button>
                         </div>
                     </div>
