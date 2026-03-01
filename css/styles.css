@@ -1,10 +1,10 @@
 :root {
-    /* Color Identity: Strategic & Premium Magenta */
+    /* Color Identity: Strategic & Deep Wine Magenta */
     --primary-hue: 335;
-    --primary-color: hsl(var(--primary-hue), 77%, 42%);
-    /* Deep Strategic Magenta (#BE185D) */
-    --primary-light: hsl(var(--primary-hue), 70%, 96%);
-    --primary-dark: hsl(var(--primary-hue), 80%, 30%);
+    --primary-color: hsl(var(--primary-hue), 75%, 35%);
+    /* Strategic Deep Magenta (#9D174D) */
+    --primary-light: hsl(var(--primary-hue), 60%, 96%);
+    --primary-dark: hsl(var(--primary-hue), 80%, 25%);
 
     --accent-color: hsl(250, 40%, 45%);
     /* Subtle professional accent */
