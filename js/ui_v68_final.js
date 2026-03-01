@@ -1204,8 +1204,144 @@ class UIManager {
         this.showModal('Estrategias de Gasto', html);
     }
 
+    getGuideHTML(hasTransactions) {
+        // Condition: No existe ingreso registrado Y no existen movimientos
+        const income = this.store.config.monthly_income_target;
+        const hasIncome = income !== undefined && income !== null && income !== "" && income > 0;
+        const needsGuide = !hasIncome && !hasTransactions;
+
+        if (!needsGuide) {
+            this.guideStep = 0; // reset
+            return '';
+        }
+
+        if (this.guideStep === undefined) this.guideStep = 0;
+
+        let content = '';
+
+        if (this.guideStep === 0) {
+            content = `
+                <h2 style="margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 800; color: var(--text-main);">👋 Empecemos</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5;">Para ayudarte a tomar mejores decisiones, necesito 3 datos básicos. No te tomará más de 2 minutos.</p>
+                <button onclick="window.ui.guideStep = 1; window.ui.render()" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">👉 Empezar ahora</button>
+            `;
+        } else if (this.guideStep === 1) {
+            content = `
+                <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 1 de 3</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Cuánto ganas al mes?</p>
+                <input type="text" id="guide-income" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                <button onclick="window.ui.saveGuideStep(1)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Siguiente 👉</button>
+            `;
+        } else if (this.guideStep === 2) {
+            content = `
+                <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 2 de 3</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuál es tu gasto fijo más importante?</p>
+                <select id="guide-fixed-type" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 1rem;">
+                    <option value="Arriendo">Arriendo</option>
+                    <option value="Servicios">Servicios (Luz, Agua, etc)</option>
+                    <option value="Educacion">Educación / Colegios</option>
+                    <option value="Transporte">Transporte / Gasolina</option>
+                    <option value="Otro">Otro importante</option>
+                </select>
+                <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado:</p>
+                <input type="text" id="guide-fixed-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                <button onclick="window.ui.saveGuideStep(2)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Siguiente 👉</button>
+            `;
+        } else if (this.guideStep === 3) {
+            content = `
+                <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 3 de 3</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Tienes deudas actualmente?</p>
+                
+                <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;" id="guide-debt-options">
+                    <button class="btn" style="flex:1; background:#f1f5f9; color:#1e293b; border-radius:12px; padding:12px; border:2px solid transparent;" onclick="this.style.borderColor='var(--primary-color)'; this.nextElementSibling.style.borderColor='transparent'; document.getElementById('guide-debt-amount-container').style.display='block'; window.guideHasDebt=true;">Sí tengo</button>
+                    <button class="btn" style="flex:1; background:#f1f5f9; color:#1e293b; border-radius:12px; padding:12px; border:2px solid transparent;" onclick="this.style.borderColor='var(--primary-color)'; this.previousElementSibling.style.borderColor='transparent'; document.getElementById('guide-debt-amount-container').style.display='none'; window.guideHasDebt=false;">No tengo</button>
+                </div>
+                
+                <div id="guide-debt-amount-container" style="display:none;">
+                    <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado total:</p>
+                    <input type="text" id="guide-debt-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                </div>
+
+                <button onclick="window.ui.saveGuideStep(3)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Finalizar</button>
+            `;
+        } else if (this.guideStep === 4) {
+            content = `
+                <div style="padding: 10px;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5;">Perfecto. Ya tengo lo básico para empezar a ayudarte.<br><br>Ahora lo más importante es algo simple: registra lo que entra y lo que sale. No tiene que ser perfecto. Solo constante.</p>
+                    <button onclick="window.ui.guideStep = -1; window.ui.render()" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">¡Entendido!</button>
+                </div>
+            `;
+        }
+
+        // Return blank if completed
+        if (this.guideStep === -1) {
+            return '';
+        }
+
+        return `
+            <div id="smart-guide-card" style="background: white; border-radius: 24px; padding: 32px 24px; margin-bottom: 2rem; border: 1px solid #e1e7ef; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); text-align: center; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: linear-gradient(135deg, var(--primary-light), white); border-radius: 50%; opacity: 0.5;"></div>
+                <div style="position: relative; z-index: 1;">
+                    ${content}
+                </div>
+            </div>
+        `;
+    }
+
+    async saveGuideStep(step) {
+        this._guideData = this._guideData || {};
+        if (step === 1) {
+            const val = document.getElementById('guide-income').value.replace(/\\D/g, '');
+            const amount = parseFloat(val) || 0;
+            if (amount <= 0) { alert("Por favor ingresa un monto válido. Estoy aprendiendo de ti."); return; }
+            this._guideData.monthly_income_target = amount;
+            this.guideStep = 2;
+            this.render();
+        } else if (step === 2) {
+            const val = document.getElementById('guide-fixed-amount').value.replace(/\\D/g, '');
+            const amount = parseFloat(val) || 0;
+            if (amount > 0) {
+                const type = document.getElementById('guide-fixed-type').value;
+                this._guideData.fixed_expenses = [{ id: 'fix_' + Date.now(), title: type, amount, category_id: 'cat_3' }];
+            }
+            window.guideHasDebt = null; // reset
+            this.guideStep = 3;
+            this.render();
+        } else if (step === 3) {
+            if (window.guideHasDebt === undefined || window.guideHasDebt === null) {
+                alert("Por favor selecciona una opción."); return;
+            }
+            if (window.guideHasDebt) {
+                const val = document.getElementById('guide-debt-amount').value.replace(/\\D/g, '');
+                const amount = parseFloat(val) || 0;
+                this._guideData.total_debt = amount;
+            } else {
+                this._guideData.total_debt = 0;
+            }
+
+            // Save to DB
+            const fixed = this.store.config.fixed_expenses || [];
+            if (this._guideData.fixed_expenses) {
+                fixed.push(...this._guideData.fixed_expenses);
+            }
+
+            const btn = document.querySelector('#smart-guide-card button');
+            if (btn) { btn.disabled = true; btn.innerHTML = 'Guardando...'; }
+
+            await this.store.updateConfig({
+                monthly_income_target: this._guideData.monthly_income_target,
+                fixed_expenses: fixed,
+                total_debt: this._guideData.total_debt
+            });
+
+            this.guideStep = 4;
+            this.render();
+        }
+    }
 
     renderDashboard() {
+
         this.pageTitle.textContent = 'Tu Panorama Financiero';
 
 
@@ -1229,29 +1365,8 @@ class UIManager {
         // --- CHECK: Is this a brand new user? ---
         const hasApiKey = this.aiAdvisor && this.aiAdvisor.hasApiKey && this.aiAdvisor.hasApiKey();
 
-        // --- SECTION 0: WELCOME TIP (only if no transactions) ---
-        let welcomeTipHTML = '';
-        if (!hasTransactions) {
-            welcomeTipHTML = `
-                <div style="background: var(--bg-surface); border-radius: 24px; padding: 32px 24px; margin-bottom: 2rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); text-align: center;">
-                    <img src="assets/logo.png" style="width: 64px; height: 64px; margin-bottom: 16px; border-radius: 16px;">
-                    <h2 style="margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 700; color: var(--text-main);">ClarityCash</h2>
-                    
-                    <button onclick="window.showGuide()" style="width:100%; max-width: 280px; padding:16px; background:var(--bg-surface); color:var(--primary-color); border:2px solid var(--primary-color); border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; margin-bottom:12px; transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
-                        📖 Ver Guía de Inicio
-                    </button>
-                    
-                    <div style="display: flex; justify-content: center; gap: 16px; opacity: 0.7;">
-                        <small style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
-                            <i data-feather="camera" style="width:14px; height:14px;"></i> Escáner IA
-                        </small>
-                        <small style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
-                            <i data-feather="lock" style="width:14px; height:14px;"></i> 100% Privado
-                        </small>
-                    </div>
-                </div>
-            `;
-        }
+        // --- SECTION 0: WELCOME TIP (Modo Guía Inteligente) ---
+        let welcomeTipHTML = this.getGuideHTML(hasTransactions);
 
         // --- AI TIP REMOVED ---
         let aiTipHTML = '';
@@ -1276,6 +1391,21 @@ class UIManager {
             statusBg = "#FFF3E0";
         }
 
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const txsThisWeek = (this.store.transactions || []).filter(t => new Date(t.date) >= oneWeekAgo);
+        const currentMonthTxs = (this.store.transactions || []).filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === this.viewDate.getMonth() && d.getFullYear() === this.viewDate.getFullYear();
+        });
+
+        let miniGuideText = "Tu disciplina está construyendo claridad financiera.";
+        if (txsThisWeek.length === 0) {
+            miniGuideText = "Cuando registres tus gastos diarios, podré darte recomendaciones más precisas.";
+        } else if (currentMonthTxs.length <= 5) {
+            miniGuideText = "Vas bien. Entre más constante seas, más claro será tu panorama.";
+        }
+
         const heroHTML = `
             ${welcomeTipHTML}
             <div class="dashboard-hero" style="background: white; border-radius: 24px; padding: 24px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); margin-bottom: 2rem;">
@@ -1298,6 +1428,9 @@ class UIManager {
                             </div>
                             <div style="margin-top: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;">
                                 ${ratio > 1.0 ? 'Este mes estás por encima de tu presupuesto.' : (ratio >= 0.8 ? 'Este mes estás cerca del límite.' : 'Vas bien este mes.')}
+                            </div>
+                            <div style="margin-top: 6px; font-size: 0.85rem; color: var(--text-secondary);">
+                                ${miniGuideText}
                             </div>
                         </div>
                         <div style="text-align: right;">
