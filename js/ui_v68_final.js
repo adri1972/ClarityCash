@@ -1280,12 +1280,20 @@ class UIManager {
         }
 
         return `
-            <div id="smart-guide-card" style="background: white; border-radius: 24px; padding: 32px 24px; margin-bottom: 2rem; border: 1px solid #e1e7ef; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); text-align: center; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: linear-gradient(135deg, var(--primary-light), white); border-radius: 50%; opacity: 0.5;"></div>
-                <div style="position: relative; z-index: 1;">
-                    ${content}
+            <div id="smart-guide-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px);">
+                <div id="smart-guide-card" style="background: white; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 400px; border: 1px solid #e1e7ef; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; position: relative; overflow: hidden; animation: modalIn 0.3s ease-out;">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: linear-gradient(135deg, var(--primary-light), white); border-radius: 50%; opacity: 0.5;"></div>
+                    <div style="position: relative; z-index: 1;">
+                        ${content}
+                    </div>
                 </div>
             </div>
+            <style>
+                @keyframes modalIn {
+                    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+            </style>
         `;
     }
 
