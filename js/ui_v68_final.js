@@ -86,7 +86,12 @@ class UIManager {
         const txModal = document.getElementById('transaction-modal');
 
         if (addBtn && txModal) {
-            addBtn.addEventListener('click', () => {
+            addBtn.addEventListener('click', (e) => {
+                // Prevent opening if we are not logged in
+                if (!window.auth || !window.auth.currentUser) {
+                    e.preventDefault();
+                    return;
+                }
                 this.populateSelects('GASTO');
                 txModal.classList.remove('hidden');
             });
