@@ -1369,14 +1369,14 @@ class UIManager {
     async saveGuideStep(step) {
         this._guideData = this._guideData || {};
         if (step === 1) {
-            const val = document.getElementById('guide-income').value.replace(/\\D/g, '');
+            const val = document.getElementById('guide-income').value.replace(/\D/g, '');
             const amount = parseFloat(val) || 0;
             if (amount <= 0) { alert("Por favor ingresa un monto válido. Estoy aprendiendo de ti."); return; }
             this._guideData.monthly_income_target = amount;
             this.guideStep = 2;
             this.render();
         } else if (step === 2) {
-            const val = document.getElementById('guide-fixed-amount').value.replace(/\\D/g, '');
+            const val = document.getElementById('guide-fixed-amount').value.replace(/\D/g, '');
             const amount = parseFloat(val) || 0;
             if (amount > 0) {
                 const type = document.getElementById('guide-fixed-type').value;
@@ -1390,7 +1390,7 @@ class UIManager {
                 alert("Por favor selecciona una opción."); return;
             }
             if (window.guideHasDebt) {
-                const val = document.getElementById('guide-debt-amount').value.replace(/\\D/g, '');
+                const val = document.getElementById('guide-debt-amount').value.replace(/\D/g, '');
                 const amount = parseFloat(val) || 0;
                 this._guideData.total_debt = amount;
             } else {
