@@ -1210,7 +1210,7 @@ class UIManager {
         const hasIncome = income !== undefined && income !== null && income !== "" && income > 0;
         const needsGuide = !hasIncome && !hasTransactions;
 
-        if (!needsGuide) {
+        if (!needsGuide && this.guideStep !== 4) {
             this.guideStep = 0; // reset
             return '';
         }
@@ -1265,11 +1265,47 @@ class UIManager {
                 <button onclick="window.ui.saveGuideStep(3)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Finalizar</button>
             `;
         } else if (this.guideStep === 4) {
+            const fixedExpense = (this._guideData && this._guideData.fixed_expenses && this._guideData.fixed_expenses[0] && this._guideData.fixed_expenses[0].amount) || 0;
+            const debt = (this._guideData && this._guideData.total_debt) || 0;
+            const formattedFixed = this.formatCurrency(fixedExpense);
+            const formattedDebt = this.formatCurrency(debt);
+
+            let debtBlock = '';
+            if (debt > 0) {
+                debtBlock = `
+                    <ul style="text-align: left; background: #fff1f2; padding: 15px 15px 15px 35px; border-radius: 12px; font-size: 0.95rem; color: #9f1239; margin-bottom: 20px; margin-top: 0;">
+                        <li style="margin-bottom: 8px;">Registraste un gasto fijo principal de <b>${formattedFixed}</b> al mes.</li>
+                        <li>Tienes una deuda aproximada de <b>${formattedDebt}</b>.</li>
+                    </ul>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; text-align: left;">Antes de tomar decisiones grandes, necesitamos organizar tu base financiera.</p>
+                `;
+            } else {
+                debtBlock = `
+                    <ul style="text-align: left; background: #f0fdf4; padding: 15px 15px 15px 35px; border-radius: 12px; font-size: 0.95rem; color: #166534; margin-bottom: 20px; margin-top: 0;">
+                        <li style="margin-bottom: 8px;">Tu gasto fijo principal es de <b>${formattedFixed}</b> al mes.</li>
+                        <li>No registras deudas actualmente.</li>
+                    </ul>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; text-align: left;">Este es un buen momento para estructurar tu presupuesto correctamente.</p>
+                `;
+            }
+
             content = `
-                <div style="padding: 10px;">
-                    <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5;">Perfecto. Ya tengo lo básico para empezar a ayudarte.<br><br>Ahora lo más importante es algo simple: registra lo que entra y lo que sale. No tiene que ser perfecto. Solo constante.</p>
-                    <button onclick="window.ui.guideStep = -1; window.ui.render()" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">¡Entendido!</button>
+                <div style="text-align: left;">
+                    <h2 style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Tu siguiente paso</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;">Con la información que me diste, este es tu punto de partida:</p>
+                    
+                    ${debtBlock}
+
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 12px; font-size: 0.85rem; color: #64748b; margin-bottom: 25px; border-left: 4px solid var(--primary-color);">
+                        El siguiente paso es definir tu presupuesto mensual.<br>
+                        Sin presupuesto no hay control.<br>
+                        Sin control no hay decisiones claras.
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button onclick="window.ui.finishGuide('budget')" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Crear mi presupuesto mensual</button>
+                        <button onclick="window.ui.finishGuide('expense')" class="btn btn-text" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 600; color: var(--text-secondary); border: 1px solid var(--border-color);">Prefiero empezar registrando gastos</button>
+                    </div>
                 </div>
             `;
         }
@@ -1346,6 +1382,24 @@ class UIManager {
             this.guideStep = 4;
             this.render();
         }
+    }
+
+    finishGuide(action) {
+        this.guideStep = -1;
+        this.render(); // This removes the modal
+
+        setTimeout(() => {
+            if (action === 'budget') {
+                const navBtn = document.querySelector('[data-view="settings"]');
+                if (navBtn) navBtn.click();
+            } else if (action === 'expense') {
+                const txModal = document.getElementById('transaction-modal');
+                if (txModal) {
+                    this.populateSelects('GASTO');
+                    txModal.classList.remove('hidden');
+                }
+            }
+        }, 300);
     }
 
     renderDashboard() {
