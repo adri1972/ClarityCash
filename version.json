@@ -1,5 +1,5 @@
 {
-    "version": "74.4",
-    "updatedAt": "2026-03-02T13:15:00Z",
-    "notes": "v74.4: Sincronización inteligente de nombres. Ahora el presupuesto mensual adopta automáticamente el nombre de tus gastos fijos (ej: 'Renting') si no has personalizado la categoría. Mejorada la coherencia entre Onboarding y Ajustes."
+    "version": "74.5",
+    "updatedAt": "2026-03-02T13:20:00Z",
+    "notes": "v74.5: Onboarding mejorado. Añadida opción directa de Renting / Leasing y soporte para nombres personalizados desde el guía de inicio. Sincronización completa entre Onboarding y Presupuesto Mensual."
 }

@@ -1248,12 +1248,13 @@ class UIManager {
                     <option value="cat_1">Arriendo / Hipoteca</option>
                     <option value="cat_2">Alimentación</option>
                     <option value="cat_viv_servicios">Servicios (Luz, Agua, etc)</option>
+                    <option value="cat_fin_5">Renting / Leasing</option>
                     <option value="cat_8">Educación / Colegios</option>
                     <option value="cat_3">Transporte / Gasolina</option>
                     <option value="cat_10">Otros / Cuál?</option>
                 </select>
                 <div id="guide-fixed-other-container" style="display:none; margin-bottom:10px;">
-                    <input type="text" id="guide-fixed-other-name" placeholder="Escribe el nombre (ej: Leasing)" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); font-size: 0.95rem;">
+                    <input type="text" id="guide-fixed-other-name" placeholder="Escribe el nombre personalizado" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); font-size: 0.95rem;">
                 </div>
                 <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado:</p>
                 <input type="text" id="guide-fixed-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
@@ -1397,7 +1398,7 @@ class UIManager {
             if (amount > 0) {
                 const catId = document.getElementById('guide-fixed-type').value;
                 let catName = document.querySelector(`#guide-fixed-type option[value="${catId}"]`).text;
-                if (catId === 'cat_10') {
+                if (catId === 'cat_10' || catId === 'cat_fin_5') {
                     const otherName = document.getElementById('guide-fixed-other-name').value;
                     if (otherName) catName = otherName;
                 }
