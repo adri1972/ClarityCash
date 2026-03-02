@@ -230,8 +230,12 @@ nav {
 .content-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 2rem;
-    padding-bottom: 12rem;
+    padding-bottom: 20rem;
+    /* Espacio extra para que no se corte al final */
+    display: block;
+    /* Asegurar que se comporte como bloque para el flujo de hijos */
 }
 
 /* Buttons */
@@ -1017,8 +1021,8 @@ td {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     border: 1px solid rgba(0, 0, 0, 0.03);
-    height: 100%;
-    /* Match height */
+    height: auto;
+    min-height: fit-content;
 }
 
 /* Compact Budget List */
@@ -1450,6 +1454,8 @@ td {
     .card {
         background: var(--bg-surface) !important;
         border-color: var(--border-color) !important;
+        height: auto !important;
+        min-height: min-content !important;
     }
 
     .modal-content {

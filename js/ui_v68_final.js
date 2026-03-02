@@ -4325,11 +4325,15 @@ class UIManager {
         let html = `
             ${nudgesHTML}
             ${metricsHTML}
-            ${this.renderBudgetCompact()}
-            ${recomendacionHtml}
+            <div style="margin-bottom: 2rem; display: block;">
+                ${this.renderBudgetCompact()}
+            </div>
+            
+            <div style="margin-top: 3rem; margin-bottom: 3rem; display: block;">
+                ${recomendacionHtml}
+            </div>
 
-
-            <div class="charts-grid" style="margin-bottom: 2rem;">
+            <div class="charts-grid" style="margin-bottom: 4rem; display: grid;">
                 <div class="chart-card main-chart">
                     <div class="card-header-clean">
                         <h4>Tendencia Semestral</h4>
@@ -4757,7 +4761,8 @@ class UIManager {
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
                          <div style="position:relative; display:flex; align-items:center;">
                             <span style="position:absolute; left:10px; color:#94a3b8; font-size:0.8rem; font-weight:700;">$</span>
-                            <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0"
+                            <input type="text" inputmode="numeric" name="budget_${c.id}" value="${limit > 0 ? this.formatNumberWithDots(limit) : ''}" 
+                                   placeholder="${floor > 0 ? this.formatNumberWithDots(floor) : '0'}"
                                    style="width: 135px; text-align: right; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px 8px 25px; font-weight: 800; font-size: 1rem; color: #1e293b;"
                                    oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();"
                                    onfocus="this.style.borderColor='var(--primary-color)';"

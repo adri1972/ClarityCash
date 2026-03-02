@@ -1,5 +1,5 @@
 {
-    "version": "74.9",
-    "updatedAt": "2026-03-02T13:45:00Z",
-    "notes": "v74.9: Mejora de navegación y scroll en Análisis. Se eliminó la restricción de altura en el seguimiento del presupuesto para evitar el efecto de 'doble scroll', permitiendo que todo el reporte de análisis fluya de forma continua y natural, especialmente en dispositivos móviles."
+    "version": "76.0",
+    "updatedAt": "2026-03-02T14:00:00Z",
+    "notes": "v76.0: Gran Fix de Análisis y Seguridad de Datos. 1. Scroll Fluido: Se eliminaron solapamientos en la pestaña Análisis y se forzó un diseño de bloque que crece con el contenido. 2. Protección de Presupuesto: Los gastos fijos ahora muestran su monto como sugerencia (placeholder) y no se guardan solos, evitando cambios automáticos. 3. Máxima Libertad: Edición total habilitada y corrección de motor de renderizado."
 }
