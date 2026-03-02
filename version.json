@@ -1,5 +1,5 @@
 {
-    "version": "74.1",
-    "updatedAt": "2026-03-02T12:55:00Z",
-    "notes": "v74.1: Mejora crítica en el Presupuesto Inteligente. Ahora el sistema sugiere montos para todas las categorías (Comida, Vivienda, etc.) incluso si están en $0, basándose en tu perfil y el dinero disponible tras cubrir gastos fijos."
+    "version": "74.2",
+    "updatedAt": "2026-03-02T13:05:00Z",
+    "notes": "v74.2: Corrección funcional para agregar Gastos Fijos e Ingresos. Se restauraron los métodos de guardado perdidos y se añadió formato visual a los inputs de monto. Corregido error de visualización 'Día undefined'."
 }

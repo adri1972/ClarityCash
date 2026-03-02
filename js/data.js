@@ -305,6 +305,24 @@ class Store {
         window.dispatchEvent(new CustomEvent('c_store_updated'));
     }
 
+    async addFixedExpense(fe) {
+        const id = 'fix_' + Date.now();
+        const newFE = { ...fe, id };
+        if (!this.data.config.fixed_expenses) this.data.config.fixed_expenses = [];
+        this.data.config.fixed_expenses.push(newFE);
+        await this.updateConfig({ fixed_expenses: this.data.config.fixed_expenses });
+        return newFE;
+    }
+
+    async addRecurringIncome(ri) {
+        const id = 'ri_' + Date.now();
+        const newRI = { ...ri, id };
+        if (!this.data.config.recurring_incomes) this.data.config.recurring_incomes = [];
+        this.data.config.recurring_incomes.push(newRI);
+        await this.updateConfig({ recurring_incomes: this.data.config.recurring_incomes });
+        return newRI;
+    }
+
     // --- Helpers Balance ---
     _updateAccountBalanceLocal(accountId, amount, type) {
         const account = this.data.accounts.find(a => a.id === accountId);

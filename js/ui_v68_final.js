@@ -4846,7 +4846,7 @@ class UIManager {
                         <div style="display:flex; flex-direction:column; gap:8px;">
                             <input type="text" id="new-ri-name" placeholder="Nombre (ej. Salario)">
                             <div style="display:flex; gap:8px;">
-                                <input type="text" id="new-ri-amt" placeholder="Monto" style="flex:1;">
+                                <input type="text" id="new-ri-amt" placeholder="Monto" style="flex:1;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
                                 <select id="new-ri-cat" style="flex:1;">${this.store.categories.filter(c => c.group === 'INGRESOS').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
                             </div>
                             <button type="button" class="btn btn-primary" style="background:#16a34a;" onclick="window.ui.handleTinyRIAdd()">+ Agregar</button>
@@ -4862,7 +4862,7 @@ class UIManager {
                         <div style="display:flex; flex-direction:column; gap:8px;">
                             <input type="text" id="new-fe-name" placeholder="Nombre (ej. Arriendo)">
                             <div style="display:flex; gap:8px;">
-                                <input type="text" id="new-fe-amt" placeholder="Monto" style="flex:1;">
+                                <input type="text" id="new-fe-amt" placeholder="Monto" style="flex:1;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
                                 <select id="new-fe-cat" style="flex:1;">${categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
                             </div>
                             <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyFEAdd()">+ Agregar</button>
@@ -5131,6 +5131,7 @@ class UIManager {
         const cat = document.getElementById('new-ri-cat').value;
         if (!name || !amt) return alert('Completa los campos');
         this.store.addRecurringIncome({ name, amount: amt, category_id: cat, day: 1 });
+        alert('✅ Ingreso agregado');
         this.render();
     }
 
@@ -5140,6 +5141,7 @@ class UIManager {
         const cat = document.getElementById('new-fe-cat').value;
         if (!name || !amt) return alert('Completa los campos');
         this.store.addFixedExpense({ name, amount: amt, category_id: cat, day: 1 });
+        alert('✅ Gasto fijo agregado');
         this.render();
     }
 
@@ -5351,7 +5353,7 @@ class UIManager {
                     <div>
                         <div style="font-weight: 600; font-size: 0.95rem;">${fe.name || fe.title || 'Gasto Fijo'}</div>
                         <div style="font-size: 0.85rem; color: #666;">
-                           Día ${fe.day} • ${cat.name} • ${this.formatCurrency(fe.amount)}
+                           Día ${fe.day || 1} • ${cat.name} • ${this.formatCurrency(fe.amount)}
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
