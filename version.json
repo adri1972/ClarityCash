@@ -1,5 +1,5 @@
 {
-    "version": "74.0",
-    "updatedAt": "2026-03-01T22:40:00Z",
-    "notes": "v74.0: Reestructuración de la persistencia de datos. Se corrigió el error que impedía guardar saldos de préstamos y nombres de gastos fijos debido a discrepancias en tipos de ID. Mejorada la sincronización asíncrona."
+    "version": "74.1",
+    "updatedAt": "2026-03-02T12:55:00Z",
+    "notes": "v74.1: Mejora crítica en el Presupuesto Inteligente. Ahora el sistema sugiere montos para todas las categorías (Comida, Vivienda, etc.) incluso si están en $0, basándose en tu perfil y el dinero disponible tras cubrir gastos fijos."
 }

@@ -5003,10 +5003,8 @@ class UIManager {
 
                 const distributions = this.getDistributions();
                 const weights = distributions[profile] || distributions['BALANCEADO'];
-                const activeCats = this.store.categories.filter(cat => {
-                    const input = document.querySelector(`input[name="budget_${cat.id}"]`);
-                    return input && (input.value.replace(/\D/g, '') !== '0' || input.value === '');
-                });
+                // Usamos todas las categorías presupuestables visibles en la pantalla de ajustes
+                const activeCats = categories;
 
                 const totalFixed = activeCats.reduce((sum, cat) => sum + (fixedFloor[cat.id] || 0), 0);
                 const surplus = income - totalFixed;
