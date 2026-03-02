@@ -1,5 +1,5 @@
 {
-    "version": "74.3",
-    "updatedAt": "2026-03-02T13:10:00Z",
-    "notes": "v74.3: Forzado de actualización de caché para habilitar el guardado de Gastos Fijos e Ingresos. Mejorada la respuesta visual al agregar nuevos conceptos y limpieza automática de campos."
+    "version": "74.4",
+    "updatedAt": "2026-03-02T13:15:00Z",
+    "notes": "v74.4: Sincronización inteligente de nombres. Ahora el presupuesto mensual adopta automáticamente el nombre de tus gastos fijos (ej: 'Renting') si no has personalizado la categoría. Mejorada la coherencia entre Onboarding y Ajustes."
 }

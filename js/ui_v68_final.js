@@ -4693,9 +4693,13 @@ class UIManager {
 
         const budgets = conf.budgets || {};
         const fixedFloor = {};
+        const fixedNames = {};
         (conf.fixed_expenses || []).forEach(fe => {
             if (fe.category_id && fe.amount) {
                 fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
+                // If only one expense in category, suggest its name
+                if (!fixedNames[fe.category_id]) fixedNames[fe.category_id] = (fe.name || fe.title);
+                else fixedNames[fe.category_id] = 'Varios';
             }
         });
 
@@ -4707,6 +4711,7 @@ class UIManager {
         }, 0);
         if (loanPaymentsSum > 0) {
             fixedFloor['cat_7'] = (fixedFloor['cat_7'] || 0) + loanPaymentsSum;
+            if (!fixedNames['cat_7']) fixedNames['cat_7'] = 'Deuda/Créditos';
         }
 
         const fixedCats = categories.filter(c => (fixedFloor[c.id] || 0) > 0);
@@ -4727,7 +4732,7 @@ class UIManager {
 
             // Get custom name if exists
             const customNames = conf.category_names || {};
-            const displayName = customNames[c.id] || c.name;
+            const displayName = customNames[c.id] || fixedNames[c.id] || c.name;
 
             let rowBg = 'white';
             let borderStyle = '1px solid #edf2f7';
