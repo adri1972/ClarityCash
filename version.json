@@ -1,5 +1,5 @@
 {
-    "version": "72.5.FIX_DASHBOARD",
-    "updatedAt": "2026-03-01T16:45:00Z",
-    "notes": "Fix: Corrección de variable indefinida totalBudget en el Dashboard de inicio tras la migración al modelo de préstamos."
+    "version": "73.1.LOAN_LOGIC_FIX",
+    "updatedAt": "2026-03-01T20:45:00Z",
+    "notes": "Corregida lógica de préstamos: ahora forman parte del presupuesto base y no se restan del ingreso total inicial. Mejora en la visualización de compromisos fijos."
 }

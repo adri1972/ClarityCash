@@ -27,6 +27,10 @@ class UIManager {
             'OTROS': '📦 Otros'
         };
 
+        this.monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        this._monthPromptShownFor = null;
+
         // Smart Date: Jump to latest transaction date if current month is empty
         this.setSmartViewDate();
     }
@@ -37,9 +41,9 @@ class UIManager {
         console.log('📅 Date Initialized to current month:', this.viewDate.toLocaleDateString());
     }
 
-    changeMonth(delta) {
+    async changeMonth(delta) {
         this.viewDate.setMonth(this.viewDate.getMonth() + delta);
-        this.render(); // Re-render current view (Dashboard)
+        await this.render(); // Re-render current view (Dashboard)
     }
 
     formatNumberWithDots(amount) {
@@ -615,15 +619,15 @@ class UIManager {
         ).join('');
     }
 
-    navigate(viewName) {
-        this.navItems.forEach(n => n.classList.remove('active'));
+    async navigate(viewName) {
+        this.navItems.forEach(item => item.classList.remove('active'));
         const target = document.querySelector(`.nav-item[data-view="${viewName}"]`);
         if (target) target.classList.add('active');
         this.currentView = viewName;
-        this.render();
+        await this.render();
     }
 
-    render() {
+    async render() {
         if (!this.container) return;
 
         // Reset legacy handlers to avoid conflicts between views
@@ -680,14 +684,14 @@ class UIManager {
 
         try {
             switch (this.currentView) {
-                case 'dashboard': this.renderDashboard(); break;
+                case 'dashboard': await this.renderDashboard(); break;
                 case 'transactions': this.renderTransactions(); break;
                 case 'insights': this.renderInsightsPage(); break;
                 case 'goals': this.renderGoals(); break;
                 case 'settings': this.renderSettings(); break;
                 case 'strategy': this.renderStrategyReport(); break;
                 case 'upgrade': this.renderUpgradeScreen(); break;
-                default: this.renderDashboard();
+                default: await this.renderDashboard();
             }
         } catch (err) {
             console.error('❌ Render Error:', err);
@@ -1274,43 +1278,45 @@ class UIManager {
             const income = (this._guideData && this._guideData.monthly_income_target) || (this.store.config && this.store.config.monthly_income_target) || 0;
             const fixedExpenseArray = (this._guideData && this._guideData.fixed_expenses) || (this.store.config && this.store.config.fixed_expenses) || [];
             const fixedExpense = fixedExpenseArray.reduce((sum, item) => sum + (item.amount || 0), 0);
-            const debt = (this._guideData && this._guideData.total_debt) !== undefined ? this._guideData.total_debt : (this.store.config && this.store.config.total_debt) || 0;
+            const loanAmount = (this._guideData && this._guideData.loan) ? (this._guideData.loan.monthly_payment || 0) : 0;
+            const totalDebt = (this._guideData && this._guideData.total_debt) !== undefined ? this._guideData.total_debt : (this.store.config && this.store.config.total_debt) || 0;
 
-            const fixedRate = income > 0 ? (fixedExpense / income) : 0;
-            const freeCash = income - fixedExpense;
+            const totalCommitment = fixedExpense + loanAmount;
+            const fixedRate = income > 0 ? (totalCommitment / income) : 0;
+            const freeCash = income - totalCommitment;
 
             const formattedIncome = this.formatCurrency(income);
-            const formattedFixed = this.formatCurrency(fixedExpense);
-            const formattedDebt = this.formatCurrency(debt);
+            const formattedFixedCommit = this.formatCurrency(totalCommitment);
+            const formattedDebt = this.formatCurrency(totalDebt);
             const formattedFree = this.formatCurrency(Math.max(0, freeCash));
 
             let diagnosisTitle = "Análisis Inicial";
-            let diagnosisColor = "#1e293b"; // Slate
+            let diagnosisColor = "#1e293b";
             let diagnosisIcon = "📊";
             let diagnosisText = "";
 
             if (fixedRate > 0.6) {
-                diagnosisTitle = "Atención: Gastos Elevados";
+                diagnosisTitle = "Atención: Compromisos Elevados";
                 diagnosisColor = "var(--danger-color)";
                 diagnosisIcon = "⚠️";
-                diagnosisText = `Tus gastos fijos consumen el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos ($${this.formatNumberWithDots(fixedExpense)}). Esto deja poco margen de maniobra.`;
+                diagnosisText = `Tus compromisos fijos consumen el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos ($${this.formatNumberWithDots(totalCommitment)}). Esto deja poco margen de maniobra.`;
             } else if (fixedRate > 0.3) {
                 diagnosisTitle = "Panorama Estable";
-                diagnosisColor = "#0369a1"; // Blue for stability
+                diagnosisColor = "#0369a1";
                 diagnosisIcon = "✅";
-                diagnosisText = `Tus gastos fijos representan el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos. Es un nivel saludable, pero podemos optimizar.`;
+                diagnosisText = `Tus compromisos fijos representan el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos. Es un nivel saludable, pero podemos optimizar.`;
             } else {
                 diagnosisTitle = "Excelente Capacidad";
                 diagnosisColor = "var(--success-color)";
                 diagnosisIcon = "🌟";
-                diagnosisText = `Solo el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos se va en gastos fijos. Tienes una gran oportunidad para invertir y crecer.`;
+                diagnosisText = `Solo el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos se va en compromisos fijos. Tienes una gran oportunidad para invertir y crecer.`;
             }
 
             let debtAdvice = "";
-            if (debt > 0) {
-                debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">Detectamos una deuda de <b>${formattedDebt}</b>. La atacaremos pronto.</p>`;
+            if (loanAmount > 0) {
+                debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">Tu cuota de préstamo de <b>${this.formatCurrency(loanAmount)}</b> ha sido integrada a tus compromisos fijos.</p>`;
             } else {
-                debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">¡Sin deudas! Estás en la posición ideal para construir patrimonio.</p>`;
+                debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">¡Sin deudas activas! Estás en la posición ideal para construir patrimonio.</p>`;
             }
 
             content = `
@@ -1458,15 +1464,38 @@ class UIManager {
         }, 300);
     }
 
-    renderDashboard() {
+    async renderDashboard() {
 
         this.pageTitle.textContent = 'Tu Panorama Financiero';
 
 
         // --- 0. Month Navigation & Header ---
-        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        const currentMonthName = monthNames[this.viewDate.getMonth()];
+        const currentMonthName = this.monthNames[this.viewDate.getMonth()];
         const currentYear = this.viewDate.getFullYear();
+
+        // --- CONTINUITY LOGIC: Load or copy Monthly Plan ---
+        let currentPlan = await this.store.getSavedMonthPlan(currentYear, this.viewDate.getMonth());
+
+        if (!currentPlan) {
+            // Find previous month plan as template
+            let prevM = this.viewDate.getMonth() - 1;
+            let prevY = currentYear;
+            if (prevM < 0) { prevM = 11; prevY--; }
+
+            const prevPlan = await this.store.getSavedMonthPlan(prevY, prevM);
+            const templateData = {
+                monthly_income_target: prevPlan ? (prevPlan.monthly_income_target || 0) : (this.store.config.monthly_income_target || 0),
+                loans: prevPlan ? (prevPlan.loans || []) : (this.store.config.loans || [])
+            };
+
+            // Only show prompt if we are in dashboard view and it's a "fresh" month entry
+            if (this._monthPromptShownFor !== `${currentYear}-${this.viewDate.getMonth()}`) {
+                this.showNewMonthModal(templateData, currentYear, this.viewDate.getMonth());
+                this._monthPromptShownFor = `${currentYear}-${this.viewDate.getMonth()}`;
+            }
+
+            currentPlan = templateData;
+        }
 
         // Generate Recurring Items for this month (Fixed Expenses & Incomes)
         this.store.processFixedExpenses(this.viewDate.getMonth(), this.viewDate.getFullYear());
@@ -1489,41 +1518,54 @@ class UIManager {
         // --- AI TIP REMOVED ---
         let aiTipHTML = '';
 
-        // MODELO EDUCATIVO FINAL
-        const monthlyIncome = Number(this.store.config.monthly_income_target) || 0;
-        const loansList = this.store.config.loans || [];
-        const totalLoanPayments = loansList.reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
+        // MODELO EDUCATIVO COHERENTE
+        const monthlyIncome = Number(currentPlan.monthly_income_target) || 0;
+        const loansList = currentPlan.loans || [];
+        const totalLoanPaymentsExpected = loansList.reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
 
-        // Ingreso mensual – Total cuotas de Préstamos = Disponible para organizar
-        const disposableToOrganize = monthlyIncome - totalLoanPayments;
+        // Identificar cuánto se ha pagado ya de esas deudas en transacciones reales
+        const currentMonthTxs = (this.store.transactions || []).filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === this.viewDate.getMonth() && d.getFullYear() === this.viewDate.getFullYear();
+        });
+        const registeredLoanPayments = currentMonthTxs.filter(t =>
+            t.category_id === 'cat_7' || t.type === 'PAGO_DEUDA' || t.type === 'PAGO_TARJETA'
+        ).reduce((sum, t) => sum + t.amount, 0);
 
-        const used = summary.expenses;
-        // Disponible para organizar – Gastos registrados = Disponible restante
+        // El presupuesto base es el ingreso total
+        const disposableToOrganize = monthlyIncome;
+
+        // "Usado" total = (Todos los gastos/ahorros/inversiones registrados) + (Deuda proyectada que falta por pagar)
+        const summaryTotalRegistered = (summary.expenses || 0) + (summary.savings || 0) + (summary.investment || 0) + (summary.debt_payment || 0);
+
+        // El excedente de deuda es lo que esperamos pagar pero aún no hemos registrado
+        const pendingLoanPayments = Math.max(0, totalLoanPaymentsExpected - registeredLoanPayments);
+
+        const used = summaryTotalRegistered + pendingLoanPayments;
+
+        // Disponible restante
         const available = disposableToOrganize - used;
 
         const ratio = disposableToOrganize > 0 ? (used / disposableToOrganize) : 0;
 
         let statusText = "Dentro del presupuesto";
-        let statusColor = "#2E7D32"; // Green
+        let statusColor = "#2E7D32";
         let statusBg = "#E8F5E9";
 
         if (ratio > 1.0) {
             statusText = "Presupuesto superado";
-            statusColor = "#D32F2F"; // Red
+            statusColor = "#D32F2F";
             statusBg = "#FFEBEE";
         } else if (ratio >= 0.8) {
             statusText = "Cerca del límite";
-            statusColor = "#E65100"; // Orange
+            statusColor = "#E65100";
             statusBg = "#FFF3E0";
         }
 
         const now = new Date();
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const txsThisWeek = (this.store.transactions || []).filter(t => new Date(t.date) >= oneWeekAgo);
-        const currentMonthTxs = (this.store.transactions || []).filter(t => {
-            const d = new Date(t.date);
-            return d.getMonth() === this.viewDate.getMonth() && d.getFullYear() === this.viewDate.getFullYear();
-        });
+        // currentMonthTxs already declared above
 
         let miniGuideText = "Tu disciplina está construyendo claridad financiera.";
         if (txsThisWeek.length === 0) {
@@ -1546,41 +1588,43 @@ class UIManager {
                 <div style="background: #fcfcfc; border-radius: 20px; padding: 20px; border: 1px solid #f0f0f0;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                         <div>
-                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Tu estado del mes</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Estado de tu organización</span>
                             <div style="margin-top: 4px;">
                                 <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: ${statusColor}; background: ${statusBg};">
                                     ${statusText}
                                 </span>
                             </div>
                             <div style="margin-top: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;">
-                                ${ratio > 1.0 ? 'Este mes estás por encima de tu presupuesto.' : (ratio >= 0.8 ? 'Este mes estás cerca del límite.' : 'Vas bien este mes.')}
+                                ${ratio > 1.0 ? 'Has excedido tu capacidad de planeación.' : (ratio >= 0.8 ? 'Estás muy cerca de agotar lo planeado.' : 'Mantienes un margen saludable.')}
                             </div>
                             <div style="margin-top: 6px; font-size: 0.85rem; color: var(--text-secondary);">
                                 ${miniGuideText}
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">Disponible base</div>
+                            <div style="font-size: 1rem; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">Disponible</div>
                             <div style="font-size: 2.2rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; line-height: 1;">
                                 ${this.formatCurrency(available)}
                             </div>
-                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">
-                                de <b>${this.formatCurrency(disposableToOrganize)}</b> libres
+                            <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
+                                de un presupuesto de <b>${this.formatCurrency(disposableToOrganize)}</b>
                             </div>
                             ${totalLoanPayments > 0 ? `
-                            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">
-                                (Ingreso ${this.formatCurrency(monthlyIncome)} - Préstamos ${this.formatCurrency(totalLoanPayments)})
+                            <div style="font-size: 0.75rem; color: #3b82f6; margin-top: 6px; font-weight: 600;">
+                                Incluye ${this.formatCurrency(totalLoanPayments)} en cuotas de préstamos
                             </div>` : ''}
                         </div>
                     </div>
 
-                    <div style="height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin-bottom: 12px;">
-                        <div style="width: ${Math.min(ratio * 100, 100)}%; background: ${statusColor}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
+                    <div style="height: 12px; background: #f0f0f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px;">
+                        <div style="width: ${Math.min(ratio * 100, 100)}%; background: ${statusColor}; height: 100%; border-radius: 6px; transition: width 0.5s ease; position: relative;">
+                             ${totalLoanPayments > 0 ? `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${Math.min((totalLoanPayments / disposableToOrganize) * 100, 100)}%; background: rgba(0,0,0,0.1); border-right: 1px solid rgba(255,255,255,0.3);"></div>` : ''}
+                        </div>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
-                        <span>Usado: <b>${this.formatCurrency(used)}</b></span>
-                        <span>Presupuesto Base: <b>${this.formatCurrency(disposableToOrganize)}</b></span>
+                        <span>Comprometido: <b>${this.formatCurrency(used)}</b></span>
+                        <span style="text-align: right;">Meta Ingreso: <b>${this.formatCurrency(disposableToOrganize)}</b></span>
                     </div>
                 </div>
                 
@@ -4631,6 +4675,12 @@ class UIManager {
             }
         });
 
+        // Sumar préstamos al piso fijo de la categoría de Deuda (cat_7)
+        const loanPaymentsSum = (conf.loans || []).reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
+        if (loanPaymentsSum > 0) {
+            fixedFloor['cat_7'] = (fixedFloor['cat_7'] || 0) + loanPaymentsSum;
+        }
+
         const fixedCats = categories.filter(c => (fixedFloor[c.id] || 0) > 0);
         const savingCat = categories.find(c => c.id === 'cat_5');
         const groups = {
@@ -4798,7 +4848,7 @@ class UIManager {
                          <span id="budget-summary-pill" style="font-size:0.85rem; font-weight:700; color:#475569;">Calculando...</span>
                      </div>
                     <div style="margin-bottom:1rem;">
-                        <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #3b82f6; text-transform: uppercase;">📌 Gastos Fijos</h4>
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #3b82f6; text-transform: uppercase;">📌 Compromisos Fijos</h4>
                         ${fixedCats.map(c => renderRow(c, true)).join('')}
                     </div>
                     ${savingCat && (fixedFloor[savingCat.id] || 0) === 0 ? `
@@ -5572,5 +5622,108 @@ class UIManager {
         const loans = (this.store.config.loans || []).filter(l => l.id !== id);
         await this.store.updateConfig({ loans });
         this.render();
+    }
+
+    showNewMonthModal(templateData, y, m) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'new-month-modal';
+        modal.style.zIndex = '100000';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px;">
+                <h2 style="margin-bottom: 15px; font-size: 1.5rem;">✨ Nuevo mes: ${this.monthNames[m]} ${y}</h2>
+                <p style="margin-bottom: 25px; color: var(--text-secondary);">
+                    ¿Quieres mantener tu ingreso y tus préstamos igual que el mes pasado?
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-primary" id="confirm-same-btn" style="width: 100%; padding: 12px; font-weight: 700;">✅ Mantener igual</button>
+                    <button class="btn" id="adjust-values-btn" style="width: 100%; border: 1px solid var(--border-color); padding: 12px;">✏️ Ajustar valores</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+
+        document.getElementById('confirm-same-btn').onclick = async () => {
+            await this.store.saveMonthPlan(y, m, templateData);
+            modal.remove();
+            await this.render();
+        };
+
+        document.getElementById('adjust-values-btn').onclick = () => {
+            modal.remove();
+            this.showMonthlyAdjustmentModal(templateData, y, m);
+        };
+    }
+
+    showMonthlyAdjustmentModal(templateData, y, m) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'adjust-month-modal';
+        modal.style.zIndex = '100001';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; padding: 25px;">
+                <h3 style="margin-bottom: 20px;">Ajustar para ${this.monthNames[m]}</h3>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 8px;">Tu ingreso para este mes</label>
+                    <div style="display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 5px 12px;">
+                        <span style="font-weight: 700; color: #64748b;">$</span>
+                        <input type="text" id="adj-income" value="${this.formatNumberWithDots(templateData.monthly_income_target)}" 
+                               style="width: 100%; font-size: 1.2rem; font-weight: 800; border: none; outline: none;"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 8px;">Cuotas de Préstamos</label>
+                    <div id="adj-loans-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 5px;">
+                        ${templateData.loans.length > 0 ? templateData.loans.map((loan, index) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #eee;">
+                                <div style="font-weight: 600; font-size: 0.9rem;">${loan.name}</div>
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <span style="color: #64748b; font-size: 0.8rem;">$</span>
+                                    <input type="text" class="adj-loan-payment" data-index="${index}" value="${this.formatNumberWithDots(loan.monthly_payment)}" 
+                                           style="width: 100px; text-align: right; border-radius: 6px; border: 1px solid #ccc; padding: 5px; font-weight: 700;"
+                                           oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                                </div>
+                            </div>
+                        `).join('') : '<p style="font-size: 0.85rem; color: #64748b; text-align: center;">No tienes préstamos activos.</p>'}
+                    </div>
+                </div>
+
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; background: #f0f9ff; padding: 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    💡 Estos cambios solo afectan a <strong>${this.monthNames[m]}</strong> y servirán de modelo para el mes siguiente.
+                </p>
+
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" id="save-adj-btn" style="flex: 1; padding: 12px;">Guardar Cambios</button>
+                    <button class="btn" id="cancel-adj-btn" style="flex: 0.5; padding: 12px; border: 1px solid #ddd;">Cancelar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+
+        document.getElementById('cancel-adj-btn').onclick = () => modal.remove();
+
+        document.getElementById('save-adj-btn').onclick = async () => {
+            const newIncome = parseFloat(document.getElementById('adj-income').value.replace(/\\./g, '')) || 0;
+            const newLoans = JSON.parse(JSON.stringify(templateData.loans));
+            const loanInputs = document.querySelectorAll('.adj-loan-payment');
+            loanInputs.forEach(input => {
+                const idx = parseInt(input.dataset.index);
+                newLoans[idx].monthly_payment = parseFloat(input.value.replace(/\\./g, '')) || 0;
+            });
+
+            const finalData = {
+                monthly_income_target: newIncome,
+                loans: newLoans
+            };
+
+            await this.store.saveMonthPlan(y, m, finalData);
+            modal.remove();
+            await this.render();
+        };
     }
 }
