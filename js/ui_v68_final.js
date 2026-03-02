@@ -1413,19 +1413,16 @@ class UIManager {
                 const val = document.getElementById('guide-debt-amount').value.replace(/\D/g, '');
                 const monthlyPayment = parseFloat(val) || 0;
 
-                // En el onboarding, guardamos el monto como cuota mensual principalmente
-                this._guideData.total_debt = monthlyPayment * 12; // Estimación simple o dejar en 0 si no se pide
-                // Fixed: Do not use cat_name from previous step for the loan
+                // En el onboarding, solo capturamos la cuota mensual
+                this._guideData.total_debt = 0;
                 const loanName = 'Mi Préstamo / Deuda';
 
-                // En el onboarding, guardamos el monto como cuota mensual principalmente
-                this._guideData.total_debt = monthlyPayment * 12;
                 this._guideData.loan = {
                     id: 'loan_' + Date.now(),
                     name: loanName,
                     monthly_payment: monthlyPayment,
                     payment_day: '',
-                    total_balance: monthlyPayment * 12,
+                    total_balance: 0, // No inventamos el saldo si el usuario no lo dio
                     created_at: new Date().toISOString()
                 };
             } else {
