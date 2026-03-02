@@ -1401,7 +1401,7 @@ class UIManager {
                     const otherName = document.getElementById('guide-fixed-other-name').value;
                     if (otherName) catName = otherName;
                 }
-                this._guideData.fixed_expenses = [{ id: 'fix_' + Date.now(), title: catName, amount, category_id: catId }];
+                this._guideData.fixed_expenses = [{ id: 'fix_' + Date.now(), name: catName, amount, category_id: catId }];
                 this._guideData.cat_name = catName; // Store it for stage 3 naming
             }
             window.guideHasDebt = null; // reset
@@ -5340,7 +5340,7 @@ class UIManager {
             return `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.6rem 0;">
                     <div>
-                        <div style="font-weight: 600; font-size: 0.95rem;">${fe.name}</div>
+                        <div style="font-weight: 600; font-size: 0.95rem;">${fe.name || fe.title || 'Gasto Fijo'}</div>
                         <div style="font-size: 0.85rem; color: #666;">
                            Día ${fe.day} • ${cat.name} • ${this.formatCurrency(fe.amount)}
                         </div>
@@ -5680,7 +5680,7 @@ class UIManager {
             const newFixed = [...(conf.fixed_expenses || [])];
             newFixed.push({
                 id: 'fix_' + Date.now(),
-                title: loan.name,
+                name: loan.name,
                 amount: loan.monthly_payment,
                 category_id: 'cat_10' // Otros
             });
@@ -5756,7 +5756,7 @@ class UIManager {
             <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
                 <div>
                     <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Nombre del gasto</label>
-                    <input type="text" id="edit-fe-name" value="${fe.name}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    <input type="text" id="edit-fe-name" value="${fe.name || fe.title || ''}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
                 </div>
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
@@ -5777,7 +5777,7 @@ class UIManager {
                 <button onclick="window.ui.saveFixedExpenseEdit('${id}')" class="btn btn-primary" style="width:100%; margin-top:10px;">Guardar Cambios</button>
             </div>
         `;
-        this.showModal(`Editar ${fe.name}`, html);
+        this.showModal(`Editar ${fe.name || fe.title || 'Gasto'}`, html);
     }
 
     async saveFixedExpenseEdit(id) {

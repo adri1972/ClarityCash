@@ -1,5 +1,5 @@
 {
-    "version": "73.7",
-    "updatedAt": "2026-03-01T22:25:00Z",
-    "notes": "v73.7: Corrección conceptual de deudas vs gastos (Renting). Se añadió botón para mover ítems de préstamos a gastos fijos y se mejoró la claridad del onboarding."
+    "version": "73.8",
+    "updatedAt": "2026-03-01T22:30:00Z",
+    "notes": "v73.8: Corrección crítica del 'undefined' en gastos fijos. Se unificaron las propiedades internas para asegurar que los nombres se guarden y muestren correctamente siempre."
 }
