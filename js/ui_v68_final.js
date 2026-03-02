@@ -4689,7 +4689,11 @@ class UIManager {
         });
 
         // Sumar préstamos al piso fijo de la categoría de Deuda (cat_7)
-        const loanPaymentsSum = (conf.loans || []).reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
+        const loanPaymentsSum = (conf.loans || []).reduce((sum, l) => {
+            const mPay = l.monthly_payment || 0;
+            const val = typeof mPay === 'string' ? parseFloat(mPay.replace(/\D/g, '')) : Number(mPay);
+            return sum + (val || 0);
+        }, 0);
         if (loanPaymentsSum > 0) {
             fixedFloor['cat_7'] = (fixedFloor['cat_7'] || 0) + loanPaymentsSum;
         }
@@ -4714,30 +4718,39 @@ class UIManager {
             const customNames = conf.category_names || {};
             const displayName = customNames[c.id] || c.name;
 
-            let extraStyle = 'background: white; border: 1px solid #edf2f7;';
+            let rowBg = 'white';
+            let borderStyle = '1px solid #edf2f7';
             let labelExtra = '';
 
             if (isFixed) {
-                extraStyle = 'background: #f1f5f9; border-left: 5px solid #3b82f6;';
-                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO</span>';
+                rowBg = '#f8fafc';
+                borderStyle = '1px solid #e2e8f0; border-left: 4px solid #3b82f6;';
+                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.6rem; font-weight:800; vertical-align:middle;">FIJO</span>';
             } else if (isSaving) {
-                extraStyle = 'background: #f0fdf4; border-left: 5px solid #10b981;';
-                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META</span>';
+                rowBg = '#f0fdf4';
+                borderStyle = '1px solid #dcfce7; border-left: 4px solid #10b981;';
+                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.6rem; font-weight:800; vertical-align:middle;">META</span>';
             }
 
             return `
-                <div class="form-group" style="margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.8rem; padding: 10px; border-radius: 12px; ${extraStyle}">
+                <div class="form-group" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.8rem; padding: 12px; border-radius: 14px; background: ${rowBg}; border: ${borderStyle};">
                     <div style="flex: 1; display:flex; flex-direction:column; gap:2px;">
                         <input type="text" name="cat_name_${c.id}" value="${displayName}" 
-                               style="border:none; background:transparent; font-weight:700; font-size:1rem; color:var(--text-main); padding:0; width:100%; outline:none;" 
-                               placeholder="Concepto">
-                        <div style="font-size:0.7rem; color:#64748b; font-weight:600;">${c.name} ${labelExtra}</div>
+                               style="border: 1px solid transparent; background:transparent; font-weight:700; font-size:0.95rem; color:var(--text-main); padding:2px 5px; width:100%; outline:none; border-radius:4px;" 
+                               placeholder="Concepto..."
+                               onfocus="this.style.border='1px solid #3b82f6'; this.style.background='#fff';"
+                               onblur="this.style.border='1px solid transparent'; this.style.background='transparent';">
+                        <div style="font-size:0.7rem; color:#94a3b8; font-weight:600; padding: 0 5px;">${displayName !== c.name ? c.name : ''} ${labelExtra}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
-                        <span style="color: #64748b; font-size: 0.8rem;">$</span>
-                         <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0"
-                                style="width: 130px; text-align: right; border: 1px solid #ddd; background: #fff; border-radius: 6px; padding: 5px 8px; font-weight: 700;"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
+                         <div style="position:relative; display:flex; align-items:center;">
+                            <span style="position:absolute; left:10px; color:#94a3b8; font-size:0.8rem; font-weight:700;">$</span>
+                            <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0"
+                                   style="width: 135px; text-align: right; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px 8px 25px; font-weight: 800; font-size: 1rem; color: #1e293b;"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();"
+                                   onfocus="this.style.borderColor='var(--primary-color)';"
+                                   onblur="this.style.borderColor='#cbd5e1';">
+                         </div>
                      </div>
                 </div>
             `;
@@ -4862,6 +4875,9 @@ class UIManager {
                         </div>
                         <div id="budget-status-msg" style="font-size: 0.8rem; color: #334155; font-weight: 600; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
                             ${Object.keys(budgets).length > 0 ? '✔️ Estructura aplicada según tu perfil.' : '⚠️ Presupuesto no definido.'}
+                        </div>
+                        <div id="budget-alert-tip" style="margin-top:10px; font-size:0.75rem; color:#64748b;">
+                            💡 Tip: Puedes tocar los nombres de las categorías para personalizarlas.
                         </div>
                      </div>
  

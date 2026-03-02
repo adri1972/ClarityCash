@@ -1,5 +1,5 @@
 {
-    "version": "73.5",
-    "updatedAt": "2026-03-01T21:55:00Z",
-    "notes": "v73.5: Mejoras críticas en Onboarding (opción Otro/Leasing), corrección de nombres en diagnóstico y personalización total de conceptos en presupuesto."
+    "version": "73.6",
+    "updatedAt": "2026-03-01T22:15:00Z",
+    "notes": "v73.6: Rediseño visual del presupuesto para máxima facilidad de edición, corrección definitiva en el cálculo de cuotas de préstamos y mejora en la personalización de conceptos."
 }
