@@ -1267,8 +1267,9 @@ class UIManager {
                 </div>
                 
                 <div id="guide-debt-amount-container" style="display:none;">
-                    <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado total:</p>
-                    <input type="text" id="guide-debt-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuánto sumas al mes en cuotas de deudas?</p>
+                    <input type="text" id="guide-debt-amount" placeholder="Ej: $500.000" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: -10px; margin-bottom: 15px; text-align: center;">(Suma de cuotas de créditos, hipotecas, etc.)</p>
                 </div>
 
                 <button onclick="window.ui.saveGuideStep(3)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Ver mi diagnóstico ✨</button>
@@ -1403,20 +1404,18 @@ class UIManager {
             }
             if (window.guideHasDebt) {
                 const val = document.getElementById('guide-debt-amount').value.replace(/\D/g, '');
-                const amount = parseFloat(val) || 0;
-                this._guideData.total_debt = amount;
+                const monthlyPayment = parseFloat(val) || 0;
 
-                // Generar préstamo inicial
-                if (amount > 0) {
-                    this._guideData.loan = {
-                        id: 'loan_' + Date.now(),
-                        name: 'Obligaciones fijas (Onboarding)',
-                        monthly_payment: amount,
-                        payment_day: '',
-                        total_balance: 0,
-                        created_at: new Date().toISOString()
-                    };
-                }
+                // En el onboarding, guardamos el monto como cuota mensual principalmente
+                this._guideData.total_debt = monthlyPayment * 12; // Estimación simple o dejar en 0 si no se pide
+                this._guideData.loan = {
+                    id: 'loan_' + Date.now(),
+                    name: 'Obligaciones fijas (Onboarding)',
+                    monthly_payment: monthlyPayment,
+                    payment_day: '',
+                    total_balance: monthlyPayment * 12, // Informativo
+                    created_at: new Date().toISOString()
+                };
             } else {
                 this._guideData.total_debt = 0;
             }
@@ -4695,15 +4694,18 @@ class UIManager {
         const renderRow = (c, isFixed = false, isSaving = false) => {
             const limit = budgets[c.id] || 0;
             const floor = fixedFloor[c.id] || 0;
-            const displayVal = isFixed ? this.formatNumberWithDots(Math.max(limit, floor)) : (limit > 0 ? this.formatNumberWithDots(limit) : '');
+            const displayVal = this.formatNumberWithDots(Math.max(limit, floor));
+
+            // Get custom name if exists
+            const customNames = conf.category_names || {};
+            const displayName = customNames[c.id] || c.name;
+
             let extraStyle = 'background: white; border: 1px solid #edf2f7;';
             let labelExtra = '';
-            let inputAttrs = '';
 
             if (isFixed) {
                 extraStyle = 'background: #f1f5f9; border-left: 5px solid #3b82f6;';
                 labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">FIJO</span>';
-                inputAttrs = `readonly`;
             } else if (isSaving) {
                 extraStyle = 'background: #f0fdf4; border-left: 5px solid #10b981;';
                 labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:800; vertical-align:middle;">META</span>';
@@ -4711,12 +4713,17 @@ class UIManager {
 
             return `
                 <div class="form-group" style="margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.8rem; padding: 10px; border-radius: 12px; ${extraStyle}">
-                    <label style="margin: 0; flex: 1; font-weight: 600; font-size: 0.9rem;">${c.name} ${labelExtra}</label>
+                    <div style="flex: 1; display:flex; flex-direction:column; gap:2px;">
+                        <input type="text" name="cat_name_${c.id}" value="${displayName}" 
+                               style="border:none; background:transparent; font-weight:700; font-size:1rem; color:var(--text-main); padding:0; width:100%; outline:none;" 
+                               placeholder="Concepto">
+                        <div style="font-size:0.7rem; color:#64748b; font-weight:600;">${c.name} ${labelExtra}</div>
+                    </div>
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
                         <span style="color: #64748b; font-size: 0.8rem;">$</span>
-                         <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0" ${inputAttrs}
-                                style="width: 100px; text-align: right; border: ${isFixed ? 'none' : '1px solid #ddd'}; background: ${isFixed ? 'transparent' : '#fff'}; border-radius: 6px; padding: 5px 8px; font-weight: 700;"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal(); const msg = document.getElementById('budget-status-msg'); if(msg) msg.innerHTML='⚠️ Has ajustado manualmente tu estructura.';">
+                         <input type="text" inputmode="numeric" name="budget_${c.id}" value="${displayVal}" placeholder="0"
+                                style="width: 130px; text-align: right; border: 1px solid #ddd; background: #fff; border-radius: 6px; padding: 5px 8px; font-weight: 700;"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();">
                      </div>
                 </div>
             `;
@@ -5004,6 +5011,36 @@ class UIManager {
                 const id = (target.dataset.id || target.closest('.edit-account').dataset.id);
                 this.showEditAccountModal(id);
             }
+
+            // Loans
+            if (target.classList.contains('edit-loan') || target.closest('.edit-loan')) {
+                const id = (target.dataset.id || target.closest('.edit-loan').dataset.id);
+                this.showEditLoanModal(id);
+            }
+            if (target.classList.contains('delete-loan') || target.closest('.delete-loan')) {
+                const id = (target.dataset.id || target.closest('.delete-loan').dataset.id);
+                this.handleLoanDelete(id);
+            }
+
+            // Fixed Expenses
+            if (target.classList.contains('edit-fixed-exp') || target.closest('.edit-fixed-exp')) {
+                const id = (target.dataset.id || target.closest('.edit-fixed-exp').dataset.id);
+                this.showEditFixedExpenseModal(id);
+            }
+            if (target.classList.contains('delete-fixed-exp') || target.closest('.delete-fixed-exp')) {
+                const id = (target.dataset.id || target.closest('.delete-fixed-exp').dataset.id);
+                this.handleFixedExpenseDelete(id);
+            }
+
+            // Recurring Incomes
+            if (target.classList.contains('edit-rec-inc') || target.closest('.edit-rec-inc')) {
+                const id = (target.dataset.id || target.closest('.edit-rec-inc').dataset.id);
+                this.showEditRecurringIncomeModal(id);
+            }
+            if (target.classList.contains('delete-rec-inc') || target.closest('.delete-rec-inc')) {
+                const id = (target.dataset.id || target.closest('.delete-rec-inc').dataset.id);
+                this.handleRecurringIncomeDelete(id);
+            }
         };
 
         this.container.onsubmit = (e) => {
@@ -5011,11 +5048,16 @@ class UIManager {
             if (e.target.id === 'global-settings-form') {
                 const formData = new FormData(e.target);
                 const newBudgets = {};
+                const newNames = {};
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('budget_')) {
                         const catId = key.replace('budget_', '');
                         const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
                         if (val > 0) newBudgets[catId] = val;
+                    }
+                    if (key.startsWith('cat_name_')) {
+                        const catId = key.replace('cat_name_', '');
+                        if (value) newNames[catId] = value;
                     }
                 }
                 this.store.updateConfig({
@@ -5025,7 +5067,8 @@ class UIManager {
                     has_debts: formData.get('has_debts') === 'on',
                     total_debt: parseFloat(formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0') || 0,
                     gemini_api_key: formData.get('gemini_api_key') || '',
-                    budgets: newBudgets
+                    budgets: newBudgets,
+                    category_names: newNames
                 });
                 alert('✅ Cambios guardados.');
                 this.render();
@@ -5583,11 +5626,181 @@ class UIManager {
                     </div>
                     ${loan.total_balance > 0 ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Saldo pendiente: ${this.formatCurrency(loan.total_balance)}</div>` : ''}
                 </div>
-                <button class="btn-text" onclick="window.ui.handleLoanDelete('${loan.id}')" style="color: #ef4444; padding: 8px;">
-                    <i data-feather="trash-2" style="width:18px;"></i>
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-text edit-loan" data-id="${loan.id}" style="color: #2196F3; padding: 8px;">
+                        <i data-feather="edit-2" style="width:18px;"></i>
+                    </button>
+                    <button class="btn-text delete-loan" data-id="${loan.id}" style="color: #ef4444; padding: 8px;">
+                        <i data-feather="trash-2" style="width:18px;"></i>
+                    </button>
+                </div>
             </div>
         `).join('') + '<script>feather.replace();</script>';
+    }
+
+    showEditLoanModal(id) {
+        const loan = (this.store.config.loans || []).find(l => l.id === id);
+        if (!loan) return;
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Nombre del préstamo</label>
+                    <input type="text" id="edit-loan-name" value="${loan.name}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Cuota Mensual</label>
+                        <input type="text" id="edit-loan-payment" value="${this.formatNumberWithDots(loan.monthly_payment)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    </div>
+                    <div style="width:80px;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día</label>
+                        <input type="number" id="edit-loan-day" value="${loan.payment_day || ''}" min="1" max="31" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    </div>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Saldo Total Pendiente</label>
+                    <input type="text" id="edit-loan-balance" value="${this.formatNumberWithDots(loan.total_balance || 0)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                </div>
+                <button onclick="window.ui.saveLoanEdit('${id}')" class="btn btn-primary" style="width:100%; margin-top:10px;">Guardar Cambios</button>
+            </div>
+        `;
+        this.showModal(`Editar ${loan.name}`, html);
+    }
+
+    saveLoanEdit(id) {
+        const nameInput = document.getElementById('edit-loan-name');
+        const paymentInput = document.getElementById('edit-loan-payment');
+        const balanceInput = document.getElementById('edit-loan-balance');
+        const dayInput = document.getElementById('edit-loan-day');
+
+        const name = nameInput ? nameInput.value : '';
+        const payment = parseFloat(paymentInput ? paymentInput.value.replace(/\D/g, '') : '0') || 0;
+        const balance = parseFloat(balanceInput ? balanceInput.value.replace(/\D/g, '') : '0') || 0;
+        const day = dayInput ? dayInput.value : '';
+
+        const loans = [...(this.store.config.loans || [])];
+        const idx = loans.findIndex(l => l.id === id);
+        if (idx !== -1) {
+            loans[idx] = { ...loans[idx], name, monthly_payment: payment, total_balance: balance, payment_day: day };
+            this.store.updateConfig({ loans });
+            alert('✅ Préstamo actualizado');
+            this.render();
+        }
+    }
+
+    showEditFixedExpenseModal(id) {
+        const fe = (this.store.config.fixed_expenses || []).find(f => f.id === id);
+        if (!fe) return;
+
+        const categories = this.store.categories.filter(c => c.group !== 'INGRESOS');
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Nombre del gasto</label>
+                    <input type="text" id="edit-fe-name" value="${fe.name}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Monto</label>
+                        <input type="text" id="edit-fe-amt" value="${this.formatNumberWithDots(fe.amount)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    </div>
+                    <div style="width:80px;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día</label>
+                        <input type="number" id="edit-fe-day" value="${fe.day || 1}" min="1" max="31" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    </div>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Categoría</label>
+                    <select id="edit-fe-cat" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                        ${categories.map(c => `<option value="${c.id}" ${c.id === fe.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    </select>
+                </div>
+                <button onclick="window.ui.saveFixedExpenseEdit('${id}')" class="btn btn-primary" style="width:100%; margin-top:10px;">Guardar Cambios</button>
+            </div>
+        `;
+        this.showModal(`Editar ${fe.name}`, html);
+    }
+
+    async saveFixedExpenseEdit(id) {
+        const name = document.getElementById('edit-fe-name').value;
+        const amt = parseFloat(document.getElementById('edit-fe-amt').value.replace(/\D/g, '')) || 0;
+        const day = document.getElementById('edit-fe-day').value;
+        const cat = document.getElementById('edit-fe-cat').value;
+
+        const fixed = [...(this.store.config.fixed_expenses || [])];
+        const idx = fixed.findIndex(f => f.id === id);
+        if (idx !== -1) {
+            fixed[idx] = { ...fixed[idx], name, amount: amt, day, category_id: cat };
+            await this.store.updateConfig({ fixed_expenses: fixed });
+            alert('✅ Gasto fijo actualizado');
+            this.render();
+        }
+    }
+
+    async handleFixedExpenseDelete(id) {
+        if (!confirm('¿Eliminar este gasto fijo?')) return;
+        const fixed = (this.store.config.fixed_expenses || []).filter(f => f.id !== id);
+        await this.store.updateConfig({ fixed_expenses: fixed });
+        this.render();
+    }
+
+    showEditRecurringIncomeModal(id) {
+        const ri = (this.store.config.recurring_incomes || []).find(r => r.id === id);
+        if (!ri) return;
+
+        const categories = this.store.categories.filter(c => c.group === 'INGRESOS');
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Nombre del ingreso</label>
+                    <input type="text" id="edit-ri-name" value="${ri.name}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Monto</label>
+                        <input type="text" id="edit-ri-amt" value="${this.formatNumberWithDots(ri.amount)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    </div>
+                    <div style="width:80px;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día</label>
+                        <input type="number" id="edit-ri-day" value="${ri.day || 1}" min="1" max="31" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    </div>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Categoría</label>
+                    <select id="edit-ri-cat" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                        ${categories.map(c => `<option value="${c.id}" ${c.id === ri.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    </select>
+                </div>
+                <button onclick="window.ui.saveRecurringIncomeEdit('${id}')" class="btn btn-primary" style="width:100%; margin-top:10px;">Guardar Cambios</button>
+            </div>
+        `;
+        this.showModal(`Editar ${ri.name}`, html);
+    }
+
+    async saveRecurringIncomeEdit(id) {
+        const name = document.getElementById('edit-ri-name').value;
+        const amt = parseFloat(document.getElementById('edit-ri-amt').value.replace(/\D/g, '')) || 0;
+        const day = document.getElementById('edit-ri-day').value;
+        const cat = document.getElementById('edit-ri-cat').value;
+
+        const recurring = [...(this.store.config.recurring_incomes || [])];
+        const idx = recurring.findIndex(r => r.id === id);
+        if (idx !== -1) {
+            recurring[idx] = { ...recurring[idx], name, amount: amt, day, category_id: cat };
+            await this.store.updateConfig({ recurring_incomes: recurring });
+            alert('✅ Ingreso recurrente actualizado');
+            this.render();
+        }
+    }
+
+    async handleRecurringIncomeDelete(id) {
+        if (!confirm('¿Eliminar este ingreso recurrente?')) return;
+        const recurring = (this.store.config.recurring_incomes || []).filter(r => r.id !== id);
+        await this.store.updateConfig({ recurring_incomes: recurring });
+        this.render();
     }
 
     async handleTinyLoanAdd() {
@@ -5708,12 +5921,12 @@ class UIManager {
         document.getElementById('cancel-adj-btn').onclick = () => modal.remove();
 
         document.getElementById('save-adj-btn').onclick = async () => {
-            const newIncome = parseFloat(document.getElementById('adj-income').value.replace(/\\./g, '')) || 0;
+            const newIncome = parseFloat(document.getElementById('adj-income').value.replace(/\D/g, '')) || 0;
             const newLoans = JSON.parse(JSON.stringify(templateData.loans));
             const loanInputs = document.querySelectorAll('.adj-loan-payment');
             loanInputs.forEach(input => {
                 const idx = parseInt(input.dataset.index);
-                newLoans[idx].monthly_payment = parseFloat(input.value.replace(/\\./g, '')) || 0;
+                newLoans[idx].monthly_payment = parseFloat(input.value.replace(/\D/g, '')) || 0;
             });
 
             const finalData = {
