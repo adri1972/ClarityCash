@@ -1,5 +1,5 @@
 {
-    "version": "73.4",
-    "updatedAt": "2026-03-01T21:40:00Z",
-    "notes": "v73.4: Corrección de error de precisión en montos (bug de los $6), edición completa de conceptos en presupuesto y habilitación de edición de préstamos y gastos fijos."
+    "version": "73.5",
+    "updatedAt": "2026-03-01T21:55:00Z",
+    "notes": "v73.5: Mejoras críticas en Onboarding (opción Otro/Leasing), corrección de nombres en diagnóstico y personalización total de conceptos en presupuesto."
 }

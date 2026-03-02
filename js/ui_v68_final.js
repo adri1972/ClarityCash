@@ -1244,14 +1244,17 @@ class UIManager {
             content = `
                 <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 2 de 3</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuál es tu gasto fijo más importante?</p>
-                <select id="guide-fixed-type" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 1rem;">
+                <select id="guide-fixed-type" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 1rem;" onchange="document.getElementById('guide-fixed-other-container').style.display = this.value === 'cat_10' ? 'block' : 'none'">
                     <option value="cat_1">Arriendo / Hipoteca</option>
                     <option value="cat_2">Alimentación</option>
                     <option value="cat_viv_servicios">Servicios (Luz, Agua, etc)</option>
                     <option value="cat_8">Educación / Colegios</option>
                     <option value="cat_3">Transporte / Gasolina</option>
-                    <option value="cat_10">Otro importante</option>
+                    <option value="cat_10">Otros / Cuál?</option>
                 </select>
+                <div id="guide-fixed-other-container" style="display:none; margin-bottom:10px;">
+                    <input type="text" id="guide-fixed-other-name" placeholder="Escribe el nombre (ej: Leasing)" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); font-size: 0.95rem;">
+                </div>
                 <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado:</p>
                 <input type="text" id="guide-fixed-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
                 <button onclick="window.ui.saveGuideStep(2)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Siguiente 👉</button>
@@ -1310,12 +1313,13 @@ class UIManager {
                 diagnosisTitle = "Excelente Capacidad";
                 diagnosisColor = "var(--success-color)";
                 diagnosisIcon = "🌟";
-                diagnosisText = `Solo el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos se va en compromisos fijos. Tienes una gran oportunidad para invertir y crecer.`;
+                diagnosisText = `Solo el <b>${Math.round(fixedRate * 100)}%</b> de tus ingresos se va en compromisos fijos. Tienes una gran oportunidad para crecer.`;
             }
 
             let debtAdvice = "";
             if (loanAmount > 0) {
-                debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">Tu cuota de préstamo de <b>${this.formatCurrency(loanAmount)}</b> ha sido integrada a tus compromisos fijos.</p>`;
+                const loanName = (this._guideData && this._guideData.loan) ? this._guideData.loan.name : 'Tu obligación';
+                debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">Tu cuota de <b>${loanName}</b> por <b>${this.formatCurrency(loanAmount)}</b> ha sido integrada a tus compromisos fijos.</p>`;
             } else {
                 debtAdvice = `<p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">¡Sin deudas activas! Estás en la posición ideal para construir patrimonio.</p>`;
             }
@@ -1392,8 +1396,13 @@ class UIManager {
             const amount = parseFloat(val) || 0;
             if (amount > 0) {
                 const catId = document.getElementById('guide-fixed-type').value;
-                const catName = document.querySelector(`#guide-fixed-type option[value="${catId}"]`).text;
+                let catName = document.querySelector(`#guide-fixed-type option[value="${catId}"]`).text;
+                if (catId === 'cat_10') {
+                    const otherName = document.getElementById('guide-fixed-other-name').value;
+                    if (otherName) catName = otherName;
+                }
                 this._guideData.fixed_expenses = [{ id: 'fix_' + Date.now(), title: catName, amount, category_id: catId }];
+                this._guideData.cat_name = catName; // Store it for stage 3 naming
             }
             window.guideHasDebt = null; // reset
             this.guideStep = 3;
@@ -1408,12 +1417,17 @@ class UIManager {
 
                 // En el onboarding, guardamos el monto como cuota mensual principalmente
                 this._guideData.total_debt = monthlyPayment * 12; // Estimación simple o dejar en 0 si no se pide
+                // Name the loan based on the category chosen
+                const loanName = this._guideData.cat_name || 'Obligación Onboarding';
+
+                // En el onboarding, guardamos el monto como cuota mensual principalmente
+                this._guideData.total_debt = monthlyPayment * 12;
                 this._guideData.loan = {
                     id: 'loan_' + Date.now(),
-                    name: 'Obligaciones fijas (Onboarding)',
+                    name: loanName,
                     monthly_payment: monthlyPayment,
                     payment_day: '',
-                    total_balance: monthlyPayment * 12, // Informativo
+                    total_balance: monthlyPayment * 12,
                     created_at: new Date().toISOString()
                 };
             } else {
@@ -4860,11 +4874,12 @@ class UIManager {
                     </div>
                     ${savingCat && (fixedFloor[savingCat.id] || 0) === 0 ? `
                     <div style="margin-bottom:1rem;">
-                        <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #10b981; text-transform: uppercase;">💰 Ahorro</h4>
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #10b981; text-transform: uppercase;">💰 ${(conf.category_names && conf.category_names['cat_5']) || 'Ahorro'}</h4>
                         ${renderRow(savingCat, false, true)}
                     </div>` : ''}
                     ${Object.keys(groups).map(g => {
                     const gc = categories.filter(c => c.group === g && (fixedFloor[c.id] || 0) === 0 && c.id !== 'cat_5');
+                    // Header logic: use custom name if ALL categories in group are mapped or just stick to group name (safer)
                     return gc.length ? `<div style="margin-bottom:1rem;"><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#64748b; text-transform:uppercase;">${groups[g]}</h4>${gc.map(c => renderRow(c)).join('')}</div>` : '';
                 }).join('')}
                 `
