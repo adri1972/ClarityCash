@@ -1262,7 +1262,7 @@ class UIManager {
         } else if (this.guideStep === 3) {
             content = `
                 <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Obligaciones externas</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Tienes actualmente préstamos, cuotas fijas o hipotecas? (No incluyas consumos de tarjeta).</p>
+                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Tienes actualmente <b>créditos o deudas con saldo pendiente</b> (Hipotecas, préstamos)? <span style="display:block; font-size:0.8rem; margin-top:5px; color:#64748b;">(Si es Renting o una cuota de servicio, vuelve al paso anterior y agrégalo como Gasto Fijo).</span></p>
                 
                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;" id="guide-debt-options">
                     <button class="btn" style="flex:1; background:#f1f5f9; color:#1e293b; border-radius:12px; padding:12px; border:2px solid transparent;" onclick="this.style.borderColor='var(--primary-color)'; this.nextElementSibling.style.borderColor='transparent'; document.getElementById('guide-debt-amount-container').style.display='block'; window.guideHasDebt=true;">Sí tengo</button>
@@ -1417,8 +1417,8 @@ class UIManager {
 
                 // En el onboarding, guardamos el monto como cuota mensual principalmente
                 this._guideData.total_debt = monthlyPayment * 12; // Estimación simple o dejar en 0 si no se pide
-                // Name the loan based on the category chosen
-                const loanName = this._guideData.cat_name || 'Obligación Onboarding';
+                // Fixed: Do not use cat_name from previous step for the loan
+                const loanName = 'Mi Préstamo / Deuda';
 
                 // En el onboarding, guardamos el monto como cuota mensual principalmente
                 this._guideData.total_debt = monthlyPayment * 12;
@@ -4811,7 +4811,7 @@ class UIManager {
             },
             {
                 id: 'prestamos', title: 'Préstamos (Deuda)', icon: '🏛️', content: `
-                    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Gestiona tus deudas estructuradas (Hipotecas, créditos vehiculares, préstamos bancarios).</p>
+                    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Gestiona solo deudas con saldo pendiente (Hipotecas, créditos bancarios). <i>Renting o cuotas fijas de servicios deben ir en Gastos Fijos.</i></p>
                     <div id="loans-list" style="margin-bottom: 1.5rem;">${this.renderLoansList()}</div>
                     <div class="card" style="background:#fff7ed; padding:15px; border:1px solid #ffedd5;">
                         <h4 style="margin:0 0 10px 0; font-size:0.9rem;">+ Nuevo Préstamo</h4>
@@ -5648,14 +5648,16 @@ class UIManager {
         const list = this.store.config.loans || [];
         if (list.length === 0) return '<p class="text-secondary" style="font-size: 0.85rem;">No tienes préstamos registrados.</p>';
         return list.map(loan => `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 0.8rem 0;">
-                <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 1.2rem 0;">
+                <div style="flex:1;">
                     <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">${loan.name}</div>
                     <div style="font-size: 0.85rem; color: #64748b;">
                         Cuota: <b>${this.formatCurrency(loan.monthly_payment)}</b> 
-                        ${loan.payment_day ? `• Día ${loan.payment_day}` : ''}
                     </div>
-                    ${loan.total_balance > 0 ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Saldo pendiente: ${this.formatCurrency(loan.total_balance)}</div>` : ''}
+                    ${loan.total_balance > 0 ? `<div style="font-size: 0.75rem; color: #ef4444; font-weight:600; margin-top: 2px;">Saldo pendiente: ${this.formatCurrency(loan.total_balance)}</div>` : ''}
+                    <button class="btn-text" onclick="window.ui.handleMoveLoanToFixed('${loan.id}')" style="color: #6366f1; font-size: 0.7rem; padding: 0.4rem 0; font-weight: 700; text-decoration: underline; background:none; border:none; cursor:pointer;">
+                        🔄 Esto no es deuda (Mover a gasto fijo)
+                    </button>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn-text edit-loan" data-id="${loan.id}" style="color: #2196F3; padding: 8px;">
@@ -5667,6 +5669,30 @@ class UIManager {
                 </div>
             </div>
         `).join('') + '<script>feather.replace();</script>';
+    }
+
+    async handleMoveLoanToFixed(id) {
+        const conf = this.store.config;
+        const loan = (conf.loans || []).find(l => l.id === id);
+        if (!loan) return;
+
+        if (confirm(`¿Mover "${loan.name}" a Gastos Fijos? Esto eliminará el saldo pendiente y lo tratará como un gasto recurrente.`)) {
+            const newFixed = [...(conf.fixed_expenses || [])];
+            newFixed.push({
+                id: 'fix_' + Date.now(),
+                title: loan.name,
+                amount: loan.monthly_payment,
+                category_id: 'cat_10' // Otros
+            });
+
+            const newLoans = (conf.loans || []).filter(l => l.id !== id);
+            await this.store.updateConfig({
+                fixed_expenses: newFixed,
+                loans: newLoans
+            });
+            this.render();
+            alert(`✅ "${loan.name}" movido a Gastos Fijos.`);
+        }
     }
 
     showEditLoanModal(id) {

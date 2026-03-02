@@ -1,5 +1,5 @@
 {
-    "version": "73.6",
-    "updatedAt": "2026-03-01T22:15:00Z",
-    "notes": "v73.6: Rediseño visual del presupuesto para máxima facilidad de edición, corrección definitiva en el cálculo de cuotas de préstamos y mejora en la personalización de conceptos."
+    "version": "73.7",
+    "updatedAt": "2026-03-01T22:25:00Z",
+    "notes": "v73.7: Corrección conceptual de deudas vs gastos (Renting). Se añadió botón para mover ítems de préstamos a gastos fijos y se mejoró la claridad del onboarding."
 }
