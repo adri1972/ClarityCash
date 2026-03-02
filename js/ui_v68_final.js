@@ -2402,7 +2402,7 @@ class UIManager {
                 <div class="card-header-clean">
                     <h4>Seguimiento de Presupuesto 📊</h4>
                 </div>
-                <div class="budget-list-compact" style="max-height: 550px; overflow-y: auto; padding-right: 5px;">
+                <div class="budget-list-compact">
         `;
 
         if (items.length === 0) {

@@ -1,5 +1,5 @@
 {
-    "version": "74.8",
-    "updatedAt": "2026-03-02T13:35:00Z",
-    "notes": "v74.8: Protección absoluta de Gastos Fijos en el presupuesto. Al aplicar perfiles de gasto, el sistema ya no altera los montos fijados por el usuario (Renting, Telefonía, etc.). Se eliminaron las restricciones de edición manual, devolviendo el control total al usuario para ajustar cualquier concepto y valor a su gusto."
+    "version": "74.9",
+    "updatedAt": "2026-03-02T13:45:00Z",
+    "notes": "v74.9: Mejora de navegación y scroll en Análisis. Se eliminó la restricción de altura en el seguimiento del presupuesto para evitar el efecto de 'doble scroll', permitiendo que todo el reporte de análisis fluya de forma continua y natural, especialmente en dispositivos móviles."
 }
