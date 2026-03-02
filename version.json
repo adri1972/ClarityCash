@@ -1,5 +1,5 @@
 {
-    "version": "74.2",
-    "updatedAt": "2026-03-02T13:05:00Z",
-    "notes": "v74.2: Corrección funcional para agregar Gastos Fijos e Ingresos. Se restauraron los métodos de guardado perdidos y se añadió formato visual a los inputs de monto. Corregido error de visualización 'Día undefined'."
+    "version": "74.3",
+    "updatedAt": "2026-03-02T13:10:00Z",
+    "notes": "v74.3: Forzado de actualización de caché para habilitar el guardado de Gastos Fijos e Ingresos. Mejorada la respuesta visual al agregar nuevos conceptos y limpieza automática de campos."
 }

@@ -5125,24 +5125,45 @@ class UIManager {
         this.render();
     }
 
-    handleTinyRIAdd() {
-        const name = document.getElementById('new-ri-name').value;
-        const amt = parseFloat(document.getElementById('new-ri-amt').value.replace(/\D/g, '')) || 0;
-        const cat = document.getElementById('new-ri-cat').value;
+    async handleTinyRIAdd() {
+        const nameInput = document.getElementById('new-ri-name');
+        const amtInput = document.getElementById('new-ri-amt');
+        const catInput = document.getElementById('new-ri-cat');
+
+        const name = nameInput.value;
+        const amt = parseFloat(amtInput.value.replace(/\D/g, '')) || 0;
+        const cat = catInput.value;
+
         if (!name || !amt) return alert('Completa los campos');
-        this.store.addRecurringIncome({ name, amount: amt, category_id: cat, day: 1 });
+
+        await this.store.addRecurringIncome({ name, amount: amt, category_id: cat, day: 1 });
         alert('✅ Ingreso agregado');
-        this.render();
+
+        nameInput.value = '';
+        amtInput.value = '';
+
+        await this.render();
     }
 
-    handleTinyFEAdd() {
-        const name = document.getElementById('new-fe-name').value;
-        const amt = parseFloat(document.getElementById('new-fe-amt').value.replace(/\D/g, '')) || 0;
-        const cat = document.getElementById('new-fe-cat').value;
+    async handleTinyFEAdd() {
+        const nameInput = document.getElementById('new-fe-name');
+        const amtInput = document.getElementById('new-fe-amt');
+        const catInput = document.getElementById('new-fe-cat');
+
+        const name = nameInput.value;
+        const amt = parseFloat(amtInput.value.replace(/\D/g, '')) || 0;
+        const cat = catInput.value;
+
         if (!name || !amt) return alert('Completa los campos');
-        this.store.addFixedExpense({ name, amount: amt, category_id: cat, day: 1 });
+
+        console.log('Adding Fixed Expense:', { name, amt, cat });
+        await this.store.addFixedExpense({ name, amount: amt, category_id: cat, day: 1 });
         alert('✅ Gasto fijo agregado');
-        this.render();
+
+        nameInput.value = '';
+        amtInput.value = '';
+
+        await this.render();
     }
 
     async performNuclearUpdate() {
