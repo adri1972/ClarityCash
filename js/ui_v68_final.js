@@ -1510,6 +1510,13 @@ class UIManager {
             currentPlan = templateData;
         }
 
+        // --- NEW: Sync Logic for brand new months or stale plans ---
+        // If the plan has 0 income but the global config has income, we treat the plan as uninitialized
+        if ((!currentPlan.monthly_income_target || currentPlan.monthly_income_target == 0) && (this.store.config.monthly_income_target > 0)) {
+            currentPlan.monthly_income_target = this.store.config.monthly_income_target;
+            currentPlan.loans = this.store.config.loans || [];
+        }
+
         // Generate Recurring Items for this month (Fixed Expenses & Incomes)
         this.store.processFixedExpenses(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
@@ -1532,9 +1539,13 @@ class UIManager {
         let aiTipHTML = '';
 
         // MODELO EDUCATIVO COHERENTE
-        const monthlyIncome = Number(currentPlan.monthly_income_target) || 0;
+        const monthlyIncome = parseFloat(currentPlan.monthly_income_target.toString().replace(/\D/g, '')) || 0;
         const loansList = currentPlan.loans || [];
-        const totalLoanPayments = loansList.reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
+        const totalLoanPayments = loansList.reduce((sum, l) => {
+            const mPay = l.monthly_payment || 0;
+            const val = typeof mPay === 'string' ? parseFloat(mPay.replace(/\D/g, '')) : Number(mPay);
+            return sum + (val || 0);
+        }, 0);
 
         // Identificar cuánto se ha pagado ya de esas deudas en transacciones reales
         const currentMonthTxs = (this.store.transactions || []).filter(t => {

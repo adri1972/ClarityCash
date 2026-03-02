@@ -5,8 +5,8 @@
     <script>
         // --- STABLE UPDATE ENGINE v68.Y (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '73.8';
-            const CACHE_NAME = 'cc-integrated-v73-8';
+            const CURRENT_VERSION = '73.9';
+            const CACHE_NAME = 'cc-integrated-v73-9';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -238,24 +238,24 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <script src="js/firebase-config.js?v=v73.8"></script>
-    <script src="js/auth.js?v=v73.8"></script>
-    <script src="js/data.js?v=v73.8"></script>
-    <script src="js/advisor.js?v=v73.8"></script>
-    <script src="js/gemini_v68_final.js?v=v73.8"></script>
-    <script src="js/ui_v68_final.js?v=v73.8"></script>
-    <script src="js/strategy_report_v68.js?v=v73.8"></script>
-    <script src="js/app.js?v=v73.8"></script>
+    <script src="js/firebase-config.js?v=v73.9"></script>
+    <script src="js/auth.js?v=v73.9"></script>
+    <script src="js/data.js?v=v73.9"></script>
+    <script src="js/advisor.js?v=v73.9"></script>
+    <script src="js/gemini_v68_final.js?v=v73.9"></script>
+    <script src="js/ui_v68_final.js?v=v73.9"></script>
+    <script src="js/strategy_report_v68.js?v=v73.9"></script>
+    <script src="js/app.js?v=v73.9"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=v73.8').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v73.9').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div
         style="position:fixed; bottom:5px; left:5px; font-size:10px; color:var(--text-muted); z-index:9999; pointer-events:none; font-weight:bold;">
-        v73.8.FIX_UNDEFINED_READY</div>
+        v73.9.NUMBERS_SYNCED_READY</div>
 </body>
 
 </html>
