@@ -2336,24 +2336,8 @@ class UIManager {
         const budgets = this.store.config.budgets || {}; // { catId: limit }
         const categories = this.store.categories;
 
-        // 1. Map Data
-        let items = categories.map(c => {
-            if (c.id === 'cat_fin_4') return null; // Quitar Tarjeta de Crédito del presupuesto
-            if (c.group === 'INGRESOS') return null; // Quitar ingresos
-
-            const spent = breakdown[c.name] || 0;
-            const limit = budgets[c.id] || 0;
-            if (spent === 0 && limit === 0) return null; // Skip irrelevant
-
-            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
-            let status = 'OK';
-            if (limit <= 0 && spent > 0) status = 'OVER_UNBUDGETED';
-            else if (limit > 0 && percent > 100) status = 'OVER';
-            else if (limit > 0 && percent > 85) status = 'WARN';
-
-            return { ...c, spent, limit, percent, status };
-        }).filter(i => i !== null);
-
+        // 1. GASTOS FIJOS INDIVIDUALES
+        const fixedExpenses = this.store.config.fixed_expenses || [];
         const groupLabels = {
             'FIXED': '📌 Gastos Fijos (Compromisos)',
             'AHORRO': '💰 Prioridad de Ahorro',
@@ -2365,47 +2349,102 @@ class UIManager {
             'OTROS': '📦 Otros Gastos'
         };
 
-        const fixedIds = ['cat_1', 'cat_viv_servicios', 'cat_viv_gas', 'cat_viv_net', 'cat_viv_cel', 'cat_viv_man', 'cat_fin_5', 'cat_fin_int'];
-
-        const getGroupKey = (i) => {
-            if (fixedIds.includes(i.id)) return 'FIXED';
-            if (i.id === 'cat_5') return 'AHORRO';
-            return i.group || 'OTROS';
-        };
-
         const groupData = {};
         Object.keys(groupLabels).forEach(key => {
             groupData[key] = { label: groupLabels[key], items: [], hasOver: false, maxPercent: 0 };
         });
 
-        items.forEach(item => {
-            const key = getGroupKey(item);
-            if (!groupData[key]) groupData[key] = { label: item.group || 'Otros', items: [], hasOver: false, maxPercent: 0 };
+        // 1. GASTOS FIJOS INDIVIDUALES (Desde config.fixed_expenses)
+        const addedCategories = new Set();
+        fixedExpenses.forEach(fe => {
+            const cat = categories.find(c => c.id === fe.category_id);
+            const catName = cat ? cat.name : '';
+            // Buscamos gasto por nombre personalizado o por nombre de categoría
+            const spent = breakdown[fe.name] || breakdown[catName] || 0;
+            const limit = fe.amount || 0;
+            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
 
-            groupData[key].items.push(item);
-            if (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') groupData[key].hasOver = true;
-            if (item.percent > groupData[key].maxPercent) groupData[key].maxPercent = item.percent;
+            let status = 'OK';
+            if (limit > 0 && percent > 100) status = 'OVER';
+            else if (limit > 0 && percent > 85) status = 'WARN';
+
+            groupData['FIXED'].items.push({
+                name: fe.name,
+                spent,
+                limit,
+                percent,
+                status
+            });
+            if (status !== 'OK') groupData['FIXED'].hasOver = true;
+            if (percent > groupData['FIXED'].maxPercent) groupData['FIXED'].maxPercent = percent;
+            if (fe.category_id) addedCategories.add(fe.category_id);
+        });
+
+        // 2. PRÉSTAMOS / DEUDAS (Desde config.loans)
+        loans.forEach(loan => {
+            const spent = breakdown[loan.name] || 0;
+            const limit = loan.monthly_payment || 0;
+            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
+
+            let status = 'OK';
+            if (limit > 0 && percent > 100) status = 'OVER';
+
+            groupData['FINANCIERO'].items.push({
+                name: loan.name,
+                spent,
+                limit,
+                percent,
+                status
+            });
+            if (status !== 'OK') groupData['FINANCIERO'].hasOver = true;
+            if (loan.category_id) addedCategories.add(loan.category_id);
+        });
+
+        // 3. OTRAS CATEGORÍAS (Variables o no definidas en fijos)
+        categories.forEach(c => {
+            if (c.id === 'cat_fin_4' || c.group === 'INGRESOS') return;
+            if (addedCategories.has(c.id)) return;
+
+            const spent = breakdown[c.name] || 0;
+            const limit = budgets[c.id] || 0;
+            if (spent === 0 && limit === 0) return;
+
+            const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
+            let status = 'OK';
+            if (limit <= 0 && spent > 0) status = 'OVER_UNBUDGETED';
+            else if (limit > 0 && percent > 100) status = 'OVER';
+            else if (limit > 0 && percent > 85) status = 'WARN';
+
+            const key = c.id === 'cat_5' ? 'AHORRO' : (c.group || 'OTROS');
+            if (!groupData[key]) groupData[key] = { label: c.group || 'Otros', items: [], hasOver: false, maxPercent: 0 };
+
+            groupData[key].items.push({
+                name: c.name,
+                spent,
+                limit,
+                percent,
+                status
+            });
+            if (status !== 'OK') groupData[key].hasOver = true;
+            if (percent > groupData[key].maxPercent) groupData[key].maxPercent = percent;
         });
 
         const sortedGroups = Object.keys(groupData)
             .filter(key => groupData[key].items.length > 0)
             .sort((a, b) => {
-                const gA = groupData[a];
-                const gB = groupData[b];
-                if (gA.hasOver && !gB.hasOver) return -1;
-                if (gB.hasOver && !gA.hasOver) return 1;
-                return gB.maxPercent - gA.maxPercent;
+                const order = ['FIXED', 'AHORRO', 'NECESIDADES', 'VIVIENDA', 'FINANCIERO', 'CRECIMIENTO', 'ESTILO_DE_VIDA', 'OTROS'];
+                return order.indexOf(a) - order.indexOf(b);
             });
 
         let html = `
-            <div class="details-card">
+            <div class="details-card" style="height: auto; overflow: visible;">
                 <div class="card-header-clean">
                     <h4>Seguimiento de Presupuesto 📊</h4>
                 </div>
-                <div class="budget-list-compact">
+                <div class="budget-list-compact" style="overflow: visible;">
         `;
 
-        if (items.length === 0) {
+        if (sortedGroups.length === 0) {
             html += `<p class="empty-state">No hay gastos ni presupuestos activos este mes.</p>`;
         } else {
             const renderRow = (item) => {
@@ -2431,10 +2470,8 @@ class UIManager {
 
             sortedGroups.forEach(key => {
                 const group = groupData[key];
-                group.items.sort((a, b) => b.percent - a.percent);
-
                 html += `
-                    <details ${group.hasOver ? 'open' : ''} style="margin-bottom: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+                    <details ${group.hasOver || key === 'FIXED' ? 'open' : ''} style="margin-bottom: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: visible;">
                         <summary style="padding: 12px 16px; font-weight: 700; font-size: 0.9rem; color: ${group.hasOver ? '#b91c1c' : '#475569'}; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="transition: transform 0.2s;">▶</span>
@@ -2442,7 +2479,7 @@ class UIManager {
                             </div>
                             ${group.hasOver ? '<span style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:2px 8px; border-radius:10px;">EXCEDIDO</span>' : ''}
                         </summary>
-                        <div style="padding: 10px 16px; background: #fff;">
+                        <div style="padding: 10px 16px; background: #fff; overflow: visible;">
                             ${group.items.map(i => renderRow(i)).join('')}
                         </div>
                     </details>
