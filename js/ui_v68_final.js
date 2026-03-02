@@ -4723,7 +4723,8 @@ class UIManager {
         const renderRow = (c, isFixed = false, isSaving = false) => {
             const limit = budgets[c.id] || 0;
             const floor = fixedFloor[c.id] || 0;
-            const displayVal = this.formatNumberWithDots(Math.max(limit, floor));
+            // Usamos el presupuesto guardado si existe, o el piso fijo como sugerencia inicial
+            const displayVal = this.formatNumberWithDots(limit || floor);
 
             // Get custom name if exists
             const customNames = conf.category_names || {};
@@ -5014,17 +5015,30 @@ class UIManager {
                 } else {
                     const finalValues = {};
                     let totalRounded = 0;
+
+                    // Categorías que pueden recibir excedente (las que NO tienen piso fijo)
+                    const flexibleCats = activeCats.filter(cat => (fixedFloor[cat.id] || 0) === 0);
+                    const totalFlexWeight = flexibleCats.reduce((sum, c) => sum + (weights[c.id] || 0.005), 0);
+
                     activeCats.forEach((cat, index) => {
                         const floor = fixedFloor[cat.id] || 0;
-                        const weight = weights[cat.id] || 0.005;
-                        let val = floor + (surplus * (weight / activeCats.reduce((s, c) => s + (weights[c.id] || 0.005), 0)));
+                        let val = floor;
 
+                        // Si no tiene piso fijo, le damos su parte del excedente
+                        if (floor === 0 && flexibleCats.length > 0) {
+                            const weight = weights[cat.id] || 0.005;
+                            val = surplus * (weight / totalFlexWeight);
+                        }
+
+                        // Redondeo a miles para todas menos la última
                         if (index < activeCats.length - 1) {
                             val = Math.round(val / 1000) * 1000;
                             totalRounded += val;
                         }
                         finalValues[cat.id] = val;
                     });
+
+                    // Ajuste de centavos/redondeo en la última categoría (normalmente Otros o Ahorro)
                     const lastCat = activeCats[activeCats.length - 1];
                     finalValues[lastCat.id] = Math.max(0, income - totalRounded);
 

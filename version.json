@@ -1,5 +1,5 @@
 {
-    "version": "74.7",
-    "updatedAt": "2026-03-02T13:30:00Z",
-    "notes": "v74.7: Eliminación de estimaciones falsas de deuda. El sistema ya no inventa un 'Saldo pendiente' multiplicando por 12 la cuota. Ahora solo muestra lo que el usuario ingresa explícitamente."
+    "version": "74.8",
+    "updatedAt": "2026-03-02T13:35:00Z",
+    "notes": "v74.8: Protección absoluta de Gastos Fijos en el presupuesto. Al aplicar perfiles de gasto, el sistema ya no altera los montos fijados por el usuario (Renting, Telefonía, etc.). Se eliminaron las restricciones de edición manual, devolviendo el control total al usuario para ajustar cualquier concepto y valor a su gusto."
 }
