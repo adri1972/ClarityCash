@@ -1243,15 +1243,12 @@ class UIManager {
         } else if (this.guideStep === 2) {
             content = `
                 <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 2 de 3</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuál es tu gasto fijo más importante?</p>
-                <select id="guide-fixed-type" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 1rem;" onchange="document.getElementById('guide-fixed-other-container').style.display = this.value === 'cat_10' ? 'block' : 'none'">
-                    <option value="cat_1">Arriendo / Hipoteca</option>
-                    <option value="cat_2">Alimentación</option>
-                    <option value="cat_viv_servicios">Servicios (Luz, Agua, etc)</option>
-                    <option value="cat_fin_5">Renting / Leasing</option>
-                    <option value="cat_8">Educación / Colegios</option>
-                    <option value="cat_3">Transporte / Gasolina</option>
-                    <option value="cat_10">Otros / Cuál?</option>
+                <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuál es tu compromiso fijo más importante?</p>
+                <select id="guide-fixed-type" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 1rem;" onchange="document.getElementById('guide-fixed-other-container').style.display = (this.value === 'cat_10' || this.value === 'cat_fin_5') ? 'block' : 'none'">
+                    <option value="">Selecciona una categoría...</option>
+                    ${this.store.categories
+                    .filter(c => c.group !== 'INGRESOS' && c.id !== 'cat_fin_4' && c.id !== 'cat_7')
+                    .map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
                 </select>
                 <div id="guide-fixed-other-container" style="display:none; margin-bottom:10px;">
                     <input type="text" id="guide-fixed-other-name" placeholder="Escribe el nombre personalizado" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); font-size: 0.95rem;">

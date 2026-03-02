@@ -1,5 +1,5 @@
 {
-    "version": "74.5",
-    "updatedAt": "2026-03-02T13:20:00Z",
-    "notes": "v74.5: Onboarding mejorado. Añadida opción directa de Renting / Leasing y soporte para nombres personalizados desde el guía de inicio. Sincronización completa entre Onboarding y Presupuesto Mensual."
+    "version": "74.6",
+    "updatedAt": "2026-03-02T13:25:00Z",
+    "notes": "v74.6: Onboarding 100% dinámico. Ahora la lista de categorías del guía de inicio se sincroniza automáticamente con el sistema, eliminando discrepancias y permitiendo seleccionar cualquier categoría (Renting, Seguros, etc.) desde el primer momento."
 }
