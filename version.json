@@ -1,5 +1,5 @@
 {
-    "version": "73.9",
-    "updatedAt": "2026-03-01T22:35:00Z",
-    "notes": "v73.9: Sincronización inteligente de la meta de ingresos en el Dashboard y corrección definitiva en la lectura de números con puntos/formato."
+    "version": "74.0",
+    "updatedAt": "2026-03-01T22:40:00Z",
+    "notes": "v74.0: Reestructuración de la persistencia de datos. Se corrigió el error que impedía guardar saldos de préstamos y nombres de gastos fijos debido a discrepancias en tipos de ID. Mejorada la sincronización asíncrona."
 }

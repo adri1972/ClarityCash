@@ -5684,30 +5684,31 @@ class UIManager {
 
     async handleMoveLoanToFixed(id) {
         const conf = this.store.config;
-        const loan = (conf.loans || []).find(l => l.id === id);
+        const loan = (conf.loans || []).find(l => l.id == id); // Use loose equality for ID matching
         if (!loan) return;
 
-        if (confirm(`¿Mover "${loan.name}" a Gastos Fijos? Esto eliminará el saldo pendiente y lo tratará como un gasto recurrente.`)) {
+        if (confirm(`¿Mover "${loan.name || loan.title || 'Préstamo'}" a Gastos Fijos? Esto eliminará el saldo pendiente y lo tratará como un gasto recurrente.`)) {
             const newFixed = [...(conf.fixed_expenses || [])];
             newFixed.push({
                 id: 'fix_' + Date.now(),
-                name: loan.name,
+                name: loan.name || loan.title || 'Renting/Leasing',
                 amount: loan.monthly_payment,
-                category_id: 'cat_10' // Otros
+                day: 1,
+                category_id: 'cat_10'
             });
 
-            const newLoans = (conf.loans || []).filter(l => l.id !== id);
+            const newLoans = (conf.loans || []).filter(l => l.id != id);
             await this.store.updateConfig({
                 fixed_expenses: newFixed,
                 loans: newLoans
             });
-            this.render();
-            alert(`✅ "${loan.name}" movido a Gastos Fijos.`);
+            await this.render();
+            alert(`✅ Movido a Gastos Fijos.`);
         }
     }
 
     showEditLoanModal(id) {
-        const loan = (this.store.config.loans || []).find(l => l.id === id);
+        const loan = (this.store.config.loans || []).find(l => l.id == id);
         if (!loan) return;
 
         const html = `
@@ -5736,7 +5737,7 @@ class UIManager {
         this.showModal(`Editar ${loan.name}`, html);
     }
 
-    saveLoanEdit(id) {
+    async saveLoanEdit(id) {
         const nameInput = document.getElementById('edit-loan-name');
         const paymentInput = document.getElementById('edit-loan-payment');
         const balanceInput = document.getElementById('edit-loan-balance');
@@ -5748,12 +5749,12 @@ class UIManager {
         const day = dayInput ? dayInput.value : '';
 
         const loans = [...(this.store.config.loans || [])];
-        const idx = loans.findIndex(l => l.id === id);
+        const idx = loans.findIndex(l => l.id == id);
         if (idx !== -1) {
-            loans[idx] = { ...loans[idx], name, monthly_payment: payment, total_balance: balance, payment_day: day };
-            this.store.updateConfig({ loans });
+            loans[idx] = { ...loans[idx], name, title: name, monthly_payment: payment, total_balance: balance, payment_day: day };
+            await this.store.updateConfig({ loans });
             alert('✅ Préstamo actualizado');
-            this.render();
+            await this.render();
         }
     }
 
@@ -5798,12 +5799,12 @@ class UIManager {
         const cat = document.getElementById('edit-fe-cat').value;
 
         const fixed = [...(this.store.config.fixed_expenses || [])];
-        const idx = fixed.findIndex(f => f.id === id);
+        const idx = fixed.findIndex(f => f.id == id);
         if (idx !== -1) {
-            fixed[idx] = { ...fixed[idx], name, amount: amt, day, category_id: cat };
+            fixed[idx] = { ...fixed[idx], name, title: name, amount: amt, day, category_id: cat };
             await this.store.updateConfig({ fixed_expenses: fixed });
             alert('✅ Gasto fijo actualizado');
-            this.render();
+            await this.render();
         }
     }
 
