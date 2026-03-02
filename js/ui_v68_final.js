@@ -1521,7 +1521,7 @@ class UIManager {
         // MODELO EDUCATIVO COHERENTE
         const monthlyIncome = Number(currentPlan.monthly_income_target) || 0;
         const loansList = currentPlan.loans || [];
-        const totalLoanPaymentsExpected = loansList.reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
+        const totalLoanPayments = loansList.reduce((sum, l) => sum + (Number(l.monthly_payment) || 0), 0);
 
         // Identificar cuánto se ha pagado ya de esas deudas en transacciones reales
         const currentMonthTxs = (this.store.transactions || []).filter(t => {
@@ -1539,7 +1539,7 @@ class UIManager {
         const summaryTotalRegistered = (summary.expenses || 0) + (summary.savings || 0) + (summary.investment || 0) + (summary.debt_payment || 0);
 
         // El excedente de deuda es lo que esperamos pagar pero aún no hemos registrado
-        const pendingLoanPayments = Math.max(0, totalLoanPaymentsExpected - registeredLoanPayments);
+        const pendingLoanPayments = Math.max(0, totalLoanPayments - registeredLoanPayments);
 
         const used = summaryTotalRegistered + pendingLoanPayments;
 
