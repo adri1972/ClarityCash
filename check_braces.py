@@ -26,4 +26,5 @@ def check_braces(filename):
     else:
         print("Success: All braces matched correctly!")
 
-check_braces('js/ui-v67.js')
+check_braces('js/ui_v68_final.js')
+check_braces('js/strategy_report_v68.js')

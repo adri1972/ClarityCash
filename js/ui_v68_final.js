@@ -649,7 +649,8 @@ class UIManager {
 
         document.body.classList.remove('no-auth');
 
-        // 🚀 VERIFICACIÓN DE SUSCRIPCIÓN
+        // 🚀 VERIFICACIÓN DE SUSCRIPCIÓN (Desactivado temporalmente)
+        /*
         const sub = this.store.config.subscription;
         if (sub && sub.plan === 'trial' && sub.status === 'active') {
             const now = new Date();
@@ -664,6 +665,7 @@ class UIManager {
                 }
             }
         }
+        */
 
         this.toggleAuthElements(this.currentView !== 'upgrade');
 
@@ -2338,6 +2340,7 @@ class UIManager {
 
         // 1. GASTOS FIJOS INDIVIDUALES
         const fixedExpenses = this.store.config.fixed_expenses || [];
+        const loansList = this.store.config.loans || [];
         const groupLabels = {
             'FIXED': '📌 Gastos Fijos (Compromisos)',
             'AHORRO': '💰 Prioridad de Ahorro',
@@ -2381,7 +2384,7 @@ class UIManager {
         });
 
         // 2. PRÉSTAMOS / DEUDAS (Desde config.loans)
-        loans.forEach(loan => {
+        loansList.forEach(loan => {
             const spent = breakdown[loan.name] || 0;
             const limit = loan.monthly_payment || 0;
             const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
@@ -4363,7 +4366,14 @@ class UIManager {
             ${nudgesHTML}
             ${metricsHTML}
             <div style="margin-bottom: 2rem; display: block;">
-                ${this.renderBudgetCompact()}
+                ${(() => {
+                try {
+                    return this.renderBudgetCompact();
+                } catch (e) {
+                    console.error('Budget Compact Error:', e);
+                    return '<div style="padding:1rem; color:#999; border:1px solid #ddd; border-radius:8px;">No se pudo cargar el resumen del presupuesto.</div>';
+                }
+            })()}
             </div>
             
             <div style="margin-top: 3rem; margin-bottom: 3rem; display: block;">
@@ -5978,8 +5988,8 @@ class UIManager {
 
     async handleLoanDelete(id) {
         if (!confirm("¿Eliminar este préstamo? Esto devolverá el cupo a tu presupuesto disponible.")) return;
-        const loans = (this.store.config.loans || []).filter(l => l.id !== id);
-        await this.store.updateConfig({ loans });
+        const loansList = (this.store.config.loans || []).filter(l => l.id !== id);
+        await this.store.updateConfig({ loans: loansList });
         this.render();
     }
 
