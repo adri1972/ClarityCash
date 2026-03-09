@@ -56,7 +56,7 @@ class AIAdvisor {
         }
 
         // Minimal Context Building
-        const dateStr = (tx.date || '').includes('T') ? tx.date : \`${tx.date}T12:00:00\`;
+        const dateStr = (tx.date || '').includes('T') ? tx.date : `${tx.date}T12:00:00`;
         const dateObj = new Date(dateStr);
         const month = dateObj.getMonth();
         const year = dateObj.getFullYear();
