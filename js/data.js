@@ -360,6 +360,28 @@ class Store {
     async updateConfig(newConfig) {
         const config = { ...this.data.config, ...newConfig };
         await this._saveConfig(config);
+
+        // PROPAGAR A MES ACTUAL: si edita préstamos/ingreso desde ajustes, el Dashboard debe actualizarse.
+        try {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            let currentPlan = await this.getSavedMonthPlan(y, m);
+            if (currentPlan) {
+                let changed = false;
+                if (newConfig.monthly_income_target !== undefined) {
+                    currentPlan.monthly_income_target = newConfig.monthly_income_target;
+                    changed = true;
+                }
+                if (newConfig.loans !== undefined) {
+                    currentPlan.loans = newConfig.loans;
+                    changed = true;
+                }
+                if (changed) {
+                    await this.saveMonthPlan(y, m, currentPlan);
+                }
+            }
+        } catch (e) { console.warn("Sync Plan Error:", e); }
     }
 
     async addAccount(account) {

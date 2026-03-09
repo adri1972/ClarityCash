@@ -56,7 +56,8 @@ class AIAdvisor {
         }
 
         // Minimal Context Building
-        const dateObj = new Date(tx.date);
+        const dateStr = (tx.date || '').includes('T') ? tx.date : \`${tx.date}T12:00:00\`;
+        const dateObj = new Date(dateStr);
         const month = dateObj.getMonth();
         const year = dateObj.getFullYear();
         const summary = this.store.getFinancialSummary(month, year);
@@ -73,7 +74,7 @@ class AIAdvisor {
 
         const last3 = this.store.transactions
             .filter(t => t.id !== tx.id)
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .sort((a, b) => new Date((b.date||'').includes('T')?b.date:b.date+'T12:00:00') - new Date((a.date||'').includes('T')?a.date:a.date+'T12:00:00'))
             .slice(0, 3);
 
         const last3Str = last3.map(t => {

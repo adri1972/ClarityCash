@@ -1,5 +1,5 @@
 {
-    "version": "77.3",
+    "version": "77.4",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.3: Fixed Nuevo Gasto button and cursor jumping issue on numeric inputs."
+    "notes": "v77.4: Fixed iOS Invalid Date in AI Advisor, and synced month plan with global config updates for loan payments."
 }
