@@ -1,5 +1,5 @@
 {
-    "version": "77.0",
-    "updatedAt": "2026-03-02T16:00:00Z",
-    "notes": "v77.0: Sincronización Total y Fix Maestro de UI. 1. Coherencia 100%: Los nombres personalizados de Gastos Fijos (Renting Bancolombia, Spotify, etc.) ahora aparecen exactamente igual en el Análisis. 2. Limpieza de Grupos: Solo lo definido como Fijo o Préstamo aparece en la sección de Compromisos. 3. Fix Scroll Máximo: Se eliminaron restricciones de desbordamiento en acordeones y contenedores, resolviendo solapamientos visuales."
+    "version": "77.1",
+    "updatedAt": "2026-03-09T14:15:00Z",
+    "notes": "v77.1: Disabled subscription trial lock temporaly."
 }
