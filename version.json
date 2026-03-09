@@ -1,5 +1,5 @@
 {
-    "version": "77.2",
+    "version": "77.3",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.2: Removed balance validation logic to allow saving any transaction regardless of account balance."
+    "notes": "v77.3: Fixed Nuevo Gasto button and cursor jumping issue on numeric inputs."
 }

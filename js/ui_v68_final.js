@@ -53,6 +53,26 @@ class UIManager {
         return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
 
+    formatCurrencyInput(input) {
+        if (!input) return;
+        let cursorStart = input.selectionStart;
+        let oldLength = input.value.length;
+
+        let val = input.value.replace(/[^0-9]/g, '');
+        let formatted = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        input.value = formatted;
+
+        let newLength = formatted.length;
+        let newCursorPos = cursorStart + (newLength - oldLength);
+
+        if (newCursorPos < 0) newCursorPos = 0;
+
+        try {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        } catch (e) { }
+    }
+
     formatCurrency(amount) {
         const currency = this.store.config.currency || 'COP';
 
@@ -92,7 +112,7 @@ class UIManager {
         if (addBtn && txModal) {
             addBtn.addEventListener('click', (e) => {
                 // Prevent opening if we are not logged in
-                if (!window.auth || !window.auth.currentUser) {
+                if (typeof auth === 'undefined' || !auth.currentUser) {
                     e.preventDefault();
                     return;
                 }
@@ -140,9 +160,7 @@ class UIManager {
                 amountInput.type = 'text'; // Force text type for formatting
                 amountInput.addEventListener('input', function (e) {
                     // Remove existing dots and non-digits
-                    let value = this.value.replace(/[^0-9]/g, '');
-                    // Add dots every 3 digits
-                    this.value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    window.ui.formatCurrencyInput(this);
                 });
             }
 
@@ -1241,7 +1259,7 @@ class UIManager {
             content = `
                 <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Paso 1 de 3</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">¿Cuánto ganas al mes?</p>
-                <input type="text" id="guide-income" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                <input type="text" id="guide-income" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="window.ui.formatCurrencyInput(this)">
                 <button onclick="window.ui.saveGuideStep(1)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Siguiente 👉</button>
             `;
         } else if (this.guideStep === 2) {
@@ -1258,7 +1276,7 @@ class UIManager {
                     <input type="text" id="guide-fixed-other-name" placeholder="Escribe el nombre personalizado" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); font-size: 0.95rem;">
                 </div>
                 <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">Monto aproximado:</p>
-                <input type="text" id="guide-fixed-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                <input type="text" id="guide-fixed-amount" placeholder="$0" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="window.ui.formatCurrencyInput(this)">
                 <button onclick="window.ui.saveGuideStep(2)" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 700;">Siguiente 👉</button>
             `;
         } else if (this.guideStep === 3) {
@@ -1273,7 +1291,7 @@ class UIManager {
                 
                 <div id="guide-debt-amount-container" style="display:none;">
                     <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem;">¿Cuánto sumas al mes en cuotas de deudas?</p>
-                    <input type="text" id="guide-debt-amount" placeholder="Ej: $500.000" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    <input type="text" id="guide-debt-amount" placeholder="Ej: $500.000" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 1.1rem; text-align:center;" oninput="window.ui.formatCurrencyInput(this)">
                     <p style="font-size: 0.75rem; color: #64748b; margin-top: -10px; margin-bottom: 15px; text-align: center;">(Suma de cuotas de créditos, hipotecas, etc.)</p>
                 </div>
 
@@ -2083,7 +2101,7 @@ class UIManager {
                     <span style="position:absolute; left:20px; top:50%; transform:translateY(-50%); font-size:1.5rem; color: var(--text-main); font-weight:700;">$</span>
                     <input id="quick-amount" type="text" inputmode="numeric" placeholder="0" 
                         style="width:100%; padding:20px 20px 20px 40px; font-size:2.5rem; font-weight:800; border:none; background:var(--bg-body); border-radius:18px; text-align:center; box-sizing:border-box; outline:none; color:var(--text-main);"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"
+                        oninput="window.ui.formatCurrencyInput(this)"
                         autofocus />
                 </div>
                 
@@ -4815,7 +4833,7 @@ class UIManager {
                             <input type="text" inputmode="numeric" name="budget_${c.id}" value="${limit > 0 ? this.formatNumberWithDots(limit) : ''}" 
                                    placeholder="${floor > 0 ? this.formatNumberWithDots(floor) : '0'}"
                                    style="width: 135px; text-align: right; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px 8px 25px; font-weight: 800; font-size: 1rem; color: #1e293b;"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); window.ui.updateBudgetTotal();"
+                                   oninput="window.ui.formatCurrencyInput(this); window.ui.updateBudgetTotal();"
                                    onfocus="this.style.borderColor='var(--primary-color)';"
                                    onblur="this.style.borderColor='#cbd5e1';">
                          </div>
@@ -4833,7 +4851,7 @@ class UIManager {
                 id: 'perfil', title: 'Perfil y Estrategia', icon: '👤', content: `
                     <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Tu ingreso y perfil determinan tu distribución ideal.</p>
                     <div class="form-group"><label>Nombre</label><input type="text" name="user_name" value="${conf.user_name || ''}"></div>
-                    <div class="form-group"><label>Ingreso Mensual</label><input type="text" inputmode="numeric" name="monthly_income_target" value="${this.formatNumberWithDots(conf.monthly_income_target || 0)}" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"></div>
+                    <div class="form-group"><label>Ingreso Mensual</label><input type="text" inputmode="numeric" name="monthly_income_target" value="${this.formatNumberWithDots(conf.monthly_income_target || 0)}" oninput="window.ui.formatCurrencyInput(this)"></div>
                     <div class="form-group">
                          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                              <label style="margin: 0;">Perfil de Gasto</label>
@@ -4886,10 +4904,10 @@ class UIManager {
                         <div style="display:flex; flex-direction:column; gap:8px;">
                             <input type="text" id="loan-name" placeholder="Nombre (ej. Crédito Carro)">
                             <div style="display:flex; gap:8px;">
-                                <input type="text" id="loan-payment" placeholder="Cuota mensual" style="flex:1;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                                <input type="text" id="loan-payment" placeholder="Cuota mensual" style="flex:1;" oninput="window.ui.formatCurrencyInput(this)">
                                 <input type="text" id="loan-day" placeholder="Día de pago (opc)" style="flex:0.6;" maxlength="2">
                             </div>
-                            <input type="text" id="loan-balance" placeholder="Saldo pendiente (opcional)" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                            <input type="text" id="loan-balance" placeholder="Saldo pendiente (opcional)" oninput="window.ui.formatCurrencyInput(this)">
                             <button type="button" class="btn btn-primary" style="background:#ea580c;" onclick="window.ui.handleTinyLoanAdd()">Guardar Préstamo</button>
                         </div>
                     </div>
@@ -4903,7 +4921,7 @@ class UIManager {
                         <div style="display:flex; flex-direction:column; gap:8px;">
                             <input type="text" id="new-ri-name" placeholder="Nombre (ej. Salario)">
                             <div style="display:flex; gap:8px;">
-                                <input type="text" id="new-ri-amt" placeholder="Monto" style="flex:1;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                                <input type="text" id="new-ri-amt" placeholder="Monto" style="flex:1;" oninput="window.ui.formatCurrencyInput(this)">
                                 <select id="new-ri-cat" style="flex:1;">${this.store.categories.filter(c => c.group === 'INGRESOS').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
                             </div>
                             <button type="button" class="btn btn-primary" style="background:#16a34a;" onclick="window.ui.handleTinyRIAdd()">+ Agregar</button>
@@ -4919,7 +4937,7 @@ class UIManager {
                         <div style="display:flex; flex-direction:column; gap:8px;">
                             <input type="text" id="new-fe-name" placeholder="Nombre (ej. Arriendo)">
                             <div style="display:flex; gap:8px;">
-                                <input type="text" id="new-fe-amt" placeholder="Monto" style="flex:1;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                                <input type="text" id="new-fe-amt" placeholder="Monto" style="flex:1;" oninput="window.ui.formatCurrencyInput(this)">
                                 <select id="new-fe-cat" style="flex:1;">${categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
                             </div>
                             <button type="button" class="btn btn-primary" onclick="window.ui.handleTinyFEAdd()">+ Agregar</button>
@@ -5389,7 +5407,7 @@ class UIManager {
                 </div>
                 <div>
                     <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:6px;">Monto del pago</label>
-                    <input type="text" id="pay-card-amount" placeholder="$0" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ccc; font-size:1.1rem; font-weight:700;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    <input type="text" id="pay-card-amount" placeholder="$0" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ccc; font-size:1.1rem; font-weight:700;" oninput="window.ui.formatCurrencyInput(this)">
                 </div>
                 
                 <div style="background:#f0fbff; padding:12px; border-radius:12px; font-size:0.8rem; color:#0c4a6e; line-height:1.4; border:1px solid #bae6fd;">
@@ -5811,7 +5829,7 @@ class UIManager {
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
                         <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Cuota Mensual</label>
-                        <input type="text" id="edit-loan-payment" value="${this.formatNumberWithDots(loan.monthly_payment)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                        <input type="text" id="edit-loan-payment" value="${this.formatNumberWithDots(loan.monthly_payment)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="window.ui.formatCurrencyInput(this)">
                     </div>
                     <div style="width:80px;">
                         <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día</label>
@@ -5820,7 +5838,7 @@ class UIManager {
                 </div>
                 <div>
                     <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Saldo Total Pendiente</label>
-                    <input type="text" id="edit-loan-balance" value="${this.formatNumberWithDots(loan.total_balance || 0)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                    <input type="text" id="edit-loan-balance" value="${this.formatNumberWithDots(loan.total_balance || 0)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="window.ui.formatCurrencyInput(this)">
                 </div>
                 <button onclick="window.ui.saveLoanEdit('${id}')" class="btn btn-primary" style="width:100%; margin-top:10px;">Guardar Cambios</button>
             </div>
@@ -5864,7 +5882,7 @@ class UIManager {
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
                         <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Monto</label>
-                        <input type="text" id="edit-fe-amt" value="${this.formatNumberWithDots(fe.amount)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                        <input type="text" id="edit-fe-amt" value="${this.formatNumberWithDots(fe.amount)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="window.ui.formatCurrencyInput(this)">
                     </div>
                     <div style="width:80px;">
                         <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día</label>
@@ -5921,7 +5939,7 @@ class UIManager {
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
                         <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Monto</label>
-                        <input type="text" id="edit-ri-amt" value="${this.formatNumberWithDots(ri.amount)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                        <input type="text" id="edit-ri-amt" value="${this.formatNumberWithDots(ri.amount)}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;" oninput="window.ui.formatCurrencyInput(this)">
                     </div>
                     <div style="width:80px;">
                         <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Día</label>
@@ -6044,7 +6062,7 @@ class UIManager {
                         <span style="font-weight: 700; color: #64748b;">$</span>
                         <input type="text" id="adj-income" value="${this.formatNumberWithDots(templateData.monthly_income_target)}" 
                                style="width: 100%; font-size: 1.2rem; font-weight: 800; border: none; outline: none;"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                               oninput="window.ui.formatCurrencyInput(this)">
                     </div>
                 </div>
 
@@ -6058,7 +6076,7 @@ class UIManager {
                                     <span style="color: #64748b; font-size: 0.8rem;">$</span>
                                     <input type="text" class="adj-loan-payment" data-index="${index}" value="${this.formatNumberWithDots(loan.monthly_payment)}" 
                                            style="width: 100px; text-align: right; border-radius: 6px; border: 1px solid #ccc; padding: 5px; font-weight: 700;"
-                                           oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')">
+                                           oninput="window.ui.formatCurrencyInput(this)">
                                 </div>
                             </div>
                         `).join('') : '<p style="font-size: 0.85rem; color: #64748b; text-align: center;">No tienes préstamos activos.</p>'}
