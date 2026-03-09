@@ -191,6 +191,7 @@ class UIManager {
                     const editId = formData.get('edit_tx_id');
 
                     // --- BLOQUEO DE NEGATIVOS ---
+                    /*
                     if (data.type === 'GASTO' || data.type === 'AHORRO' || data.type === 'INVERSION') {
                         const account = this.store.accounts.find(a => a.id === data.account_id);
                         if (account && (account.current_balance - data.amount < 0) && account.type !== 'CREDITO') {
@@ -199,6 +200,7 @@ class UIManager {
                             return; // Stop execution
                         }
                     }
+                    */
 
                     if (editId) {
                         this.store.updateTransaction(editId, data);
@@ -2197,12 +2199,14 @@ class UIManager {
             };
 
             // --- BLOQUEO DE NEGATIVOS (QUICK EXPENSE) ---
+            /*
             const account = this.store.accounts.find(a => a.id === accountId);
             if (account && (account.current_balance - amount < 0) && account.type !== 'CREDITO') {
                 closeOverlay(); // Close quick overlay first
                 this.showNegativeBalanceIntervention(txData, account, null, null, null, null);
                 return; // Stop execution
             }
+            */
 
             const newTx = this.store.addTransaction(txData);
 

@@ -1,5 +1,5 @@
 {
-    "version": "77.1",
+    "version": "77.2",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.1: Disabled subscription trial lock temporaly."
+    "notes": "v77.2: Removed balance validation logic to allow saving any transaction regardless of account balance."
 }
