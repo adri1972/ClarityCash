@@ -432,6 +432,13 @@ class Store {
             else if (type === 'INVERSION') s.investment += t.amount;
             else if (type === 'PAGO_DEUDA' || type === 'PAGO_TARJETA') s.debt_payment += t.amount;
         });
+
+        // --- 💵 GLOBAL FALLBACK A INGRESOS CONFIGURADOS ---
+        const confIncome = parseFloat((this.data.config.monthly_income_target || '0').toString().replace(/\D/g, ''));
+        if (s.income === 0 && confIncome > 0) {
+            s.income = confIncome;
+        }
+
         s.balance_net = s.income - (s.expenses + s.savings + s.investment + s.debt_payment);
         return s;
     }

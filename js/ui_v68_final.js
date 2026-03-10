@@ -2327,6 +2327,14 @@ class UIManager {
             groupData[key] = { label: groupLabels[key], items: [], hasOver: false, maxPercent: 0 };
         });
 
+        const month = this.viewDate.getMonth();
+        const year = this.viewDate.getFullYear();
+        const monthlyTx = this.store.transactions.filter(t => {
+            if (!t.date) return false;
+            const parts = t.date.split('-');
+            return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month;
+        });
+
         // 1. GASTOS FIJOS INDIVIDUALES (Desde config.fixed_expenses)
         const addedCategories = new Set();
         fixedExpenses.forEach(fe => {
@@ -2484,13 +2492,28 @@ class UIManager {
         const ctx = document.getElementById('historyChart');
         if (!ctx) return;
 
-        const history = this.store.getHistorySummary(6); // Get last 6 months
-        // history: [{label, income, expenses, balance}]
+        const rawHistory = this.store.getHistorySummary(6).reverse(); // Oldest first
 
-        // Reverse to show oldest -> newest
-        const labels = history.map(h => h.label).reverse();
-        const incomeData = history.map(h => h.income).reverse();
-        const expenseData = history.map(h => h.expenses).reverse();
+        let firstActiveIdx = -1;
+        for (let i = 0; i < rawHistory.length; i++) {
+            if (rawHistory[i].income > 0 || rawHistory[i].expenses > 0) {
+                firstActiveIdx = i;
+                break;
+            }
+        }
+
+        // If no active data found at all, just show the last month (current month)
+        let filteredHistory = rawHistory;
+        if (firstActiveIdx === -1) {
+            filteredHistory = [rawHistory[rawHistory.length - 1]];
+        } else {
+            // Include everything from the first active month onwards
+            filteredHistory = rawHistory.slice(firstActiveIdx);
+        }
+
+        const labels = filteredHistory.map(h => h.label);
+        const incomeData = filteredHistory.map(h => h.income);
+        const expenseData = filteredHistory.map(h => h.expenses);
 
         if (this.currentHistoryChart) this.currentHistoryChart.destroy();
 
@@ -3300,8 +3323,14 @@ class UIManager {
         // Filter by View Date
         const breakdownUnfiltered = this.store.getCategoryBreakdown(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
-        // Strip 0 values so they don't render or show 0% labels
-        const labelsToData = Object.entries(breakdownUnfiltered).filter(([_, val]) => val > 0);
+        const rawTotal = Object.values(breakdownUnfiltered).reduce((sum, val) => sum + val, 0);
+
+        // Strip values that are too small (<2%) to avoid cluttering the pie chart
+        const labelsToData = Object.entries(breakdownUnfiltered).filter(([_, val]) => {
+            if (val <= 0) return false;
+            const pct = rawTotal > 0 ? (val / rawTotal) * 100 : 0;
+            return pct >= 2;
+        });
 
         // Remove fixed truncation so full labels show. Since legend is now at bottom, they will fit.
         const labels = labelsToData.map(([k, _]) => k);
@@ -3310,7 +3339,7 @@ class UIManager {
         if (this.currentChart) this.currentChart.destroy();
 
         if (data.length === 0) {
-            ctx.parentNode.innerHTML += '<p class="text-secondary" style="text-align:center;">Sin datos de gastos.</p>';
+            ctx.parentNode.innerHTML += '<p class="text-secondary" style="text-align:center;">Sin datos representativos de gastos.</p>';
             return;
         }
 
@@ -3339,7 +3368,7 @@ class UIManager {
                                     return chart.data.labels.map((label, i) => {
                                         const value = dataset.data[i];
                                         const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-                                        const pctText = pct > 0 ? `${pct}%` : '<1%';
+                                        const pctText = `${pct}%`;
                                         return {
                                             text: `${label} (${pctText})`,
                                             fillStyle: dataset.backgroundColor[i],
@@ -4181,12 +4210,6 @@ class UIManager {
         const summary = this.store.getFinancialSummary(month, year);
         const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
 
-        // --- 💵 FALLBACK A INGRESOS CONFIGURADOS ---
-        const configuredIncome = parseFloat((this.store.config.monthly_income_target || '0').toString().replace(/\D/g, ''));
-        if (summary.income === 0 && configuredIncome > 0) {
-            summary.income = configuredIncome; // Assume configured income if they haven't explicitly logged one
-        }
-
         // --- 📊 MOVEMENTS COUNTER FOR ANALYSIS ---
         const startOfMonth = new Date(year, month, 1).toISOString();
         const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
@@ -4249,9 +4272,7 @@ class UIManager {
             </div>
         ` : '';
 
-        const coffeePrice = 5000;
-        const coffees = Math.round(summary.expenses / coffeePrice);
-        const coffeeText = summary.expenses > 0 ? `☕ ${coffees} cafés` : '';
+        const coffeeText = ''; // Temporarily hidden per user request to avoid metrics confusion
 
         const metricsHTML = `
             ${streakHTML}
@@ -4263,7 +4284,6 @@ class UIManager {
                  <div class="metric-card">
                     <span class="label">Gastos ${expenseArrow(summary.expenses, prevSummary.expenses)}</span>
                     <span class="value expense">-${this.formatCurrency(summary.expenses)}</span>
-                    ${coffeeText ? `<span style="font-size:0.75rem; color:#666; font-weight:500; margin-top:4px;">${coffeeText}</span>` : ''}
                 </div>
                  <div class="metric-card">
                     <span class="label">Ahorro ${compareArrow(summary.savings, prevSummary.savings)}</span>
@@ -4447,39 +4467,21 @@ class UIManager {
                     </div>
                 `;
             } else {
-                insights.forEach(i => {
+                const renderInsightHtml = (i) => {
                     try {
                         const potentialHtml = i.savingsPotential
                             ? `<div class="insight-potential">Potencial ahorro: ${this.formatCurrency(i.savingsPotential)}/mes</div>`
                             : '';
-
-                        // Map advisor type to severity (advisor returns: critical, warning, info)
                         const severityMap = { 'critical': 'HIGH', 'warning': 'MEDIUM', 'info': 'LOW' };
                         const severity = severityMap[i.type] || i.severity || 'INFO';
-
-                        // Color mapping
-                        const colors = {
-                            'HIGH': '#F44336',
-                            'MEDIUM': '#FF9800',
-                            'LOW': '#4CAF50',
-                            'INFO': '#2196F3'
-                        };
+                        const colors = { 'HIGH': '#F44336', 'MEDIUM': '#FF9800', 'LOW': '#4CAF50', 'INFO': '#2196F3' };
                         const color = colors[severity] || '#666';
-
-                        // Icon mapping
-                        const icons = {
-                            'HIGH': 'alert-circle',
-                            'MEDIUM': 'alert-triangle',
-                            'LOW': 'check-circle',
-                            'INFO': 'info'
-                        };
+                        const icons = { 'HIGH': 'alert-circle', 'MEDIUM': 'alert-triangle', 'LOW': 'check-circle', 'INFO': 'info' };
                         const icon = icons[severity] || 'info';
-
-                        // Use message or description (advisor uses 'message')
                         const desc = i.description || i.message || '';
                         const rec = i.recommendation || '';
 
-                        html += `
+                        return `
                         <div class="insight-card severity-${severity.toLowerCase()}">
                             <div class="insight-header">
                                 <span class="insight-title" style="color:${color}; display:flex; align-items:center; gap:0.5rem;">
@@ -4489,15 +4491,45 @@ class UIManager {
                             </div>
                             <p class="insight-desc">${desc}</p>
                             ${potentialHtml}
-                            ${rec ? `<div class="insight-action">
-                                 💡 <strong>Recomendación:</strong> ${rec}
-                            </div>` : ''}
-                        </div>
-                    `;
+                            ${rec ? `<div class="insight-action">💡 <strong>Recomendación:</strong> ${rec}</div>` : ''}
+                        </div>`;
                     } catch (err) {
                         console.error('Error rendering insight:', err, i);
+                        return '';
+                    }
+                };
+
+                let criticalCount = 0;
+                const visibleHtml = [];
+                const hiddenHtml = [];
+
+                insights.forEach(i => {
+                    if (i.type === 'critical') {
+                        if (criticalCount < 2) {
+                            visibleHtml.push(renderInsightHtml(i));
+                        } else {
+                            hiddenHtml.push(renderInsightHtml(i));
+                        }
+                        criticalCount++;
+                    } else {
+                        visibleHtml.push(renderInsightHtml(i)); // warnings/infos are visible
                     }
                 });
+
+                html += visibleHtml.join('');
+
+                if (hiddenHtml.length > 0) {
+                    html += `
+                        <details style="margin-top: 1rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 0.5rem;">
+                            <summary style="padding: 12px 16px; font-weight: 600; font-size: 0.9rem; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none;">
+                                Ver ${hiddenHtml.length} alertas adicionales 👇
+                            </summary>
+                            <div style="padding: 1rem 0;">
+                                ${hiddenHtml.join('')}
+                            </div>
+                        </details>
+                    `;
+                }
             }
         }
 

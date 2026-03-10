@@ -82,16 +82,25 @@ class FinancialAdvisor {
                 const cat = this.store.categories.find(c => c.id === catId);
                 if (!cat) return;
                 const spent = breakdown[cat.name] || 0;
-                const spentPct = spent / limit;
 
-                // Critical: 50% month passed, but 90% budget used
-                if (progress < 0.6 && spentPct > 0.9) {
-                    insights.push({
-                        type: 'critical',
-                        title: `🛑 Freno de Mano: ${cat.name}`,
-                        message: `¡Cuidado! Apenas es día ${day} y ya te gastaste el presupuesto de ${cat.name}. Deja la tarjeta en casa.`,
-                        impact: limit - spent
-                    });
+                if (limit > 0) {
+                    const spentPct = spent / limit;
+
+                    if (spentPct > 1) {
+                        insights.push({
+                            type: 'critical',
+                            title: `🛑 Exceso de Presupuesto: ${cat.name}`,
+                            message: `Has superado tu presupuesto en esta categoría. Te sugerimos controlar este gasto el resto del mes.`,
+                            impact: spent - limit
+                        });
+                    } else if (spentPct > 0.85) {
+                        insights.push({
+                            type: 'warning',
+                            title: `⚠️ Atención: ${cat.name}`,
+                            message: `Estás cerca de superar tu presupuesto en esta categoría (${Math.round(spentPct * 100)}%). Considera reducir este gasto durante el resto del mes.`,
+                            impact: limit - spent
+                        });
+                    }
                 }
             });
         }
