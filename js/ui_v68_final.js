@@ -5178,19 +5178,23 @@ class UIManager {
             e.preventDefault();
             if (e.target.id === 'global-settings-form') {
                 const formData = new FormData(e.target);
-                const newBudgets = {};
-                const newNames = {};
+                const newBudgets = { ...(this.store.config.budgets || {}) };
+                const newNames = { ...(this.store.config.category_names || {}) };
+
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('budget_')) {
                         const catId = key.replace('budget_', '');
                         const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
                         if (val > 0) newBudgets[catId] = val;
+                        else delete newBudgets[catId];
                     }
                     if (key.startsWith('cat_name_')) {
                         const catId = key.replace('cat_name_', '');
                         if (value) newNames[catId] = value;
+                        else delete newNames[catId];
                     }
                 }
+
                 this.store.updateConfig({
                     monthly_income_target: parseFloat(formData.get('monthly_income_target').toString().replace(/\D/g, '')) || 0,
                     user_name: formData.get('user_name'),

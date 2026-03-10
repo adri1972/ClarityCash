@@ -1,5 +1,5 @@
 {
-    "version": "77.15",
+    "version": "77.16",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.15: Fix Analysis UI errors. Fix empty history charts, deduplicate diagnostic alerts under an accordion, centralize income calculations to avoid Diagnostic vs Balance contradictions, ignore tiny percentages from donuts."
+    "notes": "v77.16: Fix global settings form erasing hidden budget category configs when saving. New logic merges with existing ones."
 }
