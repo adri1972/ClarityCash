@@ -1,5 +1,5 @@
 {
-    "version": "77.9",
+    "version": "77.10",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.9: Re-order budget tracking categories to prioritize variable expenses at the top, and close fixed expenses by default to let the user focus on active spending."
+    "notes": "v77.10: Fixed Firebase No document to update error when creating default account initial transactions."
 }

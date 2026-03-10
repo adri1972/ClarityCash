@@ -248,7 +248,7 @@ class Store {
             const acc = this.data.accounts.find(a => a.id === newTx.account_id);
             if (acc) {
                 const accRef = db.collection('users').doc(this.uid).collection('accounts').doc(acc.id);
-                batch.update(accRef, { current_balance: acc.current_balance });
+                batch.set(accRef, acc, { merge: true });
             }
             await batch.commit();
         }
@@ -277,7 +277,7 @@ class Store {
 
             const acc = this.data.accounts.find(a => a.id === mergedTx.account_id);
             if (acc) {
-                batch.update(db.collection('users').doc(this.uid).collection('accounts').doc(acc.id), { current_balance: acc.current_balance });
+                batch.set(db.collection('users').doc(this.uid).collection('accounts').doc(acc.id), acc, { merge: true });
             }
             await batch.commit();
         }
@@ -298,7 +298,7 @@ class Store {
             batch.delete(db.collection('users').doc(this.uid).collection('transactions').doc(id));
             const acc = this.data.accounts.find(a => a.id === tx.account_id);
             if (acc) {
-                batch.update(db.collection('users').doc(this.uid).collection('accounts').doc(acc.id), { current_balance: acc.current_balance });
+                batch.set(db.collection('users').doc(this.uid).collection('accounts').doc(acc.id), acc, { merge: true });
             }
             await batch.commit();
         }
