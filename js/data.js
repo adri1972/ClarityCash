@@ -477,6 +477,7 @@ class Store {
         for (let fe of fixed) {
             const exists = this.data.transactions.find(t =>
                 t.is_auto_fixed && t.category_id === fe.category_id &&
+                (t.fixed_id === fe.id || t.description.includes(fe.name || 'Fijo')) &&
                 (() => {
                     if (!t.date) return false;
                     const parts = t.date.split('-');
@@ -487,6 +488,7 @@ class Store {
             // AUTO-CLEAN DUPLICATES: If by the previous timezone bug multiple duplicates were spawned, safely delete the extras
             const allTxsForFe = this.data.transactions.filter(t =>
                 t.is_auto_fixed && t.category_id === fe.category_id &&
+                (t.fixed_id === fe.id || t.description.includes(fe.name || 'Fijo')) &&
                 t.date && parseInt(t.date.split('-')[0]) === year && (parseInt(t.date.split('-')[1]) - 1) === month
             );
             if (allTxsForFe.length > 1) {

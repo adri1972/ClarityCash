@@ -1,5 +1,5 @@
 {
-    "version": "77.13",
+    "version": "77.14",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.13: Updated UI Insights logic to read from configured monthly_income_target transparently so it does not falsely prompt missing income to users manually logging."
+    "notes": "v77.14: Fix budget tracking UI errors. Prevent Gastos Fijos from showing EXCEDIDO at 100%, fix duplicate debt visualizations, and fix isolated spent mapping for fixed expenses sharing the same category (like SmartFit & Entrenador)."
 }

@@ -2332,8 +2332,14 @@ class UIManager {
         fixedExpenses.forEach(fe => {
             const cat = categories.find(c => c.id === fe.category_id);
             const catName = cat ? cat.name : '';
-            // Buscamos gasto por nombre personalizado o por nombre de categoría
-            const spent = breakdown[fe.name] || breakdown[catName] || 0;
+            // Buscar gasto específico de este fijo (automático) o caer en el default
+            const feTx = monthlyTx.filter(t => t.is_auto_fixed && t.category_id === fe.category_id && (t.fixed_id === fe.id || (t.description && t.description.includes(fe.name))));
+            let spent = feTx.length > 0 ? feTx.reduce((s, t) => s + t.amount, 0) : (breakdown[fe.name] || 0);
+
+            // Si no hay transacciones automáticas e históricamente usaba el nombre de la categoría y solo hay 1 fijo en ella
+            if (spent === 0 && fixedExpenses.filter(f => f.category_id === fe.category_id).length === 1) {
+                spent = breakdown[catName] || 0;
+            }
             const limit = fe.amount || 0;
             const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
 
@@ -2348,7 +2354,7 @@ class UIManager {
                 percent,
                 status
             });
-            if (status !== 'OK') groupData['FIXED'].hasOver = true;
+            if (status.startsWith('OVER')) groupData['FIXED'].hasOver = true;
             if (percent > groupData['FIXED'].maxPercent) groupData['FIXED'].maxPercent = percent;
             if (fe.category_id) addedCategories.add(fe.category_id);
         });
@@ -2369,8 +2375,15 @@ class UIManager {
                 percent,
                 status
             });
-            if (status !== 'OK') groupData['FINANCIERO'].hasOver = true;
+            if (status.startsWith('OVER')) groupData['FINANCIERO'].hasOver = true;
             if (loan.category_id) addedCategories.add(loan.category_id);
+
+            // Si el nombre del crédito coincide con una categoría o pertenece a gastos financieros genéricos, agreguémoslo al set para evitar duplis.
+            const possibleCat = categories.find(c =>
+                c.name.toLowerCase() === loan.name.toLowerCase() ||
+                (c.group === 'FINANCIERO' && (categories.filter(x => x.group === 'FINANCIERO').length === 1 || c.name.toLowerCase().includes('deud') || c.name.toLowerCase().includes('créd')))
+            );
+            if (possibleCat) addedCategories.add(possibleCat.id);
         });
 
         // 3. OTRAS CATEGORÍAS (Variables o no definidas en fijos)
@@ -2398,7 +2411,7 @@ class UIManager {
                 percent,
                 status
             });
-            if (status !== 'OK') groupData[key].hasOver = true;
+            if (status.startsWith('OVER')) groupData[key].hasOver = true;
             if (percent > groupData[key].maxPercent) groupData[key].maxPercent = percent;
         });
 
