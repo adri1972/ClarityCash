@@ -425,11 +425,12 @@ class Store {
         });
         const s = { income: 0, expenses: 0, savings: 0, investment: 0, debt_payment: 0, balance_net: 0 };
         monthlyTx.forEach(t => {
-            if (t.type === 'INGRESO') s.income += t.amount;
-            else if (t.type === 'GASTO') s.expenses += t.amount;
-            else if (t.type === 'AHORRO') s.savings += t.amount;
-            else if (t.type === 'INVERSION') s.investment += t.amount;
-            else if (t.type === 'PAGO_DEUDA' || t.type === 'PAGO_TARJETA') s.debt_payment += t.amount;
+            const type = (t.type || '').toUpperCase();
+            if (type === 'INGRESO') s.income += t.amount;
+            else if (type === 'GASTO') s.expenses += t.amount;
+            else if (type === 'AHORRO') s.savings += t.amount;
+            else if (type === 'INVERSION') s.investment += t.amount;
+            else if (type === 'PAGO_DEUDA' || type === 'PAGO_TARJETA') s.debt_payment += t.amount;
         });
         s.balance_net = s.income - (s.expenses + s.savings + s.investment + s.debt_payment);
         return s;

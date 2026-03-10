@@ -1831,137 +1831,61 @@ class UIManager {
         const nudges = [];
         const month = this.viewDate.getMonth();
         const year = this.viewDate.getFullYear();
-        const dayOfMonth = new Date().getDate();
         const isCurrentMonth = (new Date().getMonth() === month && new Date().getFullYear() === year);
+
+        // Si no estamos en el mes actual, no molestar con estas alertas de acción inmediata
+        if (!isCurrentMonth) return '';
 
         const txs = this.store.transactions.filter(t => {
             const d = new Date(t.date);
             return d.getMonth() === month && d.getFullYear() === year;
         });
 
-        const budgets = this.store.config.budgets || {};
-        const breakdown = this.store.getCategoryBreakdown(month, year);
+        const incomeTxs = txs.filter(t => t.type === 'INGRESO');
+        const savingsTxs = txs.filter(t => t.type === 'AHORRO' || t.category_id === 'cat_5');
 
-        // 1. SAVINGS NUDGE: Budget says save X but no savings this month
-        const savingsBudget = budgets['cat_5'] || 0;
-        if (savingsBudget > 0 && isCurrentMonth) {
-            const savingsTxs = txs.filter(t => t.type === 'AHORRO' || t.category_id === 'cat_5');
-            const totalSaved = savingsTxs.reduce((s, t) => s + t.amount, 0);
-            if (totalSaved === 0) {
-                nudges.push({
-                    emoji: '🐷',
-                    title: '¿Ya apartaste tu ahorro?',
-                    msg: `Tu meta es ahorrar ${this.formatCurrency(savingsBudget)} este mes y aún no has registrado ningún ahorro.`,
-                    action: 'Registra tu ahorro →',
-                    onclick: "document.getElementById('add-transaction-btn').click()"
-                });
-            } else if (totalSaved < savingsBudget) {
-                const pct = Math.round((totalSaved / savingsBudget) * 100);
-                nudges.push({
-                    emoji: '💪',
-                    title: `Llevas ${pct}% de tu meta de ahorro`,
-                    msg: `Has ahorrado ${this.formatCurrency(totalSaved)} de ${this.formatCurrency(savingsBudget)}. ¡Faltan ${this.formatCurrency(savingsBudget - totalSaved)}!`,
-                    action: 'Registrar abono →',
-                    onclick: "document.getElementById('add-transaction-btn').click()"
-                });
-            }
-        }
+        const totalIncome = incomeTxs.reduce((s, t) => s + t.amount, 0);
+        const totalSaved = savingsTxs.reduce((s, t) => s + t.amount, 0);
 
-        // 2. BUDGET EXCEEDED: Categories over budget
-        const categories = this.store.categories;
-        categories.forEach(c => {
-            const limit = budgets[c.id] || 0;
-            const spent = breakdown[c.name] || 0;
-            if (limit > 0 && spent > limit) {
-                const over = spent - limit;
-                nudges.push({
-                    emoji: '🚨',
-                    title: `Te pasaste en ${c.name}`,
-                    msg: `Gastaste ${this.formatCurrency(spent)} de ${this.formatCurrency(limit)} presupuestados. Exceso: ${this.formatCurrency(over)}.`,
-                    action: 'Ver presupuestos →',
-                    onclick: "document.querySelector('[data-view=settings]').click()"
-                });
-            }
-        });
-
-        // 3. NO TRANSACTIONS: Past the 5th and nothing logged
-        if (isCurrentMonth && dayOfMonth > 5 && txs.length === 0) {
-            nudges.push({
-                emoji: '📝',
-                title: '¿Llevas 5 días sin registrar nada?',
-                msg: 'Para que la IA te ayude, necesita ver tus movimientos. Registra uno o escanea un recibo.',
-                action: 'Agregar movimiento →',
-                onclick: "document.getElementById('add-transaction-btn').click()"
-            });
-        }
-
-        // 4. GOALS BEHIND: Goals not on track
-        const goals = this.store.getGoals();
-        goals.forEach(g => {
-            if (g.deadline) {
-                const deadline = new Date(g.deadline);
-                const now = new Date();
-                const monthsLeft = Math.max(1, (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth()));
-                const remaining = g.target_amount - g.current_amount;
-                if (remaining > 0 && monthsLeft <= 3) {
-                    const perMonth = Math.ceil(remaining / monthsLeft);
-                    nudges.push({
-                        emoji: '⏰',
-                        title: `Meta "${g.name}" necesita atención`,
-                        msg: `Te faltan ${this.formatCurrency(remaining)} y quedan ${monthsLeft} mes(es). Necesitas ${this.formatCurrency(perMonth)}/mes.`,
-                        action: 'Ver metas →',
-                        onclick: "document.querySelector('[data-view=goals]').click()"
-                    });
-                }
-            }
-        });
-
-        // 5. EXPENSES WITHOUT INCOME: Spending but forgot to log income
-        if (isCurrentMonth && summary.expenses > 0 && summary.income === 0 && dayOfMonth > 3) {
+        if (totalIncome === 0) {
             nudges.push({
                 emoji: '💵',
-                title: '¿Ya registraste tus ingresos?',
-                msg: 'Tienes gastos registrados pero $0 en ingresos. Sin ingresos, el análisis sale incompleto.',
+                title: 'Faltan tus ingresos',
+                msg: 'Registra tu ingreso para comenzar tu análisis financiero.',
                 action: 'Registrar ingreso →',
                 onclick: "document.getElementById('add-transaction-btn').click()"
             });
-        }
-
-        // 6. WEEKLY AUDIT: Prompt user to see their Strategy Report
-        const weekKey = `${new Date().getFullYear()}-W${String(Math.ceil(((new Date() - new Date(new Date().getFullYear(), 0, 1)) / 86400000 + new Date(new Date().getFullYear(), 0, 1).getDay() + 1) / 7)).padStart(2, '0')}`;
-        const cachedVerdict = localStorage.getItem('cc_cfo_verdict');
-        const hasVerdictThisWeek = cachedVerdict && JSON.parse(cachedVerdict).week === weekKey;
-
-        if (!hasVerdictThisWeek) {
+        } else if (totalSaved === 0) {
             nudges.push({
-                emoji: '📊',
-                title: 'Tu Auditoría Semanal está lista',
-                msg: '¿Cómo va tu disciplina financiera? Mira el veredicto del CFO esta semana.',
-                action: 'Ver Auditoría →',
-                onclick: "window.ui.navigate('strategy')"
+                emoji: '🐷',
+                title: 'Protege tu dinero',
+                msg: 'Aparta tu ahorro primero para proteger tu dinero.',
+                action: 'Registra tu ahorro →',
+                onclick: "document.getElementById('add-transaction-btn').click()"
+            });
+        } else {
+            nudges.push({
+                emoji: '✅',
+                title: 'Todo en orden',
+                msg: 'Tu análisis financiero está listo.',
+                action: 'Ver detalle →',
+                onclick: "window.scrollBy({ top: 300, behavior: 'smooth' })"
             });
         }
 
-        // RENDER
-        if (nudges.length === 0) return '';
-
-        // Limit to 3 most important
-        const topNudges = nudges.slice(0, 3);
-
+        const n = nudges[0];
         return `
-            <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 12px; margin-bottom: 0.5rem; -webkit-overflow-scrolling: touch;">
-                ${topNudges.map(n => `
-                    <div style="min-width: 260px; max-width: 300px; background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #FF9800; flex-shrink: 0;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                            <span style="font-size: 1.4rem;">${n.emoji}</span>
-                            <strong style="font-size: 0.85rem; color: #333;">${n.title}</strong>
-                        </div>
-                        <p style="margin: 0 0 8px; font-size: 0.8rem; color: #666; line-height: 1.4;">${n.msg}</p>
-                        <button onclick="${n.onclick}" style="background: none; border: none; color: var(--primary-color); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">
-                            ${n.action}
-                        </button>
+            <div style="margin-bottom: 1.5rem;">
+                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #FF9800; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.4rem;">${n.emoji}</span>
+                        <strong style="font-size: 0.95rem; color: #333;">${n.title}</strong>
                     </div>
-                `).join('')}
+                    <p style="margin: 0; font-size: 0.85rem; color: #666; line-height: 1.4;">${n.msg}</p>
+                    <button onclick="${n.onclick}" style="background: none; border: none; color: var(--primary-color); font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 0; text-align: left; width: max-content; margin-top: 4px;">
+                        ${n.action}
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -2500,14 +2424,17 @@ class UIManager {
 
                 return `
                     <div class="budget-row" style="margin-bottom: 0.8rem; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                        <div style="margin-bottom: 0.3rem;">
                             <span style="font-weight: 500; font-size: 0.85rem; color: ${isOver ? '#dc2626' : '#1e293b'};">${isOver ? '🚨 ' : ''}${item.name}</span>
-                            <span style="font-size: 0.75rem; color: #64748b;">
-                                ${this.formatCurrency(item.spent)} / <span style="font-weight: 600;">${item.limit > 0 ? this.formatCurrency(item.limit) : 'Sin Pres.'}</span>
-                            </span>
                         </div>
-                        <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
-                            <div style="width: ${width}%; height: 100%; background: ${barColor};"></div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px;">
+                            ${this.formatCurrency(item.spent)} / <span style="font-weight: 600;">${item.limit > 0 ? this.formatCurrency(item.limit) : 'Sin Pres.'}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                <div style="width: ${width}%; height: 100%; background: ${barColor};"></div>
+                            </div>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: ${barColor}; min-width: 32px; text-align: right;">${Math.round(item.percent)}%</span>
                         </div>
                         ${isOver ? `<div style="color: #dc2626; font-size: 0.7rem; font-weight: 600; margin-top: 4px;">Excedido por ${this.formatCurrency(Math.max(0, item.spent - item.limit))}</div>` : ''}
                     </div>
@@ -4247,17 +4174,18 @@ class UIManager {
         const expenseCount = monthlyTransactions.filter(t => t.type === 'GASTO').length;
 
         // --- 💰 BALANCE DEL MES ---
-        const balanceValue = summary.income - summary.expenses;
         let balanceMessage = "";
         let balanceColor = "#64748b";
-        if (balanceValue > 0) {
-            balanceMessage = `Te está sobrando dinero: ${this.formatCurrency(balanceValue)}`;
-            balanceColor = "#10b981";
-        } else if (balanceValue < 0) {
-            balanceMessage = `Estás gastando más de lo que ganas: ${this.formatCurrency(Math.abs(balanceValue))}`;
+
+        if (summary.income === 0) {
+            balanceMessage = "Tu análisis está incompleto. Registra tu ingreso del mes.";
+            balanceColor = "#ef4444";
+        } else if (summary.expenses > summary.income) {
+            balanceMessage = "Estás gastando más de lo que ganas este mes.";
             balanceColor = "#ef4444";
         } else {
-            balanceMessage = "Estás en punto de equilibrio";
+            balanceMessage = "Vas dentro de tu plan financiero.";
+            balanceColor = "#10b981";
         }
 
         const compareArrow = (current, previous) => {
