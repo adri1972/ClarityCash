@@ -477,10 +477,23 @@ class Store {
             const exists = this.data.transactions.find(t =>
                 t.is_auto_fixed && t.category_id === fe.category_id &&
                 (() => {
-                    const d = new Date(t.date);
-                    return d.getMonth() === month && d.getFullYear() === year;
+                    if (!t.date) return false;
+                    const parts = t.date.split('-');
+                    return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month;
                 })()
             );
+
+            // AUTO-CLEAN DUPLICATES: If by the previous timezone bug multiple duplicates were spawned, safely delete the extras
+            const allTxsForFe = this.data.transactions.filter(t =>
+                t.is_auto_fixed && t.category_id === fe.category_id &&
+                t.date && parseInt(t.date.split('-')[0]) === year && (parseInt(t.date.split('-')[1]) - 1) === month
+            );
+            if (allTxsForFe.length > 1) {
+                const toDelete = allTxsForFe.slice(1);
+                for (let dup of toDelete) {
+                    await this.deleteTransaction(dup.id);
+                }
+            }
 
             if (!exists) {
                 const accountId = this.data.accounts && this.data.accounts.length > 0 ? this.data.accounts[0].id : 'acc_1';
