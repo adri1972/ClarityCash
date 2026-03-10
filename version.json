@@ -1,5 +1,5 @@
 {
-    "version": "77.5",
+    "version": "77.6",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.5: Fixed syntax error in AI advisor."
+    "notes": "v77.6: Definitive fix for iOS Invalid Date using robust parseSafeDate helper."
 }

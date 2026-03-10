@@ -56,8 +56,13 @@ class AIAdvisor {
         }
 
         // Minimal Context Building
-        const dateStr = (tx.date || '').includes('T') ? tx.date : `${tx.date}T12:00:00`;
-        const dateObj = new Date(dateStr);
+        const parseSafeDate = (d) => {
+            if (!d) return new Date();
+            if (d.includes('T')) return new Date(d);
+            return new Date(d.replace(/-/g, '/'));
+        };
+
+        const dateObj = parseSafeDate(tx.date);
         const month = dateObj.getMonth();
         const year = dateObj.getFullYear();
         const summary = this.store.getFinancialSummary(month, year);
@@ -74,13 +79,13 @@ class AIAdvisor {
 
         const last3 = this.store.transactions
             .filter(t => t.id !== tx.id)
-            .sort((a, b) => new Date((b.date||'').includes('T')?b.date:b.date+'T12:00:00') - new Date((a.date||'').includes('T')?a.date:a.date+'T12:00:00'))
+            .sort((a, b) => parseSafeDate(b.date) - parseSafeDate(a.date))
             .slice(0, 3);
 
         const last3Str = last3.map(t => {
             const c = this.store.categories.find(cat => cat.id === t.category_id);
             return `- ${t.type}: $${t.amount} en ${c ? c.name : 'N/A'}`;
-        }).join('\\n');
+        }).join('\n');
 
         const prompt = `NUEVO MOVIMIENTO REGISTRADO:
 - Monto: $${tx.amount}
