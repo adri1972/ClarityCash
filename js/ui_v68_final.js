@@ -2478,7 +2478,7 @@ class UIManager {
         const sortedGroups = Object.keys(groupData)
             .filter(key => groupData[key].items.length > 0)
             .sort((a, b) => {
-                const order = ['FIXED', 'AHORRO', 'NECESIDADES', 'VIVIENDA', 'FINANCIERO', 'CRECIMIENTO', 'ESTILO_DE_VIDA', 'OTROS'];
+                const order = ['NECESIDADES', 'ESTILO_DE_VIDA', 'VIVIENDA', 'CRECIMIENTO', 'OTROS', 'AHORRO', 'FINANCIERO', 'FIXED'];
                 return order.indexOf(a) - order.indexOf(b);
             });
 
@@ -2517,7 +2517,7 @@ class UIManager {
             sortedGroups.forEach(key => {
                 const group = groupData[key];
                 html += `
-                    <details ${group.hasOver || key === 'FIXED' ? 'open' : ''} style="margin-bottom: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: visible;">
+                    <details ${group.hasOver ? 'open' : ''} style="margin-bottom: 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: visible;">
                         <summary style="padding: 12px 16px; font-weight: 700; font-size: 0.9rem; color: ${group.hasOver ? '#b91c1c' : '#475569'}; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="transition: transform 0.2s;">▶</span>
