@@ -1576,13 +1576,31 @@ class UIManager {
         // El presupuesto base es el ingreso total
         const disposableToOrganize = monthlyIncome;
 
-        // "Usado" total = (Todos los gastos/ahorros/inversiones registrados) + (Deuda proyectada que falta por pagar)
+        // "Usado" total = (Todos los gastos/ahorros/inversiones registrados)
         const summaryTotalRegistered = (summary.expenses || 0) + (summary.savings || 0) + (summary.investment || 0) + (summary.debt_payment || 0);
 
         // El excedente de deuda es lo que esperamos pagar pero aún no hemos registrado
         const pendingLoanPayments = Math.max(0, totalLoanPayments - registeredLoanPayments);
 
-        const used = summaryTotalRegistered + pendingLoanPayments;
+        // Novedad: Identificar gastos fijos proyectados vs pagados por categoría
+        const fixedExpensesList = this.store.config.fixed_expenses || [];
+        const fixedExpensesByCat = {};
+        let totalFixedExpensesAmount = 0;
+
+        fixedExpensesList.forEach(fe => {
+            const amount = parseFloat(fe.amount) || 0;
+            fixedExpensesByCat[fe.category_id] = (fixedExpensesByCat[fe.category_id] || 0) + amount;
+            totalFixedExpensesAmount += amount;
+        });
+
+        let pendingFixedExpenses = 0;
+        for (const catId in fixedExpensesByCat) {
+            const floor = fixedExpensesByCat[catId];
+            const spentInCat = currentMonthTxs.filter(t => t.category_id === catId && t.type === 'GASTO').reduce((s, t) => s + t.amount, 0);
+            pendingFixedExpenses += Math.max(0, floor - spentInCat);
+        }
+
+        const used = summaryTotalRegistered + pendingLoanPayments + pendingFixedExpenses;
 
         // Disponible restante
         const available = disposableToOrganize - used;
@@ -1650,16 +1668,19 @@ class UIManager {
                             <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
                                 de un presupuesto de <b>${this.formatCurrency(disposableToOrganize)}</b>
                             </div>
-                            ${totalLoanPayments > 0 ? `
+                            ${totalLoanPayments > 0 || totalFixedExpensesAmount > 0 ? `
                             <div style="font-size: 0.75rem; color: #3b82f6; margin-top: 6px; font-weight: 600;">
-                                Incluye ${this.formatCurrency(totalLoanPayments)} en cuotas de préstamos
+                                Incluye ${[
+                    totalLoanPayments > 0 ? this.formatCurrency(totalLoanPayments) + ' en cuotas' : null,
+                    totalFixedExpensesAmount > 0 ? this.formatCurrency(totalFixedExpensesAmount) + ' en fijos' : null
+                ].filter(Boolean).join(' y ')}
                             </div>` : ''}
                         </div>
                     </div>
 
                     <div style="height: 12px; background: #f0f0f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px;">
                         <div style="width: ${Math.min(ratio * 100, 100)}%; background: ${statusColor}; height: 100%; border-radius: 6px; transition: width 0.5s ease; position: relative;">
-                             ${totalLoanPayments > 0 ? `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${Math.min((totalLoanPayments / disposableToOrganize) * 100, 100)}%; background: rgba(0,0,0,0.1); border-right: 1px solid rgba(255,255,255,0.3);"></div>` : ''}
+                             ${(totalLoanPayments + totalFixedExpensesAmount) > 0 ? `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${Math.min(((totalLoanPayments + totalFixedExpensesAmount) / disposableToOrganize) * 100, 100)}%; background: rgba(0,0,0,0.1); border-right: 1px solid rgba(255,255,255,0.3);"></div>` : ''}
                         </div>
                     </div>
 
