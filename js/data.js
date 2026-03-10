@@ -465,19 +465,44 @@ class Store {
         // ... similar logic as before
     }
 
-    processFixedExpenses(month, year) {
+    async processFixedExpenses(month, year) {
         if (!this.data.config.fixed_expenses) this.data.config.fixed_expenses = [];
         const fixed = this.data.config.fixed_expenses;
-        fixed.forEach(fe => {
+
+        const now = new Date();
+        const isCurrentOrPast = (year < now.getFullYear()) || (year === now.getFullYear() && month <= now.getMonth());
+        if (!isCurrentOrPast) return;
+
+        for (let fe of fixed) {
             const exists = this.data.transactions.find(t =>
-                t.category_id === fe.category_id &&
-                t.amount === fe.amount &&
+                t.is_auto_fixed && t.category_id === fe.category_id &&
                 (() => {
                     const d = new Date(t.date);
                     return d.getMonth() === month && d.getFullYear() === year;
                 })()
             );
-        });
+
+            if (!exists) {
+                const accountId = this.data.accounts && this.data.accounts.length > 0 ? this.data.accounts[0].id : 'acc_1';
+                let txDate = new Date(year, month, 1).toISOString().split('T')[0];
+                if (year === now.getFullYear() && month === now.getMonth()) {
+                    txDate = now.toISOString().split('T')[0];
+                }
+
+                await this.addTransaction({
+                    type: 'GASTO',
+                    amount: fe.amount,
+                    date: txDate,
+                    category_id: fe.category_id,
+                    description: (fe.name || 'Compromiso Fijo') + ' (Automático)',
+                    account_id: accountId,
+                    is_auto_fixed: true,
+                    fixed_id: fe.id
+                });
+            } else if (exists && exists.amount !== fe.amount) {
+                await this.updateTransaction(exists.id, { amount: fe.amount });
+            }
+        }
     }
 
     getHistorySummary(monthsCount = 6) {

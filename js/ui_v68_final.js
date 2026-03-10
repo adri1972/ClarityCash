@@ -1535,7 +1535,7 @@ class UIManager {
         }
 
         // Generate Recurring Items for this month (Fixed Expenses & Incomes)
-        this.store.processFixedExpenses(this.viewDate.getMonth(), this.viewDate.getFullYear());
+        await this.store.processFixedExpenses(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
         // Calculate Totals for Selected Date
         const summary = this.store.getFinancialSummary(this.viewDate.getMonth(), this.viewDate.getFullYear());
