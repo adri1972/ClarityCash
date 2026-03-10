@@ -1,5 +1,5 @@
 {
-    "version": "77.12",
+    "version": "77.13",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.12: Updates Insights Analysis Screen per user request: single top action card, fix income calc case-sensitivity, updated balance message, and visual percentage for budget tracking bars."
+    "notes": "v77.13: Updated UI Insights logic to read from configured monthly_income_target transparently so it does not falsely prompt missing income to users manually logging."
 }

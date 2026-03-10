@@ -1847,7 +1847,10 @@ class UIManager {
         const totalIncome = incomeTxs.reduce((s, t) => s + t.amount, 0);
         const totalSaved = savingsTxs.reduce((s, t) => s + t.amount, 0);
 
-        if (totalIncome === 0) {
+        const configuredIncome = parseFloat((this.store.config.monthly_income_target || '0').toString().replace(/\D/g, ''));
+        const effectiveIncome = totalIncome > 0 ? totalIncome : configuredIncome;
+
+        if (effectiveIncome === 0) {
             nudges.push({
                 emoji: '💵',
                 title: 'Faltan tus ingresos',
@@ -4164,6 +4167,12 @@ class UIManager {
         const prevYear = month === 0 ? year - 1 : year;
         const summary = this.store.getFinancialSummary(month, year);
         const prevSummary = this.store.getFinancialSummary(prevMonth, prevYear);
+
+        // --- 💵 FALLBACK A INGRESOS CONFIGURADOS ---
+        const configuredIncome = parseFloat((this.store.config.monthly_income_target || '0').toString().replace(/\D/g, ''));
+        if (summary.income === 0 && configuredIncome > 0) {
+            summary.income = configuredIncome; // Assume configured income if they haven't explicitly logged one
+        }
 
         // --- 📊 MOVEMENTS COUNTER FOR ANALYSIS ---
         const startOfMonth = new Date(year, month, 1).toISOString();
