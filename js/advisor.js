@@ -69,31 +69,48 @@ class FinancialAdvisor {
             }
         }
 
-        // --- 2. BUDGET VELOCITY (Mid-month check) ---
+        // --- 2. BUDGET VELOCITY & CATEGORY ALERTS ---
         const today = new Date();
         const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
 
+        // Identify "Fixed" categories to avoid noise
+        const fixedCatIds = new Set();
+        (conf.fixed_expenses || []).forEach(fe => { if (fe.category_id) fixedCatIds.add(fe.category_id); });
+        (conf.loans || []).forEach(l => { if (l.category_id) fixedCatIds.add(l.category_id); });
+        // Financial categories usually behave like fixed obligations
+        fixedCatIds.add('cat_7'); // Deuda/Créditos
+        fixedCatIds.add('cat_fin_4'); // Tarjeta de Crédito
+
         if (isCurrentMonth) {
-            const day = today.getDate();
-            const progress = day / 30; // 0.5 at day 15
+            this.store.categories.forEach(cat => {
+                if (cat.group === 'INGRESOS') return; // Ignore income categories
 
-            Object.keys(budgets).forEach(catId => {
-                const limit = budgets[catId];
-                const cat = this.store.categories.find(c => c.id === catId);
-                if (!cat) return;
+                const limit = budgets[cat.id] || 0;
                 const spent = breakdown[cat.name] || 0;
+                const isFixed = fixedCatIds.has(cat.id);
 
-                if (limit > 0) {
-                    const spentPct = spent / limit;
+                if (spent > 0 || limit > 0) {
+                    const spentPct = limit > 0 ? (spent / limit) : (spent > 0 ? 1.1 : 0);
 
+                    // 1. CRITICAL: Over 100% or Unbudgeted
                     if (spentPct > 1) {
+                        const title = limit === 0 ? `⚠️ Sin Presupuesto: ${cat.name}` : `🛑 Exceso de Presupuesto: ${cat.name}`;
+                        const message = limit === 0 
+                            ? `Has registrado un gasto en "${cat.name}" pero no tienes presupuesto asignado. Esto resta disponibilidad a otras metas.`
+                            : `Has superado tu presupuesto en esta categoría. Te sugerimos controlar este gasto el resto del mes.`;
+
                         insights.push({
                             type: 'critical',
-                            title: `🛑 Exceso de Presupuesto: ${cat.name}`,
-                            message: `Has superado tu presupuesto en esta categoría. Te sugerimos controlar este gasto el resto del mes.`,
+                            title: title,
+                            message: message,
                             impact: spent - limit
                         });
-                    } else if (spentPct > 0.85) {
+                    } 
+                    // 2. WARNING: Over 80% (only for non-fixed)
+                    else if (spentPct > 0.8) {
+                        // Skip yellow alerts for fixed expenses if they haven't exceeded 100%
+                        if (isFixed) return; 
+
                         insights.push({
                             type: 'warning',
                             title: `⚠️ Atención: ${cat.name}`,

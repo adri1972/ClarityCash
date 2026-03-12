@@ -1,5 +1,5 @@
 {
-    "version": "77.16",
+    "version": "77.17",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.16: Fix global settings form erasing hidden budget category configs when saving. New logic merges with existing ones."
+    "notes": "v77.17: Refine monthly diagnosis alerts. Fixed expenses exactly matching budget no longer trigger alerts. Variable expenses trigger yellow at 80% and red at 100%. Unbudgeted expenses trigger red."
 }
