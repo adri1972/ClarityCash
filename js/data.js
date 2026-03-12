@@ -257,6 +257,20 @@ class Store {
 
     async _saveConfig(config) {
         if (!this.uid) return;
+
+        // LAYER 2 — Budget wipe protection at save level
+        // If the config being saved has empty budgets, but the CURRENT in-memory config
+        // already has real budget values, we NEVER silently overwrite with empty.
+        const existingBudgets = this.data.config ? this.data.config.budgets : null;
+        if (
+            existingBudgets &&
+            Object.keys(existingBudgets).length > 0 &&
+            (!config.budgets || Object.keys(config.budgets).length === 0)
+        ) {
+            console.warn('🛡️ Store _saveConfig: Budget wipe blocked. Restoring existing budgets before saving.');
+            config = { ...config, budgets: existingBudgets };
+        }
+
         this.data.config = config;
         this.data.config.updated_at = new Date().toISOString();
         await db.collection('users').doc(this.uid).set(this.data.config, { merge: true });
@@ -399,7 +413,43 @@ class Store {
     async updateConfig(newConfig) {
         // Guard: Prevent overwriting data with defaults during race conditions at startup
         if (this.uid && !this.initialized) {
-            console.warn("Store: updateConfig blocked - not initialized yet.");
+            console.warn('🛡️ Store updateConfig: BLOCKED — store not initialized yet. Aborting to prevent budget wipe.');
+            return;
+        }
+
+        // LAYER 1 — Budget wipe protection at update level
+        // If the caller is trying to set budgets to empty {} but we already have
+        // real budget values in memory, strip the budgets key from the update.
+        if (
+            newConfig.budgets !== undefined &&
+            Object.keys(newConfig.budgets).length === 0 &&
+            this.data.config.budgets &&
+            Object.keys(this.data.config.budgets).length > 0
+        ) {
+            console.warn('🛡️ Store updateConfig: Budget wipe attempt with empty object blocked. Existing budgets preserved.');
+            const safeConfig = { ...newConfig };
+            delete safeConfig.budgets; // Remove from update — Layer 2 will also catch it if it slips through
+            const config = { ...this.data.config, ...safeConfig };
+            await this._saveConfig(config);
+            // PROPAGAR A MES ACTUAL
+            try {
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = now.getMonth();
+                let currentPlan = await this.getSavedMonthPlan(y, m);
+                if (currentPlan) {
+                    let changed = false;
+                    if (newConfig.monthly_income_target !== undefined) {
+                        currentPlan.monthly_income_target = newConfig.monthly_income_target;
+                        changed = true;
+                    }
+                    if (newConfig.loans !== undefined) {
+                        currentPlan.loans = newConfig.loans;
+                        changed = true;
+                    }
+                    if (changed) await this.saveMonthPlan(y, m, currentPlan);
+                }
+            } catch (e) { console.warn('Sync Plan Error:', e); }
             return;
         }
 

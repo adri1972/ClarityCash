@@ -4996,8 +4996,16 @@ class UIManager {
                         `;
         }).join('')}
                     
-                    <div style="position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; z-index: 1000; display: flex; justify-content: center;">
-                        <button type="submit" class="btn btn-primary" style="width: 100%; max-width: 500px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 12px; box-shadow: 0 4px 15px rgba(59,130,246,0.3);">
+                    <div style="position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; z-index: 1000; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        ${!this.store.initialized ? `
+                        <p style="font-size: 0.78rem; color: #f59e0b; font-weight: 600; margin: 0;">
+                            ⏳ Cargando datos desde la nube… espera antes de guardar.
+                        </p>` : ''}
+                        <button type="submit" class="btn btn-primary" id="settings-save-btn"
+                            ${!this.store.initialized ? 'disabled' : ''}
+                            style="width: 100%; max-width: 500px; padding: 1rem; font-size: 1rem; font-weight: 700; border-radius: 12px; box-shadow: 0 4px 15px rgba(59,130,246,0.3); ${
+                                !this.store.initialized ? 'opacity:0.5; cursor:not-allowed;' : ''
+                            }">
                             💾 Guardar Cambios
                         </button>
                     </div>
@@ -5140,6 +5148,13 @@ class UIManager {
         this.container.onsubmit = (e) => {
             e.preventDefault();
             if (e.target.id === 'global-settings-form') {
+
+                // LAYER 3: Block save if store not fully initialized (prevents budget wipe on fast reload)
+                if (!this.store.initialized) {
+                    alert('⏳ Los datos aún se están cargando desde la nube. Por favor espera un momento e intenta de nuevo.');
+                    return;
+                }
+
                 const formData = new FormData(e.target);
                 const newBudgets = { ...(this.store.config.budgets || {}) };
                 const newNames = { ...(this.store.config.category_names || {}) };
