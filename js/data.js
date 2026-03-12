@@ -129,6 +129,24 @@ class Store {
         ]);
 
         this.data.accounts = accs.empty ? DEFAULT_DATA.accounts : accs.docs.map(doc => doc.data());
+        
+        // --- RESTORATION GUARD ---
+        // Ensure essential accounts always exist (Cash, Debit, Credit)
+        const essentialIds = ['acc_1', 'acc_2', 'acc_tc_1'];
+        essentialIds.forEach(id => {
+            if (!this.data.accounts.find(a => a.id === id)) {
+                console.log(`📡 Store: Restaurando cuenta esencial faltante: ${id}`);
+                const def = DEFAULT_DATA.accounts.find(d => d.id === id);
+                if (def) {
+                    const restoredAcc = { ...def, created_at: new Date().toISOString() };
+                    this.data.accounts.push(restoredAcc);
+                    if (this.uid) {
+                        db.collection('users').doc(this.uid).collection('accounts').doc(id).set(restoredAcc);
+                    }
+                }
+            }
+        });
+
         this.data.categories = cats.empty ? DEFAULT_DATA.categories : cats.docs.map(doc => doc.data());
         this.data.transactions = txts.docs.map(doc => doc.data());
         this.data.goals = goals.docs.map(doc => doc.data());

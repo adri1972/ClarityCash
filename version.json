@@ -1,5 +1,5 @@
 {
-    "version": "77.18",
+    "version": "77.19",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.18: ROOT FIX for budget resets. Removed all auto-save logic from rebalance shortcuts. The auto-budget assistant now only fills form inputs without saving, requiring an explicit user Save Changes click. Manual budgets are now fully protected."
+    "notes": "v77.19: Restoration Guard for essential accounts. Implemented mandatory Pre-Deployment Checklist. Protection against accidental deletion of Debit/Credit cards."
 }
