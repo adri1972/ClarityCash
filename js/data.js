@@ -87,11 +87,19 @@ class Store {
             // 1. Obtener Configuración
             const configDoc = await db.collection('users').doc(uid).get();
 
-            if (!configDoc.exists || (configDoc.data() && !configDoc.data().migrationCompleted)) {
-                // Posible usuario nuevo o primera vez, o migración incompleta
+            if (!configDoc.exists) {
+                // Usuario nuevo o necesita migración de LocalStorage
                 await this._checkAndPerformMigration();
             } else {
-                this.data.config = { ...DEFAULT_DATA.config, ...configDoc.data() };
+                const firestoreConfig = configDoc.data() || {};
+                this.data.config = { ...DEFAULT_DATA.config, ...firestoreConfig };
+
+                // Si existe en nube pero no tiene el flag, lo ponemos sin sobreescribir nada más
+                if (!firestoreConfig.migrationCompleted) {
+                    console.log("📡 Store: Marcando migración como completada en nube...");
+                    await db.collection('users').doc(uid).set({ migrationCompleted: true }, { merge: true });
+                    this.data.config.migrationCompleted = true;
+                }
 
                 // Asegurar que exista el objeto subscription (para usuarios antiguos post-migración)
                 if (!this.data.config.subscription) {
@@ -166,7 +174,18 @@ class Store {
 
         const localRaw = localStorage.getItem('clarity_cash_data_v2');
         if (!localRaw) {
-            console.log("Migration: No local data to migrate. Creating defaults in Cloud.");
+            console.log("Migration: No local data to migrate.");
+            
+            // Check if user already had SOMETHING in firestore (configDoc comes from previous get in init or we do a new one)
+            const configDoc = await db.collection('users').doc(this.uid).get();
+            if (configDoc.exists) {
+                console.log("Migration: Firestore data exists, just marking as migrated.");
+                await db.collection('users').doc(this.uid).set({ migrationCompleted: true }, { merge: true });
+                this.data.config = { ...DEFAULT_DATA.config, ...configDoc.data(), migrationCompleted: true };
+                return;
+            }
+
+            console.log("Migration: Creating defaults for fresh cloud user.");
             const defaultConfig = { ...DEFAULT_DATA.config, migrationCompleted: true };
             await this._saveConfig(defaultConfig);
             return;
