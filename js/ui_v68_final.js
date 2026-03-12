@@ -716,7 +716,7 @@ class UIManager {
                 case 'transactions': this.renderTransactions(); break;
                 case 'insights': this.renderInsightsPage(); break;
                 case 'goals': this.renderGoals(); break;
-                case 'settings': this.renderSettings(); break;
+                case 'settings': await this.renderSettings(); break;
                 case 'strategy': this.renderStrategyReport(); break;
                 case 'upgrade': this.renderUpgradeScreen(); break;
                 default: await this.renderDashboard();
@@ -4712,8 +4712,42 @@ class UIManager {
         this.render();
     }
 
-    renderSettings() {
+    async renderSettings() {
         this.pageTitle.textContent = 'Centro Financiero';
+
+        // LOADING SHIELD: If store not initialized, show spinner and wait
+        // This prevents the form from rendering with empty budgets before Firestore loads
+        if (!this.store.initialized) {
+            this.container.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; gap:16px;">
+                    <div style="width:40px; height:40px; border:4px solid #e2e8f0; border-top-color:var(--primary-color); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                    <p style="color:var(--text-secondary); font-weight:600;">Cargando datos desde la nube…</p>
+                    <p style="color:#94a3b8; font-size:0.8rem;">Por favor espera antes de editar tu presupuesto.</p>
+                </div>
+            `;
+            // Wait up to 8 seconds for initialization
+            await new Promise(resolve => {
+                let elapsed = 0;
+                const check = setInterval(() => {
+                    elapsed += 200;
+                    if (this.store.initialized || elapsed >= 8000) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 200);
+            });
+            // If still not initialized after 8s, show error
+            if (!this.store.initialized) {
+                this.container.innerHTML = `
+                    <div style="padding:2rem; text-align:center; color:#ef4444;">
+                        <p style="font-size:1.2rem;">⚠️ No se pudo cargar la configuración</p>
+                        <p style="color:#64748b;">Recarga la página e intenta de nuevo.</p>
+                    </div>
+                `;
+                return;
+            }
+        }
+
         const conf = this.store.config;
         if (this.expandedSection === undefined) this.expandedSection = 'perfil';
         const expanded = this.expandedSection;
