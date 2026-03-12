@@ -67,6 +67,7 @@ class Store {
         this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
         this.data.config.fixed_expenses = this.data.config.fixed_expenses || [];
         this.unsubscribe = null;
+        this.initialized = false;
     }
 
     /**
@@ -107,6 +108,7 @@ class Store {
             // 2. Cargar Colecciones (One-time fetch for initial load)
             await this._loadCollections();
 
+            this.initialized = true;
             console.log("✅ Store: Datos sincronizados.");
             return this.data;
         } catch (error) {
@@ -358,6 +360,12 @@ class Store {
 
     // --- Otros métodos adaptados ---
     async updateConfig(newConfig) {
+        // Guard: Prevent overwriting data with defaults during race conditions at startup
+        if (this.uid && !this.initialized) {
+            console.warn("Store: updateConfig blocked - not initialized yet.");
+            return;
+        }
+
         const config = { ...this.data.config, ...newConfig };
         await this._saveConfig(config);
 

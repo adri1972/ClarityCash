@@ -1041,27 +1041,13 @@ class UIManager {
             if (diff > 10) {
                 helperText = `Faltan $${this.formatNumberWithDots(diff)}`;
                 actionBtns = `
-                    <button type="button" onclick="window.ui.smartRebalance('cat_5', ${diff})" 
-                            style="background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
-                        📥 Ahorro
-                    </button>
                     <button type="button" onclick="window.ui.openRebalancePicker(${diff})" 
                             style="background: #0ea5e9; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
-                        🎯 Elegir Destino
-                    </button>
-                    <button type="button" onclick="document.getElementById('auto-budget-btn').click()"
-                            style="background: #6c5dd3; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
-                        ⚖️ Repartir Todo
+                        🎯 Ajustar Diferencia
                     </button>
                 `;
             } else if (diff < -10) {
                 helperText = `Excedido $${this.formatNumberWithDots(Math.abs(diff))}`;
-                actionBtns = `
-                    <button type="button" onclick="document.getElementById('auto-budget-btn').click()"
-                            style="background: #dc2626; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
-                        ⚖️ Ajustar Perfil
-                    </button>
-                `;
             } else {
                 helperText = `✓ Coherente`;
             }
@@ -5123,11 +5109,12 @@ class UIManager {
                         const input = document.querySelector(`input[name="budget_${cat.id}"]`);
                         if (input) input.value = this.formatNumberWithDots(finalValues[cat.id]);
                     });
-                    this.store.updateConfig({ budgets: { ...conf.budgets, ...finalValues } });
+                    
+                    // REMOVED auto-save to prevent budget wipes without explicit 'Guardar Cambios'
                     this.updateBudgetTotal();
                     const statusMsg = document.getElementById('budget-status-msg');
-                    if (statusMsg) statusMsg.innerHTML = '✔️ Estructura aplicada según tu perfil.';
-                    alert('✨ Estructura del perfil aplicada.');
+                    if (statusMsg) statusMsg.innerHTML = '✨ Estructura sugerida aplicada al formulario. No olvides pulsar "Guardar Cambios" para confirmar.';
+                    alert('✨ Estructura del perfil sugerida. Revisa los montos y pulsa "Guardar Cambios" al final.');
                 }
             }
 

@@ -1,5 +1,5 @@
 {
-    "version": "77.17",
+    "version": "77.18",
     "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.17: Refine monthly diagnosis alerts. Fixed expenses exactly matching budget no longer trigger alerts. Variable expenses trigger yellow at 80% and red at 100%. Unbudgeted expenses trigger red."
+    "notes": "v77.18: ROOT FIX for budget resets. Removed all auto-save logic from rebalance shortcuts. The auto-budget assistant now only fills form inputs without saving, requiring an explicit user Save Changes click. Manual budgets are now fully protected."
 }
