@@ -227,6 +227,12 @@ class UIManager {
                         const newTx = this.store.addTransaction(data);
                         // PROACTIVE AI: Trigger insight if it's an expense
                         if (data.type === 'GASTO') {
+                            // Clear specialized advice cache to force update on dashboard
+                            const currentMonth = this.viewDate.getMonth();
+                            const currentYear = this.viewDate.getFullYear();
+                            const cacheKey = `cc_ai_v65_${currentYear}_${currentMonth}_gemini`;
+                            localStorage.removeItem(cacheKey);
+
                             this.triggerSpendingInsight(newTx || data);
                             this.checkAndPromptOverspend(newTx || data);
                         }
@@ -1714,7 +1720,7 @@ class UIManager {
 
         // Trigger AI Insight if needed (for budget advice cards only)
         this.processAIAdvice(plan);
-        // NOTE: No llamamos fetchRealAIDiagnosis aqui. El hero usa el caché del ultimo movimiento.
+        // NOTE: AI analysis is now triggered exclusively by new expenses to optimize token consumption.
     }
 
     async fetchRealAIDiagnosis(plan) {
@@ -2162,6 +2168,12 @@ class UIManager {
 
             const newTx = this.store.addTransaction(txData);
 
+            // Clear specialized advice cache
+            const m = new Date().getMonth();
+            const y = new Date().getFullYear();
+            const cacheKey = `cc_ai_v65_${y}_${m}_gemini`;
+            localStorage.removeItem(cacheKey);
+
             // PROACTIVE AI: Trigger insight & Overspend Check
             setTimeout(() => this.triggerSpendingInsight(newTx || txData), 500);
             setTimeout(() => this.checkAndPromptOverspend(newTx || txData), 600);
@@ -2219,65 +2231,22 @@ class UIManager {
                 continue;
             }
 
-            try {
-                await new Promise(r => setTimeout(r, 100));
+            // No cached response and AI must NOT run automatically.
+            // Show local fallback message — AI only runs when a new expense is registered.
+            const coachFallback = item.fallback || "Registra un gasto para que la IA actualice su diagnóstico automáticamente.";
 
-                const adviceText = await this.aiAdvisor.getConsultation(item.context);
+            element.style.background = '#F5F5F5';
+            element.style.border = '1px dashed #DDD';
+            element.classList.remove('ai-loading');
 
-                // Save to cache so we don't call API again
-                localStorage.setItem(cacheKey, adviceText);
-
-                element.style.background = 'white';
-                element.style.border = 'none';
-                element.classList.remove('ai-loading');
-
-                element.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:4px;">
-                        <div style="display:flex; gap:10px; align-items:flex-start;">
-                            <span class="tip-bullet">✨</span>
-                            <span class="tip-text" style="color: #333; line-height: 1.4;">
-                                ${adviceText.replace(/\n/g, '<br>')}
-                            </span>
-                        </div>
-                        <div style="align-self: flex-end; margin-top: 5px;">
-                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:#999; font-size:0.7rem; cursor:pointer; text-decoration:underline;">
-                               🔄 Nueva Opinión
-                           </button>
-                        </div>
-                    </div>
-                `;
-
-            } catch (err) {
-                console.error("AI Advice Failed:", err);
-                const msg = (err.message || '').toLowerCase();
-                let coachFallback = item.fallback || "Mi consejo: Mantén tus gastos básicos bajo control hoy.";
-
-                if (msg.includes('quota') || msg.includes('rate')) {
-                    coachFallback = "🚀 Mi cerebro IA está descansando un momento, pero aquí va mi consejo: " + coachFallback;
-                } else if (msg.includes('api key')) {
-                    coachFallback = "🔑 Conecta tu API Key para darte consejos a otro nivel.";
-                }
-
-                element.style.background = '#F5F5F5';
-                element.style.border = '1px dashed #DDD';
-                element.classList.remove('ai-loading');
-
-                element.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:4px;">
-                        <div style="display:flex; gap:10px; align-items:flex-start;">
-                            <span class="tip-bullet">💡</span>
-                            <span class="tip-text" style="color: #666; line-height: 1.4; font-size: 0.85rem;">
-                                ${coachFallback}
-                            </span>
-                        </div>
-                        <div style="align-self: flex-end; margin-top: 5px;">
-                           <button onclick="window.ui.forceRefreshAI()" style="background:none; border:none; color:var(--primary-color); font-size:0.7rem; cursor:pointer; text-decoration:underline;">
-                                Reintentar
-                           </button>
-                        </div>
-                    </div>
-                `;
-            }
+            element.innerHTML = `
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <span class="tip-bullet">💡</span>
+                    <span class="tip-text" style="color: #666; line-height: 1.4; font-size: 0.85rem;">
+                        ${coachFallback}
+                    </span>
+                </div>
+            `;
         }
     }
 
@@ -2793,6 +2762,13 @@ class UIManager {
                 this.store.updateTransaction(editId, txData);
             } else {
                 newTx = this.store.addTransaction(txData);
+
+                // Clear specialized advice cache
+                const m = new Date().getMonth();
+                const y = new Date().getFullYear();
+                const cacheKey = `cc_ai_v65_${y}_${m}_gemini`;
+                localStorage.removeItem(cacheKey);
+
                 // Solo análisis IA — el usuario ya tomó su decisión financiera
                 // NO llamar checkAndPromptOverspend para no abrir otro modal encima
                 if (txData.type === 'GASTO') {
