@@ -1565,8 +1565,8 @@ class UIManager {
             t.category_id === 'cat_7' || t.type === 'PAGO_DEUDA' || t.type === 'PAGO_TARJETA'
         ).reduce((sum, t) => sum + t.amount, 0);
 
-        // El presupuesto base es el ingreso total
-        const disposableToOrganize = monthlyIncome;
+        // El presupuesto base es el ingreso total (Base configurada + Extras registrados)
+        const disposableToOrganize = summary.income;
 
         // "Usado" total = (Todos los gastos/ahorros/inversiones registrados)
         const summaryTotalRegistered = (summary.expenses || 0) + (summary.savings || 0) + (summary.investment || 0) + (summary.debt_payment || 0);
@@ -4185,7 +4185,7 @@ class UIManager {
         let balanceColor = "#64748b";
 
         if (summary.income === 0) {
-            balanceMessage = "Tu análisis está incompleto. Registra tu ingreso del mes.";
+            balanceMessage = "Configura tu ingreso mensual en el Centro Financiero para ver tu análisis.";
             balanceColor = "#ef4444";
         } else if (summary.expenses > summary.income) {
             balanceMessage = "Estás gastando más de lo que ganas este mes.";

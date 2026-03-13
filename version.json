@@ -1,5 +1,5 @@
 {
-    "version": "78.1",
-    "updatedAt": "2026-03-13T13:50:00Z",
-    "notes": "v78.1: AUTO-MIGRATION FIX. Detected legacy data structures where config was trapped inside 'fixed_expenses'. The system now automatically repairs and un-traps your data, restoring persistence for budget and income settings."
+    "version": "78.2",
+    "updatedAt": "2026-03-13T16:20:00Z",
+    "notes": "v78.2: ADDITIVE INCOME FIX. monthly_income_target is now the automatic monthly base. Manual INGRESO transactions (Honorarios, bonos, etc.) add on top of that base. No transaction needed to register the base income."
 }

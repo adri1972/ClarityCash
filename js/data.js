@@ -594,11 +594,24 @@ class Store {
             else if (type === 'PAGO_DEUDA' || type === 'PAGO_TARJETA') s.debt_payment += t.amount;
         });
 
-        // --- 💵 GLOBAL FALLBACK A INGRESOS CONFIGURADOS ---
-        const confIncome = parseFloat((this.data.config.monthly_income_target || '0').toString().replace(/\D/g, ''));
-        if (s.income === 0 && confIncome > 0) {
-            s.income = confIncome;
-        }
+        // --- 💵 MODELO DE INGRESOS CORRECTO ---
+        // REGLA: El ingreso total del mes = Base Configurada + Ingresos Adicionales Manuales
+        //
+        // 1. BASE AUTOMÁTICA = monthly_income_target (configurado en Centro Financiero)
+        //    Esta base existe SIEMPRE, sin necesidad de registrar ninguna transacción.
+        //
+        // 2. INGRESOS ADICIONALES = transacciones de tipo 'INGRESO' registradas manualmente
+        //    Estas son ingresos EXTRA (honorarios, bonos, ventas, etc.) y se suman encima.
+        //
+        // IMPORTANTE: Los 'recurring_incomes' son fuentes configuradas (como el salario) que
+        //    YA están contabilizadas como parte del monthly_income_target. No se vuelven a sumar
+        //    para evitar doble conteo. Si el usuario quiere fuentes extra, debe sumarlas.
+
+        const confIncome = parseFloat((this.data.config.monthly_income_target || '0').toString().replace(/\D/g, '')) || 0;
+        
+        // Las transacciones INGRESO son extras manuales: se suman a la base
+        // (ya estaban en s.income desde el loop de monthlyTx arriba)
+        s.income = confIncome + s.income;
 
         s.balance_net = s.income - (s.expenses + s.savings + s.investment + s.debt_payment);
         return s;
