@@ -1,5 +1,5 @@
 {
-    "version": "78.0",
-    "updatedAt": "2026-03-13T12:00:00Z",
-    "notes": "v78.0: CRITICAL FIX for budget customization. Ensured that custom budgets are fully respected and never overwritten by profile defaults. Fixed Firestore sub-field merge bug using explicit field deletion before save."
+    "version": "78.1",
+    "updatedAt": "2026-03-13T13:50:00Z",
+    "notes": "v78.1: AUTO-MIGRATION FIX. Detected legacy data structures where config was trapped inside 'fixed_expenses'. The system now automatically repairs and un-traps your data, restoring persistence for budget and income settings."
 }

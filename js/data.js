@@ -92,16 +92,42 @@ class Store {
                 await this._checkAndPerformMigration();
             } else {
                 const firestoreConfig = configDoc.data() || {};
-                this.data.config = { ...DEFAULT_DATA.config, ...firestoreConfig };
-
-                // Si existe en nube pero no tiene el flag, lo ponemos sin sobreescribir nada más
-                if (!firestoreConfig.migrationCompleted) {
-                    console.log("📡 Store: Marcando migración como completada en nube...");
-                    await db.collection('users').doc(uid).set({ migrationCompleted: true }, { merge: true });
-                    this.data.config.migrationCompleted = true;
+                
+                // --- ARQUITECTURA DE DATOS: MIGRACIÓN AUTOMÁTICA v78.0 ---
+                // Detectar si el usuario tiene datos "atrapados" en el objeto antiguo fixed_expenses
+                // En versiones viejas, por un bug, monthly_income_target y otros campos se metieron dentro de fixed_expenses
+                if (firestoreConfig.fixed_expenses && typeof firestoreConfig.fixed_expenses === 'object' && !Array.isArray(firestoreConfig.fixed_expenses)) {
+                    console.warn("⚠️ Store: Detectada estructura de datos antigua. Migrando a raíz...");
+                    const legacy = firestoreConfig.fixed_expenses;
+                    
+                    // Solo migramos si los valores en la raíz están en 0/vacíos y los de legacy tienen datos
+                    if ((!firestoreConfig.monthly_income_target || firestoreConfig.monthly_income_target === 0) && legacy.monthly_income_target) {
+                        firestoreConfig.monthly_income_target = legacy.monthly_income_target;
+                        firestoreConfig.spending_profile = legacy.spending_profile || firestoreConfig.spending_profile || 'BALANCEADO';
+                        firestoreConfig.has_debts = legacy.has_debts !== undefined ? legacy.has_debts : firestoreConfig.has_debts;
+                        
+                        // Si tiene presupuestos, asumimos que están personalizados
+                        if (firestoreConfig.budgets && Object.keys(firestoreConfig.budgets).length > 0) {
+                            firestoreConfig.budget_user_customized = true;
+                        }
+                        
+                        console.log("✅ Store: Migración de campos exitosa.");
+                        // Programar una limpieza de la nube para borrar el objeto fixed_expenses corrupto
+                        this._needsLegacyCleanup = true;
+                    }
                 }
 
-                // Asegurar que exista el objeto subscription (para usuarios antiguos post-migración)
+                this.data.config = { ...DEFAULT_DATA.config, ...firestoreConfig };
+
+                // Si se realizó migración o falta el flag, saneamos
+                if (this._needsLegacyCleanup || !firestoreConfig.migrationCompleted) {
+                    console.log("📡 Store: Saneando documento de usuario en nube...");
+                    await this._saveConfig(this.data.config, { explicitBudgetSave: true });
+                    this.data.config.migrationCompleted = true;
+                    this._needsLegacyCleanup = false;
+                }
+
+                // Asegurar que exista el objeto subscription
                 if (!this.data.config.subscription) {
                     this.data.config.subscription = {
                         plan: "trial",
@@ -286,11 +312,22 @@ class Store {
         if (options.explicitBudgetSave) {
             console.log('🔒 Store _saveConfig: Explicit budget save — fully replacing budgets field in Firestore.');
             try {
-                // Step 1: Delete old budgets and category_names fields completely
-                await docRef.update({
+                // Step 1: Delete old fields completely.
+                // We also check for 'fixed_expenses' because some users have corrupted legacy data 
+                // where config properties got trapped inside that field as a Map instead of an Array.
+                const fieldsToDelete = {
                     budgets: firebase.firestore.FieldValue.delete(),
                     category_names: firebase.firestore.FieldValue.delete()
-                });
+                };
+
+                if (config.fixed_expenses && typeof config.fixed_expenses === 'object' && !Array.isArray(config.fixed_expenses)) {
+                    console.warn("🧹 Store _saveConfig: Eliminando objeto corrupto legacy 'fixed_expenses' de Firestore.");
+                    fieldsToDelete.fixed_expenses = firebase.firestore.FieldValue.delete();
+                    // Importante: No queremos re-escribir este objeto corrupto en el set(...) posterior.
+                    delete config.fixed_expenses; 
+                }
+
+                await docRef.update(fieldsToDelete);
             } catch (e) {
                 // Document might not exist yet or fields might not exist — that's fine
                 console.log('(Budget field cleanup skipped — field may not exist yet)');
