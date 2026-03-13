@@ -97,14 +97,14 @@ class FinancialAdvisor {
                         const overAmount = spent - limit;
                         const title = limit === 0 ? `⚠️ Sin Presupuesto: ${cat.name}` : `🛑 Exceso: ${cat.name}`;
                         const message = limit === 0 
-                            ? `Registraste ${this.formatMoney(spent)} en "${cat.name}" sin presupuesto asignado. Asigna un límite o redistribuye ese dinero.`
-                            : `Excediste ${cat.name} por <b>${this.formatMoney(overAmount)}</b> (gastaste ${this.formatMoney(spent)} de ${this.formatMoney(limit)} presupuestados). Evita nuevos gastos en esta categoría durante el resto del mes.`;
+                            ? `Gastaste ${this.formatMoney(spent)} en <b>"${cat.name}"</b> sin presupuesto asignado.`
+                            : `Excediste <b>${cat.name}</b> por <b>${this.formatMoney(overAmount)}</b> (Límite: ${this.formatMoney(limit)}).`;
 
                         insights.push({
                             type: 'critical',
                             title: title,
                             message: message,
-                            recommendation: limit > 0 ? `Recorta ${this.formatMoney(Math.ceil(overAmount * 0.5))} de otra categoría discrecional para compensar.` : `Asigna un presupuesto a esta categoría en el Centro Financiero.`,
+                            recommendation: limit > 0 ? `Evita nuevos gastos en <b>${cat.name}</b> este mes y recorta el excedente de otra categoría.` : `Asigna un presupuesto a esta categoría en el Centro Financiero para evitar fugas.`,
                             impact: spent - limit
                         });
                     }

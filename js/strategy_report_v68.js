@@ -79,10 +79,15 @@ class StrategyReport {
                 const limit = budgets[cat.id] || 0;
                 if (limit <= 0) return;
                 const spent = breakdown[cat.name] || 0;
+
                 if (spent > limit) {
-                    const overPct = (spent - limit) / limit;
-                    // -5 pts por exceso leve (< 20%), -10 pts por exceso significativo
-                    score -= overPct < 0.2 ? 5 : 10;
+                    const overAmount = spent - limit;
+                    const overPct = overAmount / limit;
+                    // Penalización base por exceder CUALQUIER categoría
+                    score -= 15; 
+                    // Penalización extra proporcional al exceso
+                    if (overPct > 0.5) score -= 20; // Exceso masivo (>50%)
+                    else if (overPct > 0.2) score -= 10; // Exceso notable (>20%)
                 }
             });
         } catch(e) { /* silent — no romper si no hay datos */ }

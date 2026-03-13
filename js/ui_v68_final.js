@@ -4441,7 +4441,7 @@ class UIManager {
                         const icons = { 'HIGH': 'alert-circle', 'MEDIUM': 'alert-triangle', 'LOW': 'check-circle', 'INFO': 'info' };
                         const icon = icons[severity] || 'info';
                         const badgeLabels = { 'critical': 'CRÍTICO', 'warning': 'ALERTA', 'info': 'INFO' };
-                        const badgeLabel = badgeLabels[i.type] || (i.type || '').toUpperCase();
+                        const badgeLabel = badgeLabels[i.type] || ''; // Si no está mapeado, no mostrar texto técnico
                         const desc = i.description || i.message || '';
                         const rec = i.recommendation || '';
 
