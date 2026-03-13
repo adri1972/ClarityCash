@@ -255,14 +255,17 @@ class Store {
 
     // --- MÉTODOS DE ESCRITURA (Async y Sync con Cloud) ---
 
-    async _saveConfig(config) {
+    async _saveConfig(config, options = {}) {
         if (!this.uid) return;
 
         // LAYER 2 — Budget wipe protection at save level
         // If the config being saved has empty budgets, but the CURRENT in-memory config
         // already has real budget values, we NEVER silently overwrite with empty.
+        // EXCEPTION: if explicitBudgetSave is true, the user explicitly clicked "Guardar Cambios"
+        // and we must respect their decision (even if budgets is empty = they cleared everything).
         const existingBudgets = this.data.config ? this.data.config.budgets : null;
         if (
+            !options.explicitBudgetSave &&
             existingBudgets &&
             Object.keys(existingBudgets).length > 0 &&
             (!config.budgets || Object.keys(config.budgets).length === 0)
@@ -273,7 +276,31 @@ class Store {
 
         this.data.config = config;
         this.data.config.updated_at = new Date().toISOString();
-        await db.collection('users').doc(this.uid).set(this.data.config, { merge: true });
+
+        const docRef = db.collection('users').doc(this.uid);
+
+        // CRITICAL FIX: When budgets are being explicitly saved by the user,
+        // we must FULLY REPLACE the budgets field in Firestore.
+        // Using set({ merge: true }) alone NEVER deletes sub-fields that the user removed.
+        // Solution: First delete the old budgets field, then write the complete new config.
+        if (options.explicitBudgetSave) {
+            console.log('🔒 Store _saveConfig: Explicit budget save — fully replacing budgets field in Firestore.');
+            try {
+                // Step 1: Delete old budgets and category_names fields completely
+                await docRef.update({
+                    budgets: firebase.firestore.FieldValue.delete(),
+                    category_names: firebase.firestore.FieldValue.delete()
+                });
+            } catch (e) {
+                // Document might not exist yet or fields might not exist — that's fine
+                console.log('(Budget field cleanup skipped — field may not exist yet)');
+            }
+            // Step 2: Write the full config with the new budgets object
+            await docRef.set(this.data.config);
+        } else {
+            await docRef.set(this.data.config, { merge: true });
+        }
+
         window.dispatchEvent(new CustomEvent('c_store_updated'));
     }
 
@@ -410,7 +437,7 @@ class Store {
     get goals() { return this.data.goals; }
 
     // --- Otros métodos adaptados ---
-    async updateConfig(newConfig) {
+    async updateConfig(newConfig, options = {}) {
         // Guard: Prevent overwriting data with defaults during race conditions at startup
         if (this.uid && !this.initialized) {
             console.warn('🛡️ Store updateConfig: BLOCKED — store not initialized yet. Aborting to prevent budget wipe.');
@@ -420,7 +447,9 @@ class Store {
         // LAYER 1 — Budget wipe protection at update level
         // If the caller is trying to set budgets to empty {} but we already have
         // real budget values in memory, strip the budgets key from the update.
+        // EXCEPTION: if explicitBudgetSave, the user explicitly saved — we respect their choice.
         if (
+            !options.explicitBudgetSave &&
             newConfig.budgets !== undefined &&
             Object.keys(newConfig.budgets).length === 0 &&
             this.data.config.budgets &&
@@ -454,7 +483,7 @@ class Store {
         }
 
         const config = { ...this.data.config, ...newConfig };
-        await this._saveConfig(config);
+        await this._saveConfig(config, options);
 
         // PROPAGAR A MES ACTUAL: si edita préstamos/ingreso desde ajustes, el Dashboard debe actualizarse.
         try {

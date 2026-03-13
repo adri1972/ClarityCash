@@ -1,5 +1,5 @@
 {
-    "version": "77.20",
-    "updatedAt": "2026-03-09T14:15:00Z",
-    "notes": "v77.20: FINAL ROOT FIX for budget resets. Refactored Store initialization and migration logic to be non-destructive. Added deep protection against overwriting existing cloud data with defaults."
+    "version": "78.0",
+    "updatedAt": "2026-03-13T12:00:00Z",
+    "notes": "v78.0: CRITICAL FIX for budget customization. Ensured that custom budgets are fully respected and never overwritten by profile defaults. Fixed Firestore sub-field merge bug using explicit field deletion before save."
 }

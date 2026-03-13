@@ -4959,10 +4959,10 @@ class UIManager {
                             </button>
                         </div>
                         <div id="budget-status-msg" style="font-size: 0.8rem; color: #334155; font-weight: 600; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
-                            ${Object.keys(budgets).length > 0 ? '✔️ Estructura aplicada según tu perfil.' : '⚠️ Presupuesto no definido.'}
+                            ${conf.budget_user_customized ? '🔒 Presupuesto personalizado guardado. Solo cambia si tú lo decides.' : (Object.keys(budgets).length > 0 ? '✔️ Estructura aplicada según tu perfil. Pulsa "Guardar Cambios" para proteger tus ajustes.' : '⚠️ Presupuesto no definido. Usa "Aplicar estructura del perfil" o define tus montos manualmente.')}
                         </div>
                         <div id="budget-alert-tip" style="margin-top:10px; font-size:0.75rem; color:#64748b;">
-                            💡 Tip: Puedes tocar los nombres de las categorías para personalizarlas.
+                            💡 Tip: Puedes tocar los nombres de las categorías para personalizarlas. Pulsa "Guardar Cambios" para que tus ajustes sean permanentes.
                         </div>
                      </div>
  
@@ -5072,6 +5072,13 @@ class UIManager {
             }
 
             if (target.id === 'auto-budget-btn' || target.closest('#auto-budget-btn')) {
+                // PROTECTION: If user already has a customized budget, confirm overwrite
+                if (conf.budget_user_customized) {
+                    if (!confirm('⚠️ Ya tienes un presupuesto personalizado guardado. ¿Estás seguro de que quieres reemplazarlo con la estructura del perfil? Este cambio solo se aplica al formulario — NO se guarda hasta que pulses "Guardar Cambios".')) {
+                        return;
+                    }
+                }
+
                 const incomeInput = document.querySelector('input[name="monthly_income_target"]');
                 const profileSelect = document.querySelector('select[name="spending_profile"]');
                 const incomeStr = incomeInput ? incomeInput.value.replace(/\D/g, '') : '0';
@@ -5190,23 +5197,30 @@ class UIManager {
                 }
 
                 const formData = new FormData(e.target);
-                const newBudgets = { ...(this.store.config.budgets || {}) };
-                const newNames = { ...(this.store.config.category_names || {}) };
+                // CRITICAL: Build budgets FRESH from form fields only.
+                // Do NOT merge with stored values — the form IS the source of truth.
+                // If a category has no value in the form, it means the user removed it.
+                const newBudgets = {};
+                const newNames = {};
 
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('budget_')) {
                         const catId = key.replace('budget_', '');
                         const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
                         if (val > 0) newBudgets[catId] = val;
-                        else delete newBudgets[catId];
+                        // If val === 0, we simply don't add it — it's gone.
                     }
                     if (key.startsWith('cat_name_')) {
                         const catId = key.replace('cat_name_', '');
                         if (value) newNames[catId] = value;
-                        else delete newNames[catId];
+                        // If empty, don't add — it's gone.
                     }
                 }
 
+                console.log('💾 Guardar Cambios: Budget keys being saved:', Object.keys(newBudgets));
+
+                // Pass explicitBudgetSave flag so the store fully replaces the budgets field
+                // in Firestore instead of merging (which would keep deleted categories alive).
                 this.store.updateConfig({
                     monthly_income_target: parseFloat(formData.get('monthly_income_target').toString().replace(/\D/g, '')) || 0,
                     user_name: formData.get('user_name'),
@@ -5215,9 +5229,10 @@ class UIManager {
                     total_debt: parseFloat(formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0') || 0,
                     gemini_api_key: formData.get('gemini_api_key') || '',
                     budgets: newBudgets,
-                    category_names: newNames
-                });
-                alert('✅ Cambios guardados.');
+                    category_names: newNames,
+                    budget_user_customized: true  // Flag: user has explicitly saved their budget
+                }, { explicitBudgetSave: true });
+                alert('✅ Cambios guardados. Tu presupuesto personalizado ha sido protegido.');
                 this.render();
             }
         };
