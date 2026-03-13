@@ -94,18 +94,20 @@ class FinancialAdvisor {
 
                     // 1. CRITICAL: Over 100% or Unbudgeted
                     if (spentPct > 1) {
-                        const title = limit === 0 ? `⚠️ Sin Presupuesto: ${cat.name}` : `🛑 Exceso de Presupuesto: ${cat.name}`;
+                        const overAmount = spent - limit;
+                        const title = limit === 0 ? `⚠️ Sin Presupuesto: ${cat.name}` : `🛑 Exceso: ${cat.name}`;
                         const message = limit === 0 
-                            ? `Has registrado un gasto en "${cat.name}" pero no tienes presupuesto asignado. Esto resta disponibilidad a otras metas.`
-                            : `Has superado tu presupuesto en esta categoría. Te sugerimos controlar este gasto el resto del mes.`;
+                            ? `Registraste ${this.formatMoney(spent)} en "${cat.name}" sin presupuesto asignado. Asigna un límite o redistribuye ese dinero.`
+                            : `Excediste ${cat.name} por <b>${this.formatMoney(overAmount)}</b> (gastaste ${this.formatMoney(spent)} de ${this.formatMoney(limit)} presupuestados). Evita nuevos gastos en esta categoría durante el resto del mes.`;
 
                         insights.push({
                             type: 'critical',
                             title: title,
                             message: message,
+                            recommendation: limit > 0 ? `Recorta ${this.formatMoney(Math.ceil(overAmount * 0.5))} de otra categoría discrecional para compensar.` : `Asigna un presupuesto a esta categoría en el Centro Financiero.`,
                             impact: spent - limit
                         });
-                    } 
+                    }
                     // 2. WARNING: Over 80% (only for non-fixed)
                     else if (spentPct > 0.8) {
                         // Skip yellow alerts for fixed expenses if they haven't exceeded 100%

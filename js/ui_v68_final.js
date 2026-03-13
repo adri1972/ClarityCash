@@ -4440,6 +4440,8 @@ class UIManager {
                         const color = colors[severity] || '#666';
                         const icons = { 'HIGH': 'alert-circle', 'MEDIUM': 'alert-triangle', 'LOW': 'check-circle', 'INFO': 'info' };
                         const icon = icons[severity] || 'info';
+                        const badgeLabels = { 'critical': 'CRÍTICO', 'warning': 'ALERTA', 'info': 'INFO' };
+                        const badgeLabel = badgeLabels[i.type] || (i.type || '').toUpperCase();
                         const desc = i.description || i.message || '';
                         const rec = i.recommendation || '';
 
@@ -4449,7 +4451,7 @@ class UIManager {
                                 <span class="insight-title" style="color:${color}; display:flex; align-items:center; gap:0.5rem;">
                                     <i data-feather="${icon}"></i> ${i.title || 'Insight'}
                                 </span>
-                                <span class="badge" style="background:${color}20; color:${color}">${i.type || ''}</span>
+                                <span class="badge" style="background:${color}20; color:${color}; font-size:0.65rem; padding:2px 8px; border-radius:20px; font-weight:700;">${badgeLabel}</span>
                             </div>
                             <p class="insight-desc">${desc}</p>
                             ${potentialHtml}

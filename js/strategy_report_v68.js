@@ -55,13 +55,37 @@ class StrategyReport {
 
     // ─── Calcular salud financiera ─────────────────────────────────────────
     getHealthStatus(events) {
-        // Cálculo sugerido: Base 100
-        // -10 por cada fuga (rebalance), -15 por incidente (saldo negativo)
-        // -10 si hubo rebalanceos (exceso de presupuesto semanal)
+        // Base: 100 pts
+        // -10 por cada fuga de presupuesto semanal registrada
+        // -15 por día de saldo negativo
+        // -10 extra si hay rebalanceos
         let score = 100;
         score -= (events.rebalances.length * 10);
         score -= (events.interventions.length * 15);
         if (events.rebalances.length > 0) score -= 10;
+
+        // --- CORRECCIÓN: Evaluar excesos reales del mes actual ---
+        // Si el usuario tiene categorías con gasto > presupuesto, el score debe reflejarlo
+        try {
+            const now = new Date();
+            const month = now.getMonth();
+            const year = now.getFullYear();
+            const budgets = (this.store.config && this.store.config.budgets) || {};
+            const breakdown = this.store.getCategoryBreakdown ? this.store.getCategoryBreakdown(month, year) : {};
+            const categories = this.store.categories || [];
+
+            categories.forEach(cat => {
+                if (cat.group === 'INGRESOS') return;
+                const limit = budgets[cat.id] || 0;
+                if (limit <= 0) return;
+                const spent = breakdown[cat.name] || 0;
+                if (spent > limit) {
+                    const overPct = (spent - limit) / limit;
+                    // -5 pts por exceso leve (< 20%), -10 pts por exceso significativo
+                    score -= overPct < 0.2 ? 5 : 10;
+                }
+            });
+        } catch(e) { /* silent — no romper si no hay datos */ }
 
         score = Math.max(0, score);
 

@@ -1,5 +1,5 @@
 {
-    "version": "78.2",
-    "updatedAt": "2026-03-13T16:20:00Z",
-    "notes": "v78.2: ADDITIVE INCOME FIX. monthly_income_target is now the automatic monthly base. Manual INGRESO transactions (Honorarios, bonos, etc.) add on top of that base. No transaction needed to register the base income."
+    "version": "78.3",
+    "updatedAt": "2026-03-13T16:40:00Z",
+    "notes": "v78.3: UI/DIAGNOSIS FIXES. (1) Badge 'critical' now shows as 'CRÍTICO'. (2) Weekly Audit score now reflects real monthly budget overruns. (3) Diagnostic messages include specific overrun amounts and concrete recommendations."
 }
