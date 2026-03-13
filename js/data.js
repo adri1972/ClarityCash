@@ -581,8 +581,12 @@ class Store {
         const m = month !== undefined ? month : new Date().getMonth();
         const y = year !== undefined ? year : new Date().getFullYear();
         const monthlyTx = this.data.transactions.filter(t => {
+            if (!t.date) return false;
             const parts = t.date.split('-');
-            return parseInt(parts[0]) === y && (parseInt(parts[1]) - 1) === m;
+            if (parts.length < 2) return false;
+            const tYear = parseInt(parts[0], 10);
+            const tMonth = parseInt(parts[1], 10) - 1;
+            return tYear === y && tMonth === m;
         });
         const s = { income: 0, expenses: 0, savings: 0, investment: 0, debt_payment: 0, balance_net: 0 };
         monthlyTx.forEach(t => {
@@ -621,8 +625,12 @@ class Store {
         const m = month !== undefined ? month : new Date().getMonth();
         const y = year !== undefined ? year : new Date().getFullYear();
         const monthlyTx = this.data.transactions.filter(t => {
+            if (!t.date) return false;
             const parts = t.date.split('-');
-            return parseInt(parts[0]) === y && (parseInt(parts[1]) - 1) === m && (t.type === 'GASTO' || t.type === 'PAGO_DEUDA');
+            if (parts.length < 2) return false;
+            const tYear = parseInt(parts[0], 10);
+            const tMonth = parseInt(parts[1], 10) - 1;
+            return tYear === y && tMonth === m && (t.type === 'GASTO' || t.type === 'PAGO_DEUDA');
         });
         const breakdown = {};
         monthlyTx.forEach(t => {

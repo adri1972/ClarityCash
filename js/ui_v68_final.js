@@ -1511,7 +1511,11 @@ class UIManager {
             };
 
             // Only show prompt if we are in dashboard view and it's a "fresh" month entry
-            if (this._monthPromptShownFor !== `${currentYear}-${this.viewDate.getMonth()}`) {
+            // BUG FIX: Only show prompt for CURRENT or FUTURE months
+            const nowForModal = new Date();
+            const isPast = (currentYear < nowForModal.getFullYear()) || (currentYear === nowForModal.getFullYear() && this.viewDate.getMonth() < nowForModal.getMonth());
+
+            if (!isPast && this._monthPromptShownFor !== `${currentYear}-${this.viewDate.getMonth()}`) {
                 this.showNewMonthModal(templateData, currentYear, this.viewDate.getMonth());
                 this._monthPromptShownFor = `${currentYear}-${this.viewDate.getMonth()}`;
             }
@@ -1614,8 +1618,16 @@ class UIManager {
         }
 
         const now = new Date();
+        const isCurrentMonth = this.viewDate.getMonth() === now.getMonth() && this.viewDate.getFullYear() === now.getFullYear();
+        
+        // BUG FIX: Filter transactions strictly for the selected month context
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const txsThisWeek = (this.store.transactions || []).filter(t => new Date(t.date) >= oneWeekAgo);
+        const txsThisWeek = (this.store.transactions || []).filter(t => {
+            const d = new Date(t.date);
+            // Si estamos en el mes actual, mostramos racha real de la semana.
+            // Si estamos en un mes pasado, esta sección de racha no debería mostrarse o basarse en ese contexto.
+            return isCurrentMonth && d >= oneWeekAgo;
+        });
         // currentMonthTxs already declared above
 
         let miniGuideText = "Tu disciplina está construyendo claridad financiera.";
@@ -1700,7 +1712,7 @@ class UIManager {
                     <button class="btn-link" onclick="document.querySelector('[data-view=transactions]').click()">Ver todos</button>
                 </div>
                 <div class="transaction-list-compact">
-                    ${this.renderRecentTransactionsHTML(3)}
+                    ${this.renderRecentTransactionsHTML(3, this.viewDate.getMonth(), this.viewDate.getFullYear())}
                 </div>
             </div>
         `;
@@ -3224,10 +3236,18 @@ class UIManager {
         `;
     }
 
-    renderRecentTransactionsHTML(limit = 5) {
-        // Get last limit transactions
-        const txs = this.store.transactions
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+    renderRecentTransactionsHTML(limit = 5, month = null, year = null) {
+        let txs = this.store.transactions;
+        
+        // BUG FIX: Filter by month/year if provided
+        if (month !== null && year !== null) {
+            txs = txs.filter(t => {
+                const parts = t.date.split('-');
+                return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month;
+            });
+        }
+
+        txs = txs.sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, limit);
 
         if (txs.length === 0) {

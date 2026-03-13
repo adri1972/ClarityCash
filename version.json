@@ -1,5 +1,5 @@
 {
-    "version": "78.5",
-    "updatedAt": "2026-03-13T17:56:00Z",
-    "notes": "v78.5: UI/DIAGNOSIS REFINEMENT. (1) Eliminated 'critical' string from badges. (2) Scorecard now penalizes monthly overruns rigorously. (3) Insights include specific amounts and concrete recommendations."
+    "version": "78.6",
+    "updatedAt": "2026-03-13T18:18:00Z",
+    "notes": "v78.6: NAVIGATION & FILTER FIXES. (1) Blocked 'New Month' popup for past months. (2) Fixed Dashboard transaction list to filter strictly by selected month and year."
 }
