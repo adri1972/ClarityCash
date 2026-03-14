@@ -37,7 +37,7 @@ exports.proxyGemini = functions.runWith({
             const payload = req.body;
 
             // Modelo de respaldo definido por la directiva
-            let modelName = payload.model || "gemini-2.0-flash-lite";
+            let modelName = payload.model || "gemini-flash-latest";
 
             const commonHeaders = { 
                 'Content-Type': 'application/json',
