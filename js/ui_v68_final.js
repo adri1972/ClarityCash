@@ -3384,31 +3384,53 @@ class UIManager {
 
     renderTransactions() {
         this.pageTitle.textContent = 'Mis Movimientos';
+        
+        const currentMonth = this.viewDate.getMonth();
+        const currentYear = this.viewDate.getFullYear();
+        const currentMonthName = this.monthNames[currentMonth];
+
         let rawTxs = this.store.getAllTransactions ? this.store.getAllTransactions() : (this.store.data.transactions || []);
-        // BUG FIX: Ensure History is always sorted by most recent date first
-        const txs = [...rawTxs].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // Filter transactions for the selected month to keep consistency with dashboard
+        const filteredTxs = rawTxs.filter(t => {
+            if (!t.date) return false;
+            const parts = t.date.split('-');
+            if (parts.length < 2) return false;
+            return parseInt(parts[0], 10) === currentYear && (parseInt(parts[1], 10) - 1) === currentMonth;
+        });
+
+        const txs = [...filteredTxs].sort((a, b) => new Date(b.date) - new Date(a.date));
         const categories = this.store.data.categories || [];
 
         let html = `
-            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: 1rem;">
-                <button id="btn-reset-data" class="btn" style="background: #ff5252; color: white; display: flex; align-items: center; gap: 0.5rem;">
-                    <i data-feather="trash-2"></i> Iniciar de Cero
-                </button>
-                
-                <input type="file" id="import-file" accept=".csv,.txt,.pdf,.jpg,.jpeg,.png" style="display: none;" />
-                <button class="btn" style="background: #2E7D32; color: white; display: flex; align-items: center; gap: 0.5rem;" onclick="document.getElementById('import-file').click()">
-                    <i data-feather="camera"></i> Escanear / Importar
-                </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 12px; background: white; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                    <button class="btn-icon" onclick="window.ui.changeMonth(-1)" style="background: #f8f9fa;"><i data-feather="chevron-left"></i></button>
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); min-width: 140px; text-align: center;">${currentMonthName} ${currentYear}</h3>
+                    <button class="btn-icon" onclick="window.ui.changeMonth(1)" style="background: #f8f9fa;"><i data-feather="chevron-right"></i></button>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="btn-reset-data" class="btn" style="background: #FFF5F5; color: #E53935; border: 1px solid #FFCDD2; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 8px 12px;">
+                        <i data-feather="trash-2" style="width: 14px;"></i> Iniciar de Cero
+                    </button>
+                    
+                    <input type="file" id="import-file" accept=".csv,.txt,.pdf,.jpg,.jpeg,.png" style="display: none;" />
+                    <button class="btn" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 8px 12px;" onclick="document.getElementById('import-file').click()">
+                        <i data-feather="upload-cloud" style="width: 14px;"></i> Importar / Escanear
+                    </button>
+                </div>
             </div>
 
-            <div class="card">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="card" style="padding: 0; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
                     <thead>
-                        <tr style="text-align: left; border-bottom: 1px solid #eee;">
-                            <th style="padding: 1rem;">Fecha</th>
-                            <th style="padding: 1rem;">Categoría</th>
-                            <th style="padding: 1rem;">Monto</th>
-                            <th style="padding: 1rem;">Nota</th>
+                        <tr style="text-align: left; border-bottom: 1px solid #eee; background: #fafafa;">
+                            <th style="padding: 1.25rem 1rem; font-size: 0.85rem; color: #64748b; font-weight: 600;">Fecha</th>
+                            <th style="padding: 1.25rem 1rem; font-size: 0.85rem; color: #64748b; font-weight: 600;">Categoría</th>
+                            <th style="padding: 1.25rem 1rem; font-size: 0.85rem; color: #64748b; font-weight: 600;">Monto</th>
+                            <th style="padding: 1.25rem 1rem; font-size: 0.85rem; color: #64748b; font-weight: 600;">Nota</th>
+                            <th style="padding: 1.25rem 1rem; font-size: 0.85rem; color: #64748b; font-weight: 600;"></th>
                         </tr>
                     </thead>
                     <tbody>
