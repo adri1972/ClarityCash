@@ -45,19 +45,21 @@ exports.proxyGemini = functions.runWith({
             };
 
             if (payload.action === 'list') {
-                const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+                const listUrl = `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
                 const listResponse = await fetch(listUrl, { headers: commonHeaders });
                 const listData = await listResponse.json();
                 return res.status(200).json(listData);
             }
 
-            // Preparamos payload oficial (A Gemini no le gusta el campo model extra)
-            const googlePayload = { ...payload };
-            delete googlePayload.model;
+            // --- STABILIZATION: Remove legacy metadata and ensure clean payload ---
+            const googlePayload = {
+                contents: payload.contents,
+                generationConfig: payload.generationConfig || {}
+            };
 
-            const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const targetUrl = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
 
-            console.log(`📡 Enviando tráfico hacia: ${modelName}`);
+            console.log(`📡 Proxying to Gemini v1 [${modelName}]`);
 
             const response = await fetch(targetUrl, {
                 method: 'POST',
@@ -67,8 +69,12 @@ exports.proxyGemini = functions.runWith({
 
             const data = await response.json();
 
-            // Retorna en crudo lo que Google Cloud responda (Pasa el proxy exacto)
-            return res.status(response.status).json(data);
+            if (!response.ok) {
+                console.error("❌ Gemini API Error:", data);
+                return res.status(response.status).json(data);
+            }
+
+            return res.status(200).json(data);
 
         } catch (error) {
             console.error('Proxy Fatal Error:', error);

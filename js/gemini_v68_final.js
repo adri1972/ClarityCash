@@ -350,12 +350,15 @@ Esquema Obligatorio:
 
         if (!response.ok) {
             const errorBody = await response.json().catch(() => ({}));
-            const errorMessage = errorBody.error?.message || response.statusText;
+            const errorMessage = errorBody.error?.message || errorBody.message || response.statusText;
 
-            if (response.status === 400 || response.status === 403) throw new Error(`INVALID_KEY: ${errorMessage}`);
+            console.error("AI Proxy Error details:", errorBody);
+
+            if (response.status === 400 || response.status === 403) throw new Error(`INVALID_KEY: ${errorMessage} (${response.status})`);
             if (response.status === 429) throw new Error('RATE_LIMIT');
             if (response.status === 404) throw new Error(`PROXY_NOT_FOUND: Asegúrate de haber desplegado Firebase Functions. Detalle: ${response.statusText}`);
-            throw new Error(`API_ERROR: ${errorMessage}`);
+            // Transmitir error real para que el usuario pueda diagnosticar (ej: cuotas, api key)
+            throw new Error(`API_ERROR: ${errorMessage} (${response.status})`);
         }
 
         const data = await response.json();
@@ -829,12 +832,15 @@ ${JSON.stringify(weeklyData, null, 2)}`;
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`Proxy Error: ${errorData.error?.message || response.statusText}`);
-                }
-                
-                const data = await response.json();
-                text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const errorBody = await response.json().catch(() => ({}));
+            const errorMessage = errorBody.error?.message || errorBody.message || response.statusText;
+            console.error("AI Proxy Error details:", errorBody);
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        text = textResponse; // Assign to 'text' variable
             } else if (config.ai_provider === 'openai' && config.openai_api_key) {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',

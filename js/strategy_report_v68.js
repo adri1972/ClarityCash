@@ -465,7 +465,9 @@ class StrategyReport {
             }
         } catch (e) {
             console.error('CFO Verdict error:', e);
-            if (box) box.innerHTML = '<span style="color:#dc2626;">Error al conectar con tu asesor. Inténtalo más tarde.</span>';
+            if (box) box.innerHTML = `<div style="color:#dc2626; font-size:0.85rem; padding:1rem; background:rgba(220,38,38,0.1); border-radius:8px;">
+                <strong>⚠️ Error de conexión:</strong><br>${e.message}
+            </div>`;
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '⚡ Analizar de nuevo';
