@@ -1,5 +1,5 @@
 {
-    "version": "78.9",
+    "version": "79.0",
     "updatedAt": "2026-03-14T00:05:00Z",
     "notes": "v78.9: FIX NAMES & PROXY. (1) Updated all section names to new terminology (Mi Dinero, Mi Semana, etc.). (2) Fixed AI Proxy by adding mandatory Referer header and correcting model name."
 }
