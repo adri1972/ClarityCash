@@ -37,7 +37,7 @@ exports.proxyGemini = functions.runWith({
             const payload = req.body;
 
             // Modelo de respaldo definido por la directiva
-            let modelName = payload.model || "gemini-1.5-flash";
+            let modelName = payload.model || "gemini-2.0-flash";
 
             const commonHeaders = { 
                 'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ exports.proxyGemini = functions.runWith({
             };
 
             if (payload.action === 'list') {
-                const listUrl = `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
+                const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
                 const listResponse = await fetch(listUrl, { headers: commonHeaders });
                 const listData = await listResponse.json();
                 return res.status(200).json(listData);
@@ -57,9 +57,9 @@ exports.proxyGemini = functions.runWith({
                 generationConfig: payload.generationConfig || {}
             };
 
-            const targetUrl = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
+            const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-            console.log(`📡 Proxying to Gemini v1 [${modelName}]`);
+            console.log(`📡 Proxying to Gemini v1beta [${modelName}]`);
 
             const response = await fetch(targetUrl, {
                 method: 'POST',

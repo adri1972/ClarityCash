@@ -334,7 +334,7 @@ Esquema Obligatorio:
 
         // Payload enviado al Proxy (el proxy se encarga de empaquetar en el JSON estricto de Google)
         const proxyPayload = {
-            model: "gemini-1.5-flash",
+            model: "gemini-2.0-flash",
             contents: [{ parts: [{ text: `${systemInstruction}\n\n---\n\n${prompt}` }] }],
             generationConfig: {
                 temperature: 0.2,
@@ -598,7 +598,7 @@ Esquema Obligatorio:
                 const data = await response.json();
                 text = data.choices[0].message.content;
             } else {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -817,7 +817,7 @@ ${JSON.stringify(weeklyData, null, 2)}`;
 
             if (proxyUrl) {
                 const proxyPayload = {
-                    model: "gemini-1.5-flash", // Modelo estable
+                    model: "gemini-2.0-flash", // Modelo estable
                     contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
                     generationConfig: {
                         temperature: 0.7,
@@ -858,7 +858,7 @@ ${JSON.stringify(weeklyData, null, 2)}`;
                 const data = await response.json();
                 text = data.choices[0].message.content;
             } else {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -904,7 +904,7 @@ Responde SIEMPRE en formato JSON:
         const userPrompt = `Datos del usuario: ${JSON.stringify(historicalData, null, 2)}`;
 
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -951,7 +951,7 @@ ESTRUCTURA DE RESPUESTA (JSON estricto):
         const userPrompt = `Datos financieros reales del usuario: ${JSON.stringify(contextData, null, 2)}`;
 
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
