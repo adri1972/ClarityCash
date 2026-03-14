@@ -334,7 +334,7 @@ Esquema Obligatorio:
 
         // Payload enviado al Proxy (el proxy se encarga de empaquetar en el JSON estricto de Google)
         const proxyPayload = {
-            model: "gemini-2.5-flash",
+            model: "gemini-2.0-flash",
             contents: [{ parts: [{ text: `${systemInstruction}\n\n---\n\n${prompt}` }] }],
             generationConfig: {
                 temperature: 0.2,
@@ -774,8 +774,12 @@ Esquema Obligatorio:
      * WEEKLY CFO VERDICT — Diagnóstico Estratégico Semanal
      */
     async getWeeklyCFOVerdict(weeklyData) {
-        const apiKey = this.config.gemini_api_key || this.config.openai_api_key;
-        if (!apiKey) throw new Error('No API key configured');
+        const config = this.store && this.store.config ? this.store.config : {};
+        const apiKey = config.gemini_api_key || config.openai_api_key || this.getApiKey();
+        
+        // El veredicto puede funcionar vía Proxy (sin llave en cliente) o vía API directa.
+        const canRun = apiKey || config.firebase_project_id;
+        if (!canRun) throw new Error('No API key or Proxy configured');
 
         const systemPrompt = `Eres el CFO de ClarityCash: un Analista Estratégico Senior de finanzas personales.
 Tu misión es guiar decisiones financieras de forma clara, cercana y pedagógica.
@@ -803,23 +807,38 @@ ${JSON.stringify(weeklyData, null, 2)}`;
 
         try {
             let text = '';
-            const proxyUrl = this.config.firebase_project_id
-                ? `https://us-central1-${this.config.firebase_project_id}.cloudfunctions.net/geminiProxy`
+            const projectId = config.firebase_project_id || (window.firebaseConfig ? window.firebaseConfig.projectId : 'claritycash-e93ca');
+            const proxyUrl = projectId
+                ? `https://us-central1-${projectId}.cloudfunctions.net/proxyGemini`
                 : null;
 
             if (proxyUrl) {
+                const proxyPayload = {
+                    model: "gemini-2.0-flash", // Modelo estable
+                    contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 1000
+                    }
+                };
+
                 const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: `${systemPrompt}\n\n${userPrompt}`, maxTokens: 1000 })
+                    body: JSON.stringify(proxyPayload)
                 });
-                if (!response.ok) throw new Error('Proxy Error');
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Proxy Error: ${errorData.error?.message || response.statusText}`);
+                }
+                
                 const data = await response.json();
-                text = data.result || data.text || '';
-            } else if (this.config.ai_provider === 'openai' && this.config.openai_api_key) {
+                text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } else if (config.ai_provider === 'openai' && config.openai_api_key) {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.config.openai_api_key}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.openai_api_key}` },
                     body: JSON.stringify({
                         model: 'gpt-4o-mini',
                         messages: [

@@ -1,5 +1,5 @@
 {
-    "version": "78.7",
-    "updatedAt": "2026-03-13T22:35:00Z",
-    "notes": "v78.7: HISTORY SORTING FIX. (1) Transactions in the History view are now always sorted by most recent date first."
+    "version": "78.8",
+    "updatedAt": "2026-03-14T00:05:00Z",
+    "notes": "v78.8: WEEKLY AUDIT FIX. (1) Fixed AI connection in Weekly Audit by correcting proxy endpoint, payload structure, and config access. (2) Standardized Gemini model to gemini-2.0-flash."
 }
