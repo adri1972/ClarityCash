@@ -3384,8 +3384,9 @@ class UIManager {
 
     renderTransactions() {
         this.pageTitle.textContent = 'Mis Movimientos';
-        // Ensure we use the getter to retrieve sorted transactions
-        const txs = this.store.getAllTransactions ? this.store.getAllTransactions() : this.store.data.transactions;
+        let rawTxs = this.store.getAllTransactions ? this.store.getAllTransactions() : (this.store.data.transactions || []);
+        // BUG FIX: Ensure History is always sorted by most recent date first
+        const txs = [...rawTxs].sort((a, b) => new Date(b.date) - new Date(a.date));
         const categories = this.store.data.categories || [];
 
         let html = `

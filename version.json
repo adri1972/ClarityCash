@@ -1,5 +1,5 @@
 {
-    "version": "78.6",
-    "updatedAt": "2026-03-13T18:18:00Z",
-    "notes": "v78.6: NAVIGATION & FILTER FIXES. (1) Blocked 'New Month' popup for past months. (2) Fixed Dashboard transaction list to filter strictly by selected month and year."
+    "version": "78.7",
+    "updatedAt": "2026-03-13T22:35:00Z",
+    "notes": "v78.7: HISTORY SORTING FIX. (1) Transactions in the History view are now always sorted by most recent date first."
 }
