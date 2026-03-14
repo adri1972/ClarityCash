@@ -665,10 +665,10 @@ class Store {
         if (!isCurrentOrPast) return;
 
         for (let fe of fixed) {
-            // NEW: If the category is explicitly marked as 'FIXED' type in the new budget system,
-            // we skip auto-injection to allow manual confirmation in the UI.
+            // NEW: Si la categoría está clasificada en el nuevo sistema (FIXED o VARIABLE),
+            // saltamos la inyección automática para permitir confirmación manual o registro de gastos.
             const catType = (this.data.config.category_types || {})[fe.category_id];
-            if (catType === 'FIXED') continue;
+            if (catType === 'FIXED' || catType === 'VARIABLE') continue;
 
             const exists = this.data.transactions.find(t =>
                 t.is_auto_fixed && t.category_id === fe.category_id &&
