@@ -44,7 +44,7 @@ jobs:
 
       - name: Ejecutar Lanzamiento (Deploy)
         run: |
-          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions --project claritycash-e93ca --force --debug
+          GOOGLE_APPLICATION_CREDENTIALS=sa.json firebase deploy --only functions,hosting --project claritycash-e93ca --force --debug
         
       - name: Limpiar Rastros de Seguridad
         if: always()
