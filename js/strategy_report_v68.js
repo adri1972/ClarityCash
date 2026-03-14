@@ -313,6 +313,17 @@ class StrategyReport {
 
     // ─── Generar Asesoría IA ──────────────────────────────────────────────
     async generateVerdict() {
+        // --- 🛡️ GUARD: Once-per-week enforcement ---
+        const weekKey = this.getWeekKey();
+        try {
+            const cv = JSON.parse(localStorage.getItem('cc_cfo_verdict'));
+            if (cv && cv.week === weekKey) {
+                console.log('🛡️ StrategyReport: Analysis already exists for this week. Skipping AI call.');
+                this.render(); // Just refresh view to show cached text
+                return;
+            }
+        } catch (e) {}
+
         if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey()) {
             const box = document.getElementById('cfo-verdict-box');
             if (box) box.innerHTML = '<span style="color:#dc2626; font-weight:600;">⚠️ Conecta tu IA en Configuración para generar el veredicto.</span>';
@@ -431,9 +442,7 @@ class StrategyReport {
                     if (wordCount > 120) {
                         box.innerHTML = `<span id="cfo-text">${verdict}</span>`;
                         if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = '⚡ Analizar de nuevo';
-                            btn.style.opacity = '1';
+                            btn.style.display = 'none'; // Hide button after success to prevent double calls
                         }
                         const existingLabel = document.getElementById('cache-label');
                         if (!existingLabel) {
@@ -450,9 +459,7 @@ class StrategyReport {
                             } else {
                                 clearInterval(interval);
                                 if (btn) {
-                                    btn.disabled = false;
-                                    btn.innerHTML = '⚡ Analizar de nuevo';
-                                    btn.style.opacity = '1';
+                                    btn.style.display = 'none'; // Hide button after success
                                 }
                                 const existingLabel = document.getElementById('cache-label');
                                 if (!existingLabel) {
