@@ -20,7 +20,8 @@ const DEFAULT_DATA = {
             trialStart: new Date().toISOString(),
             trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             status: "active"
-        }
+        },
+        category_types: {}
     },
     goals: [],
     accounts: [
@@ -664,6 +665,11 @@ class Store {
         if (!isCurrentOrPast) return;
 
         for (let fe of fixed) {
+            // NEW: If the category is explicitly marked as 'FIXED' type in the new budget system,
+            // we skip auto-injection to allow manual confirmation in the UI.
+            const catType = (this.data.config.category_types || {})[fe.category_id];
+            if (catType === 'FIXED') continue;
+
             const exists = this.data.transactions.find(t =>
                 t.is_auto_fixed && t.category_id === fe.category_id &&
                 (t.fixed_id === fe.id || t.description.includes(fe.name || 'Fijo')) &&

@@ -2409,23 +2409,48 @@ class UIManager {
             html += `<p class="empty-state">No hay gastos ni presupuestos activos este mes.</p>`;
         } else {
             const renderRow = (item) => {
+                const cat = categories.find(c => c.name === item.name || (this.store.config.category_names && this.store.config.category_names[c.id] === item.name));
+                const catId = cat ? cat.id : null;
+                const type = (this.store.config.category_types && this.store.config.category_types[catId]) || 'VARIABLE';
+
+                if (type === 'FIXED') {
+                    const isPaid = item.spent >= item.limit && item.limit > 0;
+                    return `
+                        <div style="background: white; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.9rem; font-weight: 700; color: #1e293b;">${item.name}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">Monto: ${this.formatCurrency(item.limit)}</div>
+                            </div>
+                            <div>
+                                ${isPaid ? `
+                                    <div style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                                        PAGADO
+                                    </div>
+                                ` : `
+                                    <button onclick="window.ui.confirmFixedPayment('${catId}', ${item.limit}, '${item.name}')" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; cursor: pointer; transition: all 0.2s;">
+                                        💰 PAGAR
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }
+
                 const barColor = (item.status === 'OVER' || item.status === 'OVER_UNBUDGETED') ? '#ef4444' : (item.status === 'WARN' ? '#f59e0b' : '#10b981');
                 const width = Math.min(item.percent, 100);
                 const isOver = item.status === 'OVER' || item.status === 'OVER_UNBUDGETED';
 
                 return `
                     <div class="budget-row" style="margin-bottom: 0.8rem; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
-                        <div style="margin-bottom: 0.3rem;">
-                            <span style="font-weight: 500; font-size: 0.85rem; color: ${isOver ? '#dc2626' : '#1e293b'};">${isOver ? '🚨 ' : ''}${item.name}</span>
+                        <div style="margin-bottom: 0.3rem; display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; font-size: 0.85rem; color: #1e293b;">${item.name}</span>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: ${barColor};">${Math.round(item.percent)}%</span>
                         </div>
                         <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px;">
                             ${this.formatCurrency(item.spent)} / <span style="font-weight: 600;">${item.limit > 0 ? this.formatCurrency(item.limit) : 'Sin Pres.'}</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                                <div style="width: ${width}%; height: 100%; background: ${barColor};"></div>
-                            </div>
-                            <span style="font-size: 0.75rem; font-weight: 700; color: ${barColor}; min-width: 32px; text-align: right;">${Math.round(item.percent)}%</span>
+                        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                            <div style="width: ${width}%; height: 100%; background: ${barColor}; border-radius: 4px; transition: width 0.3s ease;"></div>
                         </div>
                         ${isOver ? `<div style="color: #dc2626; font-size: 0.7rem; font-weight: 600; margin-top: 4px;">Excedido por ${this.formatCurrency(Math.max(0, item.spent - item.limit))}</div>` : ''}
                     </div>
@@ -4840,48 +4865,65 @@ class UIManager {
         const renderRow = (c, isFixed = false, isSaving = false) => {
             const limit = budgets[c.id] || 0;
             const floor = fixedFloor[c.id] || 0;
-            // Usamos el presupuesto guardado si existe, o el piso fijo como sugerencia inicial
             const displayVal = this.formatNumberWithDots(limit || floor);
 
-            // Get custom name if exists
             const customNames = conf.category_names || {};
             const displayName = customNames[c.id] || fixedNames[c.id] || c.name;
+            
+            // NEW: Get category type (Fixed vs Variable)
+            const catTypes = conf.category_types || {};
+            const currentType = catTypes[c.id] || (isFixed ? 'FIXED' : 'VARIABLE');
 
             let rowBg = 'white';
             let borderStyle = '1px solid #edf2f7';
-            let labelExtra = '';
 
             if (isFixed) {
                 rowBg = '#f8fafc';
                 borderStyle = '1px solid #e2e8f0; border-left: 4px solid #3b82f6;';
-                labelExtra = ' <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.6rem; font-weight:800; vertical-align:middle;">FIJO</span>';
             } else if (isSaving) {
                 rowBg = '#f0fdf4';
                 borderStyle = '1px solid #dcfce7; border-left: 4px solid #10b981;';
-                labelExtra = ' <span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.6rem; font-weight:800; vertical-align:middle;">META</span>';
             }
 
             return `
-                <div class="form-group" style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.8rem; padding: 12px; border-radius: 14px; background: ${rowBg}; border: ${borderStyle};">
-                    <div style="flex: 1; display:flex; flex-direction:column; gap:2px;">
-                        <input type="text" name="cat_name_${c.id}" value="${displayName}" 
-                               style="border: 1px solid transparent; background:transparent; font-weight:700; font-size:0.95rem; color:var(--text-main); padding:2px 5px; width:100%; outline:none; border-radius:4px;" 
-                               placeholder="Concepto..."
-                               onfocus="this.style.border='1px solid #3b82f6'; this.style.background='#fff';"
-                               onblur="this.style.border='1px solid transparent'; this.style.background='transparent';">
-                        <div style="font-size:0.7rem; color:#94a3b8; font-weight:600; padding: 0 5px;">${displayName !== c.name ? c.name : ''} ${labelExtra}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
-                         <div style="position:relative; display:flex; align-items:center;">
-                            <span style="position:absolute; left:10px; color:#94a3b8; font-size:0.8rem; font-weight:700;">$</span>
-                            <input type="text" inputmode="numeric" name="budget_${c.id}" value="${limit > 0 ? this.formatNumberWithDots(limit) : ''}" 
-                                   placeholder="${floor > 0 ? this.formatNumberWithDots(floor) : '0'}"
-                                   style="width: 135px; text-align: right; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px 8px 25px; font-weight: 800; font-size: 1rem; color: #1e293b;"
-                                   oninput="window.ui.formatCurrencyInput(this); window.ui.updateBudgetTotal();"
-                                   onfocus="this.style.borderColor='var(--primary-color)';"
-                                   onblur="this.style.borderColor='#cbd5e1';">
+                <div class="form-group" style="margin-bottom: 0.8rem; display: flex; flex-direction: column; gap: 0.8rem; padding: 12px; border-radius: 14px; background: ${rowBg}; border: ${borderStyle};">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <div style="flex: 1; display:flex; flex-direction:column; gap:2px;">
+                            <input type="text" name="cat_name_${c.id}" value="${displayName}" 
+                                   style="border: 1px solid transparent; background:transparent; font-weight:700; font-size:0.95rem; color:var(--text-main); padding:2px 5px; width:100%; outline:none; border-radius:4px;" 
+                                   placeholder="Concepto..."
+                                   onfocus="this.style.border='1px solid #3b82f6'; this.style.background='#fff';"
+                                   onblur="this.style.border='1px solid transparent'; this.style.background='transparent';">
+                            <div style="font-size:0.7rem; color:#94a3b8; font-weight:600; padding: 0 5px;">${displayName !== c.name ? c.name : ''}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                             <div style="position:relative; display:flex; align-items:center;">
+                                <span style="position:absolute; left:10px; color:#94a3b8; font-size:0.8rem; font-weight:700;">$</span>
+                                <input type="text" inputmode="numeric" name="budget_${c.id}" value="${limit > 0 ? this.formatNumberWithDots(limit) : ''}" 
+                                       placeholder="${floor > 0 ? this.formatNumberWithDots(floor) : '0'}"
+                                       style="width: 120px; text-align: right; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px 8px 25px; font-weight: 800; font-size: 0.95rem; color: #1e293b;"
+                                       oninput="window.ui.formatCurrencyInput(this); window.ui.updateBudgetTotal();"
+                                       onfocus="this.style.borderColor='var(--primary-color)';"
+                                       onblur="this.style.borderColor='#cbd5e1';">
+                             </div>
                          </div>
-                     </div>
+                    </div>
+                    
+                    <!-- NEW: Type Selector (Segmented Control) -->
+                    <div class="type-segmented-control" style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 10px; gap: 4px;">
+                        <label style="flex: 1; margin: 0; cursor: pointer;">
+                            <input type="radio" name="cat_type_${c.id}" value="FIXED" ${currentType === 'FIXED' ? 'checked' : ''} style="display: none;">
+                            <div class="opt-label" style="text-align: center; padding: 6px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: all 0.2s; ${currentType === 'FIXED' ? 'background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'color: #64748b;'}">
+                                📅 Pago Fijo
+                            </div>
+                        </label>
+                        <label style="flex: 1; margin: 0; cursor: pointer;">
+                            <input type="radio" name="cat_type_${c.id}" value="VARIABLE" ${currentType === 'VARIABLE' ? 'checked' : ''} style="display: none;">
+                            <div class="opt-label" style="text-align: center; padding: 6px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: all 0.2s; ${currentType === 'VARIABLE' ? 'background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'color: #64748b;'}">
+                                📊 Variable
+                            </div>
+                        </label>
+                    </div>
                 </div>
             `;
         };
@@ -5247,18 +5289,21 @@ class UIManager {
                 // If a category has no value in the form, it means the user removed it.
                 const newBudgets = {};
                 const newNames = {};
+                const newTypes = {};
 
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('budget_')) {
                         const catId = key.replace('budget_', '');
                         const val = parseFloat(value.toString().replace(/\D/g, '')) || 0;
                         if (val > 0) newBudgets[catId] = val;
-                        // If val === 0, we simply don't add it — it's gone.
                     }
                     if (key.startsWith('cat_name_')) {
                         const catId = key.replace('cat_name_', '');
                         if (value) newNames[catId] = value;
-                        // If empty, don't add — it's gone.
+                    }
+                    if (key.startsWith('cat_type_')) {
+                        const catId = key.replace('cat_type_', '');
+                        if (value) newTypes[catId] = value;
                     }
                 }
 
@@ -5275,6 +5320,7 @@ class UIManager {
                     gemini_api_key: formData.get('gemini_api_key') || '',
                     budgets: newBudgets,
                     category_names: newNames,
+                    category_types: newTypes,
                     budget_user_customized: true  // Flag: user has explicitly saved their budget
                 }, { explicitBudgetSave: true });
                 alert('✅ Cambios guardados. Tu presupuesto personalizado ha sido protegido.');

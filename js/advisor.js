@@ -77,6 +77,13 @@ class FinancialAdvisor {
         const fixedCatIds = new Set();
         (conf.fixed_expenses || []).forEach(fe => { if (fe.category_id) fixedCatIds.add(fe.category_id); });
         (conf.loans || []).forEach(l => { if (l.category_id) fixedCatIds.add(l.category_id); });
+        
+        // NEW: Include categories explicitly marked as FIXED by the user
+        const catTypes = conf.category_types || {};
+        Object.keys(catTypes).forEach(catId => {
+            if (catTypes[catId] === 'FIXED') fixedCatIds.add(catId);
+        });
+
         // Financial categories usually behave like fixed obligations
         fixedCatIds.add('cat_7'); // Deuda/Créditos
         fixedCatIds.add('cat_fin_4'); // Tarjeta de Crédito
