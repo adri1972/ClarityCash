@@ -37,8 +37,51 @@ class StrategyReport {
         
         return html;
     }
+    // ─── Extraer datos consolidados de la semana ───────────────────────────
+    getWeeklyData() {
+        const now = new Date();
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(new Date(now).setDate(diff));
+        monday.setHours(0, 0, 0, 0);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
 
-    // ─── Leer eventos de la semana actual ──────────────────────────────────
+        const allTxs = this.store.transactions || [];
+        const weeklyTxs = allTxs.filter(t => {
+            const d = new Date(t.date);
+            return d >= monday && d <= sunday;
+        });
+
+        const categories = this.store.categories || [];
+        const config = this.store.config || {};
+        const budgets = config.budgets || {};
+
+        let ingresos = 0;
+        let gastos = 0;
+        let ahorro = 0;
+        let deuda = 0;
+        const catSpending = {};
+
+        weeklyTxs.forEach(t => {
+            const cat = categories.find(c => c.id === t.category_id);
+            if (!cat) return;
+
+            if (cat.group === 'INGRESOS') {
+                ingresos += t.amount;
+            } else {
+                gastos += t.amount;
+                catSpending[cat.id] = (catSpending[cat.id] || 0) + t.amount;
+                if (cat.group === 'FINANCIERO') {
+                    if (cat.id === 'cat_5') ahorro += t.amount; 
+                    if (cat.id === 'cat_7' || cat.id === 'cat_fin_4') deuda += t.amount;
+                }
+            }
+        });
+
+        return { ingresos, gastos, ahorro, deuda, catSpending, budgets, categories };
+    }
     getWeeklyEvents() {
         const key = this.getWeekKey();
         try {
@@ -194,6 +237,7 @@ class StrategyReport {
             : "Tu semana fue financieramente estable.";
 
         // Generar lista de categorías con más gasto esta semana
+        const { catSpending, categories } = this.getWeeklyData();
         let topExpensesHtml = '';
         const topWeekly = Object.entries(catSpending)
             .map(([id, amount]) => ({ id, amount, name: (categories.find(c => c.id === id) || { name: 'Otro' }).name }))
@@ -356,46 +400,7 @@ class StrategyReport {
         }
 
         // ─── Recopilar contextos mensuales y semanales ───
-        const now = new Date();
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(new Date(now).setDate(diff));
-        monday.setHours(0, 0, 0, 0);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-
-        const allTxs = this.store.transactions;
-        const weeklyTxs = allTxs.filter(t => {
-            const d = new Date(t.date);
-            return d >= monday && d <= sunday;
-        });
-
-        const categories = this.store.categories;
-        const config = this.store.config;
-        const budgets = config.budgets || {};
-
-        let ingresos = 0;
-        let gastos = 0;
-        let ahorro = 0;
-        let deuda = 0;
-        const catSpending = {};
-
-        weeklyTxs.forEach(t => {
-            const cat = categories.find(c => c.id === t.category_id);
-            if (!cat) return;
-
-            if (cat.group === 'INGRESOS') {
-                ingresos += t.amount;
-            } else {
-                gastos += t.amount;
-                catSpending[cat.id] = (catSpending[cat.id] || 0) + t.amount;
-                if (cat.group === 'FINANCIERO') {
-                    if (cat.id === 'cat_5') ahorro += t.amount; // Ahorro
-                    if (cat.id === 'cat_7' || cat.id === 'cat_fin_4') deuda += t.amount; // Deuda
-                }
-            }
-        });
+        const { ingresos, gastos, ahorro, deuda, catSpending, budgets, categories } = this.getWeeklyData();
 
         // Categorías excedidas (Semanal = Mensual / 4)
         const excedidas = [];
