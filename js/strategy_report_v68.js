@@ -193,28 +193,22 @@ class StrategyReport {
             ? "Hubo alertas esta semana que deberías revisar."
             : "Tu semana fue financieramente estable.";
 
-        // Generar tabla de rebalanceos (Fugas)
-        let rebalanceHtml = '';
-        if (events.rebalances.length > 0) {
-            const mainCat = events.rebalances[0].fromCat || 'Ocio';
-            rebalanceHtml = `
-                <div style="background:#FFF5F5; border: 1px solid #FED7D7; padding:12px; border-radius:10px; margin-bottom:12px; display:flex; gap:10px; align-items:center;">
-                    <span style="font-size:1.2rem;">⚠️</span>
-                    <span style="font-size:0.85rem; color:#C53030; font-weight:600;">Detectamos gastos fuera de tu presupuesto en: ${mainCat}</span>
+        // Generar lista de categorías con más gasto esta semana
+        let topExpensesHtml = '';
+        const topWeekly = Object.entries(catSpending)
+            .map(([id, amount]) => ({ id, amount, name: (categories.find(c => c.id === id) || { name: 'Otro' }).name }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 3);
+
+        if (topWeekly.length > 0) {
+            topExpensesHtml = topWeekly.map(cat => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size:0.85rem;">
+                    <span style="color:#1e293b; font-weight:600;">${cat.name}</span>
+                    <span style="font-weight:700; color:#1e293b;">${fmt(cat.amount)}</span>
                 </div>
-                ${events.rebalances.map(r => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size:0.85rem;">
-                        <div>
-                            <span style="color:#C62828; font-weight:600;">${r.fromCat || 'Ocio'}</span>
-                            <span style="color:#999; margin: 0 6px;">→</span>
-                            <span style="color:#1565C0; font-weight:600;">${r.toCat || 'Otro'}</span>
-                        </div>
-                        <span style="font-weight:700; color:#E65100;">${fmt(r.amount || 0)}</span>
-                    </div>
-                `).join('')}
-            `;
+            `).join('');
         } else {
-            rebalanceHtml = `<p style="color:#64748b; font-size:0.85rem; text-align:center; padding:12px 0;">✅ Sin fugas de capital esta semana.</p>`;
+            topExpensesHtml = `<p style="color:#64748b; font-size:0.85rem; text-align:center; padding:12px 0;">✅ No registraste gastos esta semana.</p>`;
         }
 
         // Generar lista de intervenciones (Saldo Negativo)
@@ -272,10 +266,9 @@ class StrategyReport {
                 <!-- FUGAS DE CAPITAL -->
                 <div style="background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b;">💸 ¿Dónde se fue tu dinero?</h4>
-                        ${totalLeaked > 0 ? `<span style="font-size:0.8rem; font-weight:700; color:#dc2626; background:#fee2e2; padding:2px 8px; border-radius:20px;">${fmt(totalLeaked)} total</span>` : ''}
+                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b;">💸 ¿Dónde se fue tu dinero de la semana?</h4>
                     </div>
-                    ${rebalanceHtml}
+                    ${topExpensesHtml}
                 </div>
 
                 <!-- INCIDENTES DE INTEGRIDAD -->
@@ -420,23 +413,33 @@ class StrategyReport {
         const integrityOk = this.checkIntegrity();
         const averages = this.get4WeekAverages();
 
+        const monthlySummary = this.store.getFinancialSummary(now.getMonth(), now.getFullYear());
+
         const weeklyDataForAI = {
             semana: this.getWeekKey(),
             perfil_financiero: config.spending_profile || 'BALANCEADO',
             score_semanal: health.score,
-            ingresos_semana: ingresos,
-            gastos_semana: gastos,
-            balance_semana: ingresos - gastos,
-            porcentaje_cumplimiento_presupuesto: config.monthly_income_target > 0 ? (gastos / (config.monthly_income_target / 4) * 100).toFixed(0) : 0,
-            fugas_capital: events.rebalances.length,
-            categorias_excedidas: excedidas,
-            dias_saldo_negativo: events.interventions.length,
-            ahorro_semana: ahorro,
-            deuda_pagada_semana: deuda,
-            intocables_comprometidos: !integrityOk,
-            promedio_ingresos_4s: averages.income,
-            promedio_gastos_4s: averages.expenses,
-            promedio_score_4s: averages.score
+            datos_semana: {
+                ingresos: ingresos,
+                gastos: gastos,
+                balance: ingresos - gastos,
+                ahorro: ahorro,
+                deuda_pagada: deuda,
+                fugas_detectadas: events.rebalances.length,
+                categorias_excedidas: excedidas,
+                dias_saldo_negativo: events.interventions.length,
+            },
+            datos_mes_actual: {
+                meta_ingreso_total: monthlySummary.income,
+                gastos_totales_mes: monthlySummary.expenses + monthlySummary.savings + monthlySummary.investment + monthlySummary.debt_payment,
+                disponible_real: monthlySummary.balance_net,
+                comprometido_mensual: (config.fixed_expenses || []).reduce((s, fe) => s + fe.amount, 0) + (config.loans || []).reduce((s, l) => s + l.amount, 0)
+            },
+            contexto_historico: {
+                promedio_ingresos_4s: averages.income,
+                promedio_gastos_4s: averages.expenses,
+                promedio_score_4s: averages.score
+            }
         };
 
         try {
