@@ -41,7 +41,7 @@ exports.proxyGemini = functions.runWith({
 
             const commonHeaders = { 
                 'Content-Type': 'application/json',
-                'Referer': req.headers.referer || 'https://claritycash-e93ca.firebaseapp.com/'
+                'Referer': 'https://claritycash-e93ca.firebaseapp.com/'
             };
 
             if (payload.action === 'list') {
