@@ -1,6 +1,6 @@
 /**
- * STRATEGY REPORT v68 — Veredicto Semanal del CFO
- * Vista de Diagnóstico y Auditoría Financiera
+ * STRATEGY REPORT v68 — Lo que dice tu asesor
+ * Vista de Diagnóstico y Mi Semana
  * Solo llama a la IA cuando el usuario lo solicita. 1 vez por semana (caché).
  */
 
@@ -233,20 +233,20 @@ class StrategyReport {
                     <div style="background:${health.color}20; border-radius:20px; height:10px; margin:16px 0 8px 0; overflow:hidden;">
                         <div id="health-bar-fill" style="background:${health.color}; height:100%; width:0%; border-radius:20px; transition: width 1s ease-out;"></div>
                     </div>
-                    <div style="font-size:0.9rem; font-weight:700; color:${health.color}; margin-bottom:12px;">Score financiero semanal: ${health.score} / 100</div>
+                    <div style="font-size:0.9rem; font-weight:700; color:${health.color}; margin-bottom:12px;">Salud financiera de la semana: ${health.score} / 100</div>
 
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; margin-top:8px;">
                         <div style="background:white; border-radius:12px; padding:8px; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
                             <div style="font-size:1.2rem; font-weight:800; color:${health.color};">${events.rebalances.length}</div>
-                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Fugas</div>
+                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Gastos descontrolados</div>
                         </div>
                         <div style="background:white; border-radius:12px; padding:8px; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
                             <div style="font-size:1.2rem; font-weight:800; color:${health.color};">${events.interventions.length}</div>
-                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Incidentes</div>
+                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Semanas en rojo</div>
                         </div>
                         <div style="background:white; border-radius:12px; padding:8px; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
                             <div style="font-size:1.2rem; font-weight:800; color:${integrityOk ? '#059669' : '#dc2626'};">${integrityOk ? '✓' : '✗'}</div>
-                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Blindado</div>
+                            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Al día</div>
                         </div>
                     </div>
                 </div>
@@ -254,7 +254,7 @@ class StrategyReport {
                 <!-- FUGAS DE CAPITAL -->
                 <div style="background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b;">💸 Fugas de Capital</h4>
+                        <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b;">💸 ¿Dónde se fue tu dinero?</h4>
                         ${totalLeaked > 0 ? `<span style="font-size:0.8rem; font-weight:700; color:#dc2626; background:#fee2e2; padding:2px 8px; border-radius:20px;">${fmt(totalLeaked)} total</span>` : ''}
                     </div>
                     ${rebalanceHtml}
@@ -262,24 +262,24 @@ class StrategyReport {
 
                 <!-- INCIDENTES DE INTEGRIDAD -->
                 <div style="background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
-                    <h4 style="margin:0 0 12px 0; font-size:0.95rem; font-weight:700; color:#1e293b;">🛡️ Incidentes de Saldo Negativo</h4>
+                    <h4 style="margin:0 0 12px 0; font-size:0.95rem; font-weight:700; color:#1e293b;">🛡️ ¿Gastaste más de lo que tenías?</h4>
                     ${interventionHtml}
                 </div>
 
-                <!-- VEREDICTO DEL CFO -->
+                <!-- LO QUE DICE TU ASESOR -->
                 <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border-radius:20px; padding:20px; margin-bottom:16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
                         <div style="width:40px; height:40px; background:rgba(255,255,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🧠</div>
                         <div>
-                            <div style="color:white; font-weight:700; font-size:1rem;">Veredicto del CFO</div>
-                            <div style="color:#94a3b8; font-size:0.75rem;">Análisis estratégico semanal</div>
+                            <div style="color:white; font-weight:700; font-size:1rem;">Lo que dice tu asesor</div>
+                            <div style="color:#94a3b8; font-size:0.75rem;">Resumen de tu semana</div>
                         </div>
                     </div>
                     
                     <div id="cfo-verdict-box" style="background:rgba(255,255,255,0.05); border-radius:14px; padding:16px; min-height:80px; color:#f1f5f9; font-size:0.9rem; line-height:1.6; border: 1px solid rgba(255,255,255,0.1);">
                         ${cachedVerdict
                 ? `<span id="cfo-text">${cachedVerdict}</span>`
-                : `<span style="color:#64748b; font-size:0.85rem;">Toca "Generar Veredicto" para que la IA analice tu semana.</span>`
+                : `<span style="color:#64748b; font-size:0.85rem;">Toca "Analizar semana" para que tu asesor analice tu semana.</span>`
             }
                     </div>
 
@@ -290,7 +290,7 @@ class StrategyReport {
                             <p style="color:#cbd5e1; font-size:0.8rem; margin-bottom:10px; font-weight:500;">${alertMessage}</p>
                             <button id="generate-verdict-btn" onclick="window.strategyReport.generateVerdict()" 
                                 style="width:100%; padding:14px; background:linear-gradient(135deg, #E91E63, #9C27B0); color:white; border:none; border-radius:14px; font-weight:700; font-size:1rem; cursor:pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(233,30,99,0.3);">
-                                ⚡ Generar Veredicto
+                                ⚡ Analizar semana
                             </button>
                         </div>
                     `}
@@ -311,7 +311,7 @@ class StrategyReport {
         }, 300);
     }
 
-    // ─── Generar Veredicto IA ──────────────────────────────────────────────
+    // ─── Generar Asesoría IA ──────────────────────────────────────────────
     async generateVerdict() {
         if (!this.aiAdvisor || !this.aiAdvisor.hasApiKey()) {
             const box = document.getElementById('cfo-verdict-box');
@@ -330,7 +330,7 @@ class StrategyReport {
         if (box) {
             box.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px; color:#94a3b8;">' +
                 '<div class="spinner" style="width:20px; height:20px; border:2px solid #334155; border-top:2px solid #E91E63; border-radius:50%; animation: spin 1s linear infinite;"></div>' +
-                '<span style="font-size:0.8rem;">El CFO está analizando tus movimientos...</span></div>';
+                '<span>Tu asesor está analizando tus movimientos...</span></div>';
         }
 
         // ─── Recopilar contextos mensuales y semanales ───
@@ -432,7 +432,7 @@ class StrategyReport {
                         box.innerHTML = `<span id="cfo-text">${verdict}</span>`;
                         if (btn) {
                             btn.disabled = false;
-                            btn.innerHTML = '⚡ Regenerar Veredicto';
+                            btn.innerHTML = '⚡ Analizar de nuevo';
                             btn.style.opacity = '1';
                         }
                         const existingLabel = document.getElementById('cache-label');
@@ -451,7 +451,7 @@ class StrategyReport {
                                 clearInterval(interval);
                                 if (btn) {
                                     btn.disabled = false;
-                                    btn.innerHTML = '⚡ Regenerar Veredicto';
+                                    btn.innerHTML = '⚡ Analizar de nuevo';
                                     btn.style.opacity = '1';
                                 }
                                 const existingLabel = document.getElementById('cache-label');
@@ -465,10 +465,10 @@ class StrategyReport {
             }
         } catch (e) {
             console.error('CFO Verdict error:', e);
-            if (box) box.innerHTML = '<span style="color:#dc2626;">Error al conectar con el CFO. Inténtalo más tarde.</span>';
+            if (box) box.innerHTML = '<span style="color:#dc2626;">Error al conectar con tu asesor. Inténtalo más tarde.</span>';
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '⚡ Generar Veredicto';
+                btn.innerHTML = '⚡ Analizar de nuevo';
                 btn.style.opacity = '1';
             }
         }

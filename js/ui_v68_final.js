@@ -1355,7 +1355,7 @@ class UIManager {
                     </div>
 
                     <div style="background: #f8fafc; padding: 15px; border-radius: 12px; font-size: 0.85rem; color: #64748b; margin-bottom: 25px; border-left: 4px solid var(--primary-color);">
-                        <b>Nota del CFO:</b> Tienes <b>${formattedFree}</b> disponibles cada mes para gastos variables, ahorro e inversión.
+                        <b>Nota de tu asesor:</b> Tienes <b>${formattedFree}</b> disponibles cada mes para gastos variables, ahorro e inversión.
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1488,7 +1488,7 @@ class UIManager {
 
     async renderDashboard() {
 
-        this.pageTitle.textContent = 'Tu Panorama Financiero';
+        this.pageTitle.textContent = 'Mi Dinero';
 
 
         // --- 0. Month Navigation & Header ---
@@ -2899,7 +2899,7 @@ class UIManager {
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
 
-        // Track event para el Veredicto Semanal del CFO
+        // Track event para la asesoría Semanal
         const fromCat = this.store.categories.find(c => c.id === fromCatId);
         const toCat = this.store.categories.find(c => c.id === toCatId);
         this.trackWeeklyEvent('rebalance', {
@@ -2950,7 +2950,7 @@ class UIManager {
             const insightJson = await this.aiAdvisor.analyzeTransaction(tx);
 
             // Renderiza siempre si hay respuesta, independientemente de si es alerta o no.
-            // Si no es alerta, es nivel bajito, pero el CFO está confirmando que el gasto está bien.
+            // Si no es alerta, es nivel bajito, pero el asesor está confirmando que el gasto está bien.
             if (insightJson && insightJson.analisis_cfo) {
                 let icon = '💡';
                 let type = 'info';
@@ -2966,7 +2966,7 @@ class UIManager {
                     type = 'success';
                 }
 
-                // Show the CFO text cleanly formatted
+                // Show the advisor text cleanly formatted
                 this.showToast(insightJson.analisis_cfo, type, icon);
 
                 // === GUARDAR EN CACÍE DEL DASHBOARD (sin costo extra) ===
@@ -4183,7 +4183,7 @@ class UIManager {
     }
 
     renderInsightsPage() {
-        this.pageTitle.textContent = 'Análisis de tus Finanzas 🔍';
+        this.pageTitle.textContent = 'Mi Mes 🔍';
 
         // METRICS ROW
         const month = this.viewDate.getMonth();
@@ -4547,7 +4547,7 @@ class UIManager {
             const aiDisabled = movementsCount < 5;
             html += `
                 <div id="ai-response" style="text-align: center; padding: 1rem;">
-                    <p style="color: #666; font-weight: 500;">Tu CFO personal está listo para analizar tu mes.</p>
+                    <p style="color: #666; font-weight: 500;">Tu asesor personal está listo para analizar tu mes.</p>
                 </div>
                 <div style="text-align: center;">
                     <button id="ai-ask-btn" class="btn btn-primary" ${aiDisabled ? 'disabled' : ''} style="padding: 0.6rem 2rem; font-size: 1rem; background: ${aiDisabled ? 'var(--text-muted)' : 'var(--primary-color)'}; color: white; border: none; font-weight: 600; box-shadow: ${aiDisabled ? 'none' : 'var(--shadow-primary)'}; cursor: ${aiDisabled ? 'not-allowed' : 'pointer'};">
@@ -4736,7 +4736,7 @@ class UIManager {
     }
 
     async renderSettings() {
-        this.pageTitle.textContent = 'Centro Financiero';
+        this.pageTitle.textContent = 'Mi Plan';
 
         // LOADING SHIELD: If store not initialized, show spinner and wait
         // This prevents the form from rendering with empty budgets before Firestore loads
@@ -5563,7 +5563,7 @@ class UIManager {
     }
 
     renderStrategyReport() {
-        this.pageTitle.textContent = 'Auditoría Semanal 📊';
+        this.pageTitle.textContent = 'Mi Semana 📊';
         if (typeof StrategyReport === 'undefined') {
             this.container.innerHTML = '<div style="padding:2rem; color:#999;">Módulo no cargado.</div>';
             return;
@@ -5575,7 +5575,7 @@ class UIManager {
     }
 
     async renderGoals() {
-        this.pageTitle.textContent = 'Plan Financiero Automático (CFO) 🧠';
+        this.pageTitle.textContent = 'Mis Metas 🧠';
         const goals = this.store.getGoals();
         const config = this.store.config;
         const now = new Date();
@@ -5605,7 +5605,7 @@ class UIManager {
                 <div style="background: #f8fafc; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 1.2rem;">📌</span>
-                        <span style="font-weight: 800; color: #1e293b; font-size: 0.9rem;">Plan del Mes (CFO)</span>
+                        <span style="font-weight: 800; color: #1e293b; font-size: 0.9rem;">Plan del Mes</span>
                     </div>
                     <span id="plan-status-badge" style="font-size: 0.7rem; font-weight: 700; background: ${savedPlan ? '#dcfce7' : '#fef3c7'}; color: ${savedPlan ? '#166534' : '#92400e'}; padding: 4px 10px; border-radius: 20px;">
                         ${savedPlan ? '✅ Listo' : '⚒️ En construcción'}
@@ -5796,7 +5796,7 @@ class UIManager {
             const sug = await this.aiAdvisor.getSmartGoalSuggestion(averages);
             if (sug) {
                 box.innerHTML = `<div style="background:#f9f5ff; border:1px solid #9C27B020; padding:15px; border-radius:15px; margin-bottom:1.5rem;">
-                    <div style="font-weight:800; color:#4a148c; font-size:0.8rem; margin-bottom:5px;">Suguerencia del CFO</div>
+                    <div style="font-weight:800; color:#4a148c; font-size:0.8rem; margin-bottom:5px;">Sugerencia de tu asesor</div>
                     <div style="font-weight:700; font-size:1rem; margin-bottom:5px;">${sug.nombre_meta}</div>
                     <p style="font-size:0.75rem; color:#475569; margin-bottom:10px;">${sug.justificacion}</p>
                     <button class="btn btn-primary" id="confirm-sug-btn" style="background:#9C27B0; width:100%; border-radius:10px;">Crear Meta ($${sug.monto_sugerido.toLocaleString()})</button>

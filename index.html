@@ -5,8 +5,8 @@
     <script>
         // --- STABLE UPDATE ENGINE v68.Y (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '78.8';
-            const CACHE_NAME = 'cc-integrated-v77-20';
+            const CURRENT_VERSION = '78.9';
+            const CACHE_NAME = 'cc-integrated-v78-9';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -101,7 +101,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="css/styles.css?v=v78.8">
+    <link rel="stylesheet" href="css/styles.css?v=v78.9">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -122,16 +122,16 @@
             </div>
             <nav>
                 <button class="nav-item active" data-view="dashboard"><i
-                        data-feather="pie-chart"></i><span>Inicio</span></button>
+                        data-feather="pie-chart"></i><span>Mi Dinero</span></button>
                 <button class="nav-item" data-view="transactions"><i
-                        data-feather="list"></i><span>Historial</span></button>
-                <button class="nav-item" data-view="insights"><i data-feather="zap"></i><span>Análisis</span></button>
+                        data-feather="list"></i><span>Mis Movimientos</span></button>
+                <button class="nav-item" data-view="insights"><i data-feather="zap"></i><span>Mi Mes</span></button>
                 <button class="nav-item" data-view="strategy"><i
-                        data-feather="bar-chart-2"></i><span>Auditoría</span></button>
-                <button class="nav-item" data-view="goals"><i data-feather="target"></i><span>Metas</span></button>
+                        data-feather="bar-chart-2"></i><span>Mi Semana</span></button>
+                <button class="nav-item" data-view="goals"><i data-feather="target"></i><span>Mis Metas</span></button>
                 <button class="nav-item" data-view="settings">
                     <i data-feather="settings"></i>
-                    <span>Centro Financiero</span>
+                    <span>Mi Plan</span>
                 </button>
             </nav>
             <div class="user-profile">
@@ -156,7 +156,7 @@
                     <button class="hamburger-btn"
                         onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('active');"><i
                             data-feather="menu"></i></button>
-                    <h2 id="page-title">Resumen Financiero</h2>
+                    <h2 id="page-title">Mi Dinero</h2>
                 </div>
                 <div class="actions" style="display: none; gap: 0.5rem;">
                     <button id="add-transaction-btn" class="btn btn-primary"><i data-feather="plus"></i> <span>Nuevo
@@ -238,24 +238,24 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <script src="js/firebase-config.js?v=v78.8"></script>
-    <script src="js/auth.js?v=v78.8"></script>
-    <script src="js/data.js?v=v78.8"></script>
-    <script src="js/advisor.js?v=v78.8"></script>
-    <script src="js/gemini_v68_final.js?v=v78.8"></script>
-    <script src="js/ui_v68_final.js?v=v78.8"></script>
-    <script src="js/strategy_report_v68.js?v=v78.8"></script>
-    <script src="js/app.js?v=v78.8"></script>
+    <script src="js/firebase-config.js?v=v78.9"></script>
+    <script src="js/auth.js?v=v78.9"></script>
+    <script src="js/data.js?v=v78.9"></script>
+    <script src="js/advisor.js?v=v78.9"></script>
+    <script src="js/gemini_v68_final.js?v=v78.9"></script>
+    <script src="js/ui_v68_final.js?v=v78.9"></script>
+    <script src="js/strategy_report_v68.js?v=v78.9"></script>
+    <script src="js/app.js?v=v78.9"></script>
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=v78.8').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v78.9').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div
         style="position:fixed; bottom:5px; left:5px; font-size:10px; color:var(--text-muted); z-index:9999; pointer-events:none; font-weight:bold;">
-        v78.8.AI_AUDIT_FIX</div>
+        v78.9.FIX_NAMES_PROXY</div>
 </body>
 
 </html>
