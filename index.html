@@ -249,13 +249,13 @@
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=v81.7').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v81.9').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div
         style="position:fixed; bottom:5px; left:5px; font-size:10px; color:var(--text-muted); z-index:9999; pointer-events:none; font-weight:bold;">
-        v81.7.MOVEMENTS_SYNC_FIX</div>,
+        v81.9.SELECTOR_AND_AUTO_FIX</div>,
 </body>
 
 </html>
