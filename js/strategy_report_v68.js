@@ -418,6 +418,8 @@ class StrategyReport {
         const integrityOk = this.checkIntegrity();
         const averages = this.get4WeekAverages();
 
+        const now = new Date();
+        const config = this.store.config || {};
         const monthlySummary = this.store.getFinancialSummary(now.getMonth(), now.getFullYear());
 
         const weeklyDataForAI = {
