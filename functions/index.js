@@ -39,9 +39,14 @@ exports.proxyGemini = functions.runWith({
             // Modelo de respaldo definido por la directiva
             let modelName = payload.model || "gemini-1.5-flash";
 
+            const commonHeaders = { 
+                'Content-Type': 'application/json',
+                'Referer': req.headers.referer || 'https://claritycash-e93ca.firebaseapp.com/'
+            };
+
             if (payload.action === 'list') {
                 const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-                const listResponse = await fetch(listUrl);
+                const listResponse = await fetch(listUrl, { headers: commonHeaders });
                 const listData = await listResponse.json();
                 return res.status(200).json(listData);
             }
@@ -56,10 +61,7 @@ exports.proxyGemini = functions.runWith({
 
             const response = await fetch(targetUrl, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Referer': req.headers.referer || 'https://claritycash-e93ca.firebaseapp.com/'
-                },
+                headers: commonHeaders,
                 body: JSON.stringify(googlePayload)
             });
 
