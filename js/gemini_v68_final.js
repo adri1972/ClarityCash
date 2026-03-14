@@ -821,7 +821,7 @@ ${JSON.stringify(weeklyData, null, 2)}`;
                     contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 1000
+                        maxOutputTokens: 2048
                     }
                 };
 

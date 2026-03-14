@@ -22,13 +22,19 @@ class StrategyReport {
 
     renderMarkdown(text) {
         if (!text) return '';
+        // Un motor minimalista pero robusto para el CFO
         let html = text
-            // Negritas
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            // Títulos (si aplica)
-            .replace(/^### (.*$)/gim, '<h4 style="color:#fff; margin:10px 0 5px 0;">$1</h4>')
-            // Saltos de línea
+            // 0. Escapar HTML básico para seguridad
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            // 1. Títulos (###, ##, #)
+            .replace(/^### (.*$)/gim, '<h4 style="color:#fff; margin:15px 0 8px 0; font-weight:800;">$1</h4>')
+            .replace(/^## (.*$)/gim, '<h3 style="color:#fff; margin:18px 0 10px 0; font-weight:800;">$1</h3>')
+            // 2. Negritas (soporta multi-línea básica con [^]*?)
+            .replace(/\*\*([^]*?)\*\*/g, '<strong>$1</strong>')
+            // 3. Saltos de línea
             .replace(/\n/g, '<br>');
+        
         return html;
     }
 
@@ -288,10 +294,10 @@ class StrategyReport {
                         </div>
                     </div>
                     
-                    <div id="cfo-verdict-box" style="background:rgba(255,255,255,0.05); border-radius:14px; padding:16px; min-height:80px; color:#f1f5f9; font-size:0.9rem; line-height:1.6; border: 1px solid rgba(255,255,255,0.1);">
+                    <div id="cfo-verdict-box" style="background:rgba(255,255,255,0.05); border-radius:14px; padding:16px; min-height:80px; color:#f1f5f9; font-size:0.95rem; line-height:1.7; border: 1px solid rgba(255,255,255,0.1); white-space: pre-wrap; overflow-wrap: break-word;">
                         ${cachedVerdict
-                ? `<span id="cfo-text">${this.renderMarkdown(cachedVerdict)}</span>`
-                : `<span style="color:#64748b; font-size:0.85rem;">Toca "Analizar semana" para que tu asesor analice tu semana.</span>`
+                ? `<div id="cfo-text">${this.renderMarkdown(cachedVerdict)}</div>`
+                : `<span style="color:#94a3b8; font-size:0.85rem;">Toca "Analizar semana" para activar tu CFO virtual.</span>`
             }
                     </div>
 
@@ -447,16 +453,8 @@ class StrategyReport {
                     }
                 } catch (e) { }
 
-                if (box) {
-                    box.innerHTML = `<span id="cfo-text">${this.renderMarkdown(verdict)}</span>`;
-                    if (btn) {
-                        btn.style.display = 'none'; // Hide button after success
-                    }
-                    const existingLabel = document.getElementById('cache-label');
-                    if (!existingLabel) {
-                        box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
-                    }
-                }
+                // 🚀 NUCLEAR UPDATE: Re-render the whole component to reflect consistent state
+                this.render();
             }
         } catch (e) {
             console.error('CFO Verdict error:', e);
@@ -465,7 +463,7 @@ class StrategyReport {
             </div>`;
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '⚡ Analizar de nuevo';
+                btn.innerHTML = '⚡ Reintentar Análisis';
                 btn.style.opacity = '1';
             }
         }
