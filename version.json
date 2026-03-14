@@ -1,5 +1,5 @@
 {
     "version": "81.9",
     "updatedAt": "2026-03-14T18:25:00Z",
-    "notes": "v81.9: Arreglado el selector interactivo (Pago Fijo vs Variable) y solucionado problema de inyección automática de transacciones en presupuestos variables."
+    "notes": "v81.9: Arreglado el selector de tipo (Pago Fijo vs Variable), eliminada la inyección automática en variables y reorganizados los grupos en Mi Mes para mayor claridad."
 }
