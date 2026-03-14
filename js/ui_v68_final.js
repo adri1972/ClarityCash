@@ -4785,6 +4785,31 @@ class UIManager {
     async renderSettings() {
         this.pageTitle.textContent = 'Mi Plan';
 
+        // --- LAYER: Inject CSS for the Type Selector (Segmented Control) ---
+        if (!document.getElementById('selector-type-styles')) {
+            const style = document.createElement('style');
+            style.id = 'selector-type-styles';
+            style.textContent = `
+                .type-segmented-control input[type="radio"]:checked + .opt-label {
+                    background: white !important;
+                    color: #1e293b !important;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+                    transform: scale(1.02);
+                }
+                .type-segmented-control input[type="radio"]:not(:checked) + .opt-label {
+                    background: transparent !important;
+                    color: #64748b !important;
+                    box-shadow: none !important;
+                    opacity: 0.7;
+                }
+                .type-segmented-control .opt-label:hover {
+                    opacity: 1;
+                    background: rgba(255,255,255,0.4);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         // LOADING SHIELD: If store not initialized, show spinner and wait
         // This prevents the form from rendering with empty budgets before Firestore loads
         if (!this.store.initialized) {
@@ -4909,18 +4934,17 @@ class UIManager {
                          </div>
                     </div>
                     
-                    <!-- NEW: Type Selector (Segmented Control) -->
                     <div class="type-segmented-control" style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 10px; gap: 4px;">
                         <label style="flex: 1; margin: 0; cursor: pointer;">
                             <input type="radio" name="cat_type_${c.id}" value="FIXED" ${currentType === 'FIXED' ? 'checked' : ''} style="display: none;">
-                            <div class="opt-label" style="text-align: center; padding: 6px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: all 0.2s; ${currentType === 'FIXED' ? 'background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'color: #64748b;'}">
+                            <div class="opt-label" style="text-align: center; padding: 6px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: all 0.2s;">
                                 📅 Pago Fijo
                             </div>
                         </label>
                         <label style="flex: 1; margin: 0; cursor: pointer;">
                             <input type="radio" name="cat_type_${c.id}" value="VARIABLE" ${currentType === 'VARIABLE' ? 'checked' : ''} style="display: none;">
-                            <div class="opt-label" style="text-align: center; padding: 6px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: all 0.2s; ${currentType === 'VARIABLE' ? 'background: white; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'color: #64748b;'}">
-                                📊 Variable
+                            <div class="opt-label" style="text-align: center; padding: 6px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: all 0.2s;">
+                                📊 Presupuesto Variable
                             </div>
                         </label>
                     </div>
