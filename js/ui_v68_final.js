@@ -2274,19 +2274,15 @@ class UIManager {
         const breakdown = this.store.getCategoryBreakdown(this.viewDate.getMonth(), this.viewDate.getFullYear());
         const budgets = this.store.config.budgets || {}; // { catId: limit }
         const categories = this.store.categories;
+        const catTypes = this.store.config.category_types || {};
 
-        // 1. GASTOS FIJOS INDIVIDUALES
-        const fixedExpenses = this.store.config.fixed_expenses || [];
-        const loansList = this.store.config.loans || [];
+        // 1. CONFIGURACIÓN DE GRUPOS PRINCIPALES
         const groupLabels = {
-            'FIXED': '📌 Gastos Fijos (Compromisos)',
             'AHORRO': '💰 Prioridad de Ahorro',
-            'NECESIDADES': '🍎 Necesidades Básicas',
-            'VIVIENDA': '🏠 Hogar y Servicios',
             'FINANCIERO': '🏦 Obligaciones Financieras',
-            'CRECIMIENTO': '📚 Educación y Desarrollo',
-            'ESTILO_DE_VIDA': '✨ Estilo de Vida',
-            'OTROS': '📦 Otros Gastos'
+            'FIXED': '📌 Gastos Fijos (Compromisos)',
+            'VARIABLE': '📊 Presupuesto Variable',
+            'OTROS': '🌀 Otros Gastos'
         };
 
         const groupData = {};
@@ -2302,19 +2298,24 @@ class UIManager {
             return parseInt(parts[0]) === year && (parseInt(parts[1]) - 1) === month;
         });
 
-        // 1. GASTOS FIJOS INDIVIDUALES (Desde config.fixed_expenses)
         const addedCategories = new Set();
+        const fixedNames = {};
+        const fixedFloor = {};
+
+        // 1. PROCESAR GASTOS FIJOS (Desde config.fixed_expenses)
+        const fixedExpenses = this.store.config.fixed_expenses || [];
         fixedExpenses.forEach(fe => {
             const cat = categories.find(c => c.id === fe.category_id);
             const catName = cat ? cat.name : '';
-            // Buscar gasto específico de este fijo (automático) o caer en el default
+            const type = catTypes[fe.category_id] || 'FIXED'; // Por defecto los fijos son FIXED
+
             const feTx = monthlyTx.filter(t => t.is_auto_fixed && t.category_id === fe.category_id && (t.fixed_id === fe.id || (t.description && t.description.includes(fe.name))));
             let spent = feTx.length > 0 ? feTx.reduce((s, t) => s + t.amount, 0) : (breakdown[fe.name] || 0);
 
-            // Si no hay transacciones automáticas e históricamente usaba el nombre de la categoría y solo hay 1 fijo en ella
             if (spent === 0 && fixedExpenses.filter(f => f.category_id === fe.category_id).length === 1) {
                 spent = breakdown[catName] || 0;
             }
+            
             const limit = fe.amount || 0;
             const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
 
@@ -2322,19 +2323,22 @@ class UIManager {
             if (limit > 0 && percent > 100) status = 'OVER';
             else if (limit > 0 && percent > 85) status = 'WARN';
 
-            groupData['FIXED'].items.push({
-                name: fe.name,
-                spent,
-                limit,
-                percent,
-                status
-            });
-            if (status.startsWith('OVER')) groupData['FIXED'].hasOver = true;
-            if (percent > groupData['FIXED'].maxPercent) groupData['FIXED'].maxPercent = percent;
+            const item = { name: fe.name, spent, limit, percent, status };
+            
+            // Si el usuario marcó la categoría como VARIABLE, lo movemos a ese grupo
+            const groupKey = (type === 'VARIABLE') ? 'VARIABLE' : 'FIXED';
+            groupData[groupKey].items.push(item);
+
+            if (status.startsWith('OVER')) groupData[groupKey].hasOver = true;
+            if (percent > groupData[groupKey].maxPercent) groupData[groupKey].maxPercent = percent;
             if (fe.category_id) addedCategories.add(fe.category_id);
+            
+            fixedNames[fe.category_id] = fe.name;
+            fixedFloor[fe.category_id] = (fixedFloor[fe.category_id] || 0) + fe.amount;
         });
 
         // 2. PRÉSTAMOS / DEUDAS (Desde config.loans)
+        const loansList = this.store.config.loans || [];
         loansList.forEach(loan => {
             const spent = breakdown[loan.name] || 0;
             const limit = loan.monthly_payment || 0;
@@ -2343,25 +2347,12 @@ class UIManager {
             let status = 'OK';
             if (limit > 0 && percent > 100) status = 'OVER';
 
-            groupData['FINANCIERO'].items.push({
-                name: loan.name,
-                spent,
-                limit,
-                percent,
-                status
-            });
+            groupData['FINANCIERO'].items.push({ name: loan.name, spent, limit, percent, status });
             if (status.startsWith('OVER')) groupData['FINANCIERO'].hasOver = true;
             if (loan.category_id) addedCategories.add(loan.category_id);
-
-            // Si el nombre del crédito coincide con una categoría o pertenece a gastos financieros genéricos, agreguémoslo al set para evitar duplis.
-            const possibleCat = categories.find(c =>
-                c.name.toLowerCase() === loan.name.toLowerCase() ||
-                (c.group === 'FINANCIERO' && (categories.filter(x => x.group === 'FINANCIERO').length === 1 || c.name.toLowerCase().includes('deud') || c.name.toLowerCase().includes('créd')))
-            );
-            if (possibleCat) addedCategories.add(possibleCat.id);
         });
 
-        // 3. OTRAS CATEGORÍAS (Variables o no definidas en fijos)
+        // 3. RESTO DE CATEGORÍAS (Usando clasificación de Mi Plan)
         categories.forEach(c => {
             if (c.id === 'cat_fin_4' || c.group === 'INGRESOS') return;
             if (addedCategories.has(c.id)) return;
@@ -2370,22 +2361,22 @@ class UIManager {
             const limit = budgets[c.id] || 0;
             if (spent === 0 && limit === 0) return;
 
+            const type = catTypes[c.id] || (c.group === 'NECESIDADES' || c.group === 'VIVIENDA' ? 'FIXED' : 'VARIABLE');
             const percent = limit > 0 ? (spent / limit) * 100 : (spent > 0 ? 150 : 0);
+            
             let status = 'OK';
             if (limit <= 0 && spent > 0) status = 'OVER_UNBUDGETED';
             else if (limit > 0 && percent > 100) status = 'OVER';
             else if (limit > 0 && percent > 85) status = 'WARN';
 
-            const key = c.id === 'cat_5' ? 'AHORRO' : (c.group || 'OTROS');
-            if (!groupData[key]) groupData[key] = { label: c.group || 'Otros', items: [], hasOver: false, maxPercent: 0 };
+            let key = (c.id === 'cat_5') ? 'AHORRO' : (type === 'VARIABLE' ? 'VARIABLE' : 'FIXED');
+            
+            // Caso especial: si es Financiero pero no es Ahorro ni Loan, va a Financiero
+            if (c.group === 'FINANCIERO' && c.id !== 'cat_5') key = 'FINANCIERO';
 
-            groupData[key].items.push({
-                name: c.name,
-                spent,
-                limit,
-                percent,
-                status
-            });
+            if (!groupData[key]) key = 'OTROS';
+
+            groupData[key].items.push({ name: c.name, spent, limit, percent, status });
             if (status.startsWith('OVER')) groupData[key].hasOver = true;
             if (percent > groupData[key].maxPercent) groupData[key].maxPercent = percent;
         });
@@ -2393,7 +2384,7 @@ class UIManager {
         const sortedGroups = Object.keys(groupData)
             .filter(key => groupData[key].items.length > 0)
             .sort((a, b) => {
-                const order = ['NECESIDADES', 'ESTILO_DE_VIDA', 'VIVIENDA', 'CRECIMIENTO', 'OTROS', 'AHORRO', 'FINANCIERO', 'FIXED'];
+                const order = ['AHORRO', 'FINANCIERO', 'FIXED', 'VARIABLE', 'OTROS'];
                 return order.indexOf(a) - order.indexOf(b);
             });
 
