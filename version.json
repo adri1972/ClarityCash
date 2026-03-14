@@ -1,5 +1,5 @@
 {
-    "version": "81.7",
-    "updatedAt": "2026-03-14T00:05:00Z",
-    "notes": "v81.7: Sincronización de filtro de mes en Movimientos. Añadido selector de mes y navegación en la vista de transacciones para coherencia con el Dashboard."
+    "version": "81.9",
+    "updatedAt": "2026-03-14T18:25:00Z",
+    "notes": "v81.9: Arreglado el selector interactivo (Pago Fijo vs Variable) y solucionado problema de inyección automática de transacciones en presupuestos variables."
 }
