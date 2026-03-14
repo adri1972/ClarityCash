@@ -20,6 +20,18 @@ class StrategyReport {
         return `${y}-W${String(week).padStart(2, '0')}`;
     }
 
+    renderMarkdown(text) {
+        if (!text) return '';
+        let html = text
+            // Negritas
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Títulos (si aplica)
+            .replace(/^### (.*$)/gim, '<h4 style="color:#fff; margin:10px 0 5px 0;">$1</h4>')
+            // Saltos de línea
+            .replace(/\n/g, '<br>');
+        return html;
+    }
+
     // ─── Leer eventos de la semana actual ──────────────────────────────────
     getWeeklyEvents() {
         const key = this.getWeekKey();
@@ -278,7 +290,7 @@ class StrategyReport {
                     
                     <div id="cfo-verdict-box" style="background:rgba(255,255,255,0.05); border-radius:14px; padding:16px; min-height:80px; color:#f1f5f9; font-size:0.9rem; line-height:1.6; border: 1px solid rgba(255,255,255,0.1);">
                         ${cachedVerdict
-                ? `<span id="cfo-text">${cachedVerdict}</span>`
+                ? `<span id="cfo-text">${this.renderMarkdown(cachedVerdict)}</span>`
                 : `<span style="color:#64748b; font-size:0.85rem;">Toca "Analizar semana" para que tu asesor analice tu semana.</span>`
             }
                     </div>
@@ -436,37 +448,13 @@ class StrategyReport {
                 } catch (e) { }
 
                 if (box) {
-                    // Si el texto es corto (<120 palabras), usamos typewriter, si no, directo
-                    const wordCount = verdict.split(/\s+/).length;
-
-                    if (wordCount > 120) {
-                        box.innerHTML = `<span id="cfo-text">${verdict}</span>`;
-                        if (btn) {
-                            btn.style.display = 'none'; // Hide button after success to prevent double calls
-                        }
-                        const existingLabel = document.getElementById('cache-label');
-                        if (!existingLabel) {
-                            box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
-                        }
-                    } else {
-                        box.innerHTML = '<span id="cfo-text"></span>';
-                        const textEl = document.getElementById('cfo-text');
-                        let i = 0;
-                        const interval = setInterval(() => {
-                            if (i < verdict.length) {
-                                textEl.textContent += verdict[i];
-                                i++;
-                            } else {
-                                clearInterval(interval);
-                                if (btn) {
-                                    btn.style.display = 'none'; // Hide button after success
-                                }
-                                const existingLabel = document.getElementById('cache-label');
-                                if (!existingLabel) {
-                                    box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
-                                }
-                            }
-                        }, 12);
+                    box.innerHTML = `<span id="cfo-text">${this.renderMarkdown(verdict)}</span>`;
+                    if (btn) {
+                        btn.style.display = 'none'; // Hide button after success
+                    }
+                    const existingLabel = document.getElementById('cache-label');
+                    if (!existingLabel) {
+                        box.insertAdjacentHTML('afterend', '<div id="cache-label" style="margin-top:10px; font-size:0.7rem; color:#475569; text-align:right;">✓ Guardado en caché</div>');
                     }
                 }
             }
