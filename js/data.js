@@ -318,7 +318,8 @@ class Store {
                 // where config properties got trapped inside that field as a Map instead of an Array.
                 const fieldsToDelete = {
                     budgets: firebase.firestore.FieldValue.delete(),
-                    category_names: firebase.firestore.FieldValue.delete()
+                    category_names: firebase.firestore.FieldValue.delete(),
+                    category_types: firebase.firestore.FieldValue.delete()
                 };
 
                 if (config.fixed_expenses && typeof config.fixed_expenses === 'object' && !Array.isArray(config.fixed_expenses)) {
