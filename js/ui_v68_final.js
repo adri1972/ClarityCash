@@ -2471,6 +2471,43 @@ class UIManager {
         return html;
     }
 
+    async confirmFixedPayment(catId, amount, name) {
+        if (!confirm(`¿Confirmar el pago de "${name}" por ${this.formatCurrency(amount)}?`)) return;
+
+        try {
+            const accountId = this.store.data.accounts && this.store.data.accounts.length > 0 
+                ? this.store.data.accounts[0].id 
+                : 'acc_1';
+            
+            const now = new Date();
+            const viewMonth = this.viewDate.getMonth();
+            const viewYear = this.viewDate.getFullYear();
+            
+            let txDate = new Date(viewYear, viewMonth, 1).toISOString().split('T')[0];
+            if (viewYear === now.getFullYear() && viewMonth === now.getMonth()) {
+                txDate = now.toISOString().split('T')[0];
+            }
+
+            await this.store.addTransaction({
+                type: 'GASTO',
+                amount: amount,
+                date: txDate,
+                category_id: catId,
+                description: `${name} (Pago confirmado)`,
+                account_id: accountId,
+                is_auto_fixed: true 
+            });
+
+            if (window.showToast) window.showToast('✅ Pago registrado correctamente', 'success');
+            
+            this.renderInsightsPage();
+            
+        } catch (error) {
+            console.error("Error confirmando pago fijo:", error);
+            alert("Error al registrar el pago. Inténtalo de nuevo.");
+        }
+    }
+
     renderHistoryChart() {
         const ctx = document.getElementById('historyChart');
         if (!ctx) return;
