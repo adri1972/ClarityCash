@@ -5,8 +5,8 @@
     <script>
         // --- STABLE UPDATE ENGINE v68.Y (JSON Based) ---
         (function () {
-            const CURRENT_VERSION = '81.9';
-            const CACHE_NAME = 'cc-integrated-v81-9';
+            const CURRENT_VERSION = '81.95';
+            const CACHE_NAME = 'cc-integrated-v81-95';
 
             // 1. Check version.json (Bypass Cache)
             fetch('version.json?t=' + Date.now())
@@ -249,13 +249,13 @@
     <script>
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js?v=v81.9').then(reg => console.log('✅ SW Active'));
+                navigator.serviceWorker.register('service-worker.js?v=v81.95').then(reg => console.log('✅ SW Active'));
             });
         }
     </script>
     <div
         style="position:fixed; bottom:5px; left:5px; font-size:10px; color:var(--text-muted); z-index:9999; pointer-events:none; font-weight:bold;">
-        v81.9.GROUPING_AND_AUTO_FIX</div>,
+        v81.95.FIREBASE_FIX</div>,
 </body>
 
 </html>

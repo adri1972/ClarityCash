@@ -1,5 +1,5 @@
 {
-    "version": "81.9",
-    "updatedAt": "2026-03-14T18:25:00Z",
-    "notes": "v81.9: Arreglado el selector de tipo (Pago Fijo vs Variable), eliminada la inyección automática en variables y reorganizados los grupos en Mi Mes para mayor claridad."
+    "version": "81.95",
+    "updatedAt": "2026-03-14T20:00:00Z",
+    "notes": "v81.95: Fix definitivo de persistencia de tipos en Firebase y cálculos de Mi Mes."
 }
