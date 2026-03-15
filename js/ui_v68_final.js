@@ -1530,6 +1530,8 @@ class UIManager {
             currentPlan.loans = this.store.config.loans || [];
         }
 
+        const catTypes = this.store.config.category_types || {};
+
         // Generate Recurring Items for this month (Fixed Expenses & Incomes)
         await this.store.processFixedExpenses(this.viewDate.getMonth(), this.viewDate.getFullYear());
 
@@ -1584,6 +1586,9 @@ class UIManager {
         let totalFixedExpensesAmount = 0;
 
         fixedExpensesList.forEach(fe => {
+            const type = catTypes[fe.category_id] || 'FIXED';
+            if (type === 'VARIABLE') return; // Saltar si es variable
+
             const amount = parseFloat(fe.amount) || 0;
             fixedExpensesByCat[fe.category_id] = (fixedExpensesByCat[fe.category_id] || 0) + amount;
             totalFixedExpensesAmount += amount;
