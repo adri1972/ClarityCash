@@ -1,5 +1,5 @@
 {
-    "version": "82.0",
-    "updatedAt": "2026-03-16T23:14:00Z",
-    "notes": "v82.0: Despliegue mayor con sincronización de fijos corregida y limpieza de caché nuclear."
+    "version": "82.0.1",
+    "updatedAt": "2026-03-16T23:25:00Z",
+    "notes": "v82.0.1: Fix sintaxis crítica en ui_v68_final.js (balanceo de llaves) para corregir pantalla blanca."
 }
