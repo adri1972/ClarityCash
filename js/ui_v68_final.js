@@ -5407,6 +5407,7 @@ class UIManager {
             }
         };
     }
+}
 
     handleTinyAccountAdd() {
         const name = document.getElementById('new-acc-name').value;
