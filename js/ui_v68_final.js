@@ -1589,7 +1589,8 @@ class UIManager {
             const type = catTypes[fe.category_id] || 'FIXED';
             if (type === 'VARIABLE') return; // Saltar si es variable
 
-            const amount = parseFloat(fe.amount || 0);
+            const cleanAmount = (fe.amount || 0).toString().replace(/\D/g, '');
+            const amount = parseFloat(cleanAmount) || 0;
             fixedExpensesByCat[fe.category_id] = (fixedExpensesByCat[fe.category_id] || 0) + amount;
             totalFixedExpensesAmount += amount;
         });

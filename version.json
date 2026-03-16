@@ -1,5 +1,5 @@
 {
-    "version": "81.99.1",
-    "updatedAt": "2026-03-16T22:57:00Z",
-    "notes": "v81.99.1: Sincronización avanzada de Gastos Fijos (Emcali) y corrección de parsing numérico."
+    "version": "82.0",
+    "updatedAt": "2026-03-16T23:14:00Z",
+    "notes": "v82.0: Despliegue mayor con sincronización de fijos corregida y limpieza de caché nuclear."
 }
