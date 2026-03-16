@@ -334,6 +334,7 @@ class Store {
                 // Document might not exist yet or fields might not exist — that's fine
                 console.log('(Budget field cleanup skipped — field may not exist yet)');
             }
+            console.log('📡 Store _saveConfig: Payload final que sale a Firebase:', JSON.parse(JSON.stringify(this.data.config)));
             // Step 2: Write the full config with the new budgets object
             await docRef.set(this.data.config);
         } else {

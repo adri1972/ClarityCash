@@ -1589,7 +1589,7 @@ class UIManager {
             const type = catTypes[fe.category_id] || 'FIXED';
             if (type === 'VARIABLE') return; // Saltar si es variable
 
-            const amount = parseFloat(fe.amount) || 0;
+            const amount = parseFloat(fe.amount || 0);
             fixedExpensesByCat[fe.category_id] = (fixedExpensesByCat[fe.category_id] || 0) + amount;
             totalFixedExpensesAmount += amount;
         });
@@ -5330,9 +5330,12 @@ class UIManager {
             }
         };
 
-        this.container.onsubmit = (e) => {
-            e.preventDefault();
-            if (e.target.id === 'global-settings-form') {
+        const settingsForm = document.getElementById('global-settings-form');
+        if (settingsForm) {
+            settingsForm.onsubmit = (e) => {
+                console.log('🚀 EVENTO: onsubmit disparado en #global-settings-form', e.target.id);
+                e.preventDefault();
+                if (e.target.id === 'global-settings-form') {
 
                 // LAYER 3: Block save if store not fully initialized (prevents budget wipe on fast reload)
                 if (!this.store.initialized) {
@@ -5364,7 +5367,25 @@ class UIManager {
                     }
                 }
 
-                console.log('💾 Guardar Cambios: Budget keys being saved:', Object.keys(newBudgets));
+                console.log('🔍 DEBUG SYNC - Antes:', JSON.parse(JSON.stringify(this.store.config.fixed_expenses || [])));
+                console.log('🔍 DEBUG SYNC - newBudgets:', newBudgets);
+
+                // 🔄 SINCRONIZACIÓN DE COMPROMISOS FIJOS
+                const currentFixed = this.store.config.fixed_expenses || [];
+                const updatedFixedExpenses = currentFixed.map(fe => {
+                    const newAmt = newBudgets[fe.category_id];
+                    const matchingInCat = currentFixed.filter(f => f.category_id === fe.category_id);
+                    
+                    console.log(`🔎 Revisando FE: "${fe.name}" (Cat: ${fe.category_id}). Coincidencias en cat: ${matchingInCat.length}, Nuevo presupuesto: ${newAmt}`);
+
+                    if (newAmt !== undefined) {
+                        console.log(`✅ MATCH! Sincronizando: ${fe.name} -> ${newAmt}`);
+                        return { ...fe, amount: newAmt };
+                    }
+                    return fe;
+                });
+
+                console.log('🔍 DEBUG SYNC - Después:', updatedFixedExpenses);
 
                 // Pass explicitBudgetSave flag so the store fully replaces the budgets field
                 // in Firestore instead of merging (which would keep deleted categories alive).
@@ -5376,6 +5397,7 @@ class UIManager {
                     total_debt: parseFloat(formData.get('total_debt') ? formData.get('total_debt').toString().replace(/\D/g, '') : '0') || 0,
                     gemini_api_key: formData.get('gemini_api_key') || '',
                     budgets: newBudgets,
+                    fixed_expenses: updatedFixedExpenses,
                     category_names: newNames,
                     category_types: newTypes,
                     budget_user_customized: true  // Flag: user has explicitly saved their budget

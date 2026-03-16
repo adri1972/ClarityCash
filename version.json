@@ -1,5 +1,5 @@
 {
-    "version": "81.95",
-    "updatedAt": "2026-03-14T20:00:00Z",
-    "notes": "v81.95: Fix definitivo de persistencia de tipos en Firebase y cálculos de Mi Mes."
+    "version": "81.99.1",
+    "updatedAt": "2026-03-16T22:57:00Z",
+    "notes": "v81.99.1: Sincronización avanzada de Gastos Fijos (Emcali) y corrección de parsing numérico."
 }
